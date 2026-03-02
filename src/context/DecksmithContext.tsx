@@ -1,0 +1,360 @@
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile } from "@/types/narrative";
+import { supabase } from "@/integrations/supabase/client";
+import { useSubscription, TIERS } from "@/hooks/useSubscription";
+import type { Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
+
+type LoadingPhase = "idle" | "structuring" | "sharpening" | "designing" | "scoring";
+
+interface DecksmithContextType {
+  rawInput: string;
+  setRawInput: (v: string) => void;
+  selectedMode: OutputMode | "auto";
+  setSelectedMode: (m: OutputMode | "auto") => void;
+  voiceProfile: VoiceProfile;
+  setVoiceProfile: (v: VoiceProfile) => void;
+  detectedMode: OutputMode | null;
+  output: NarrativeOutputData | null;
+  isGenerating: boolean;
+  loadingPhase: LoadingPhase;
+  refiningSection: string | null;
+  generationCount: number;
+  generate: () => Promise<void>;
+  refineSection: (sectionKey: string, path: string, tone: RefinementTone) => Promise<void>;
+  reset: () => void;
+  session: Session | null;
+  isPro: boolean;
+  projects: Project[];
+  loadProjects: () => Promise<void>;
+  currentProjectId: string | null;
+  openProject: (project: Project) => void;
+  deleteProject: (id: string) => Promise<void>;
+  duplicateProject: (id: string) => Promise<void>;
+  versions: ProjectVersion[];
+  currentVersion: number;
+  saveVersion: (summary?: string) => Promise<void>;
+  loadVersion: (versionNumber: number) => Promise<void>;
+  outreachTracker: OutreachEntry[];
+  addOutreachEntry: (entry: OutreachEntry) => Promise<void>;
+  updateOutreachEntry: (index: number, entry: OutreachEntry) => Promise<void>;
+  removeOutreachEntry: (index: number) => Promise<void>;
+}
+
+const DecksmithContext = createContext<DecksmithContextType | null>(null);
+
+export function DecksmithProvider({ children }: { children: React.ReactNode }) {
+  const [rawInput, setRawInput] = useState("");
+  const [selectedMode, setSelectedMode] = useState<OutputMode | "auto">("auto");
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile>("auto");
+  const [detectedMode, setDetectedMode] = useState<OutputMode | null>(null);
+  const [output, setOutput] = useState<NarrativeOutputData | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("idle");
+  const [refiningSection, setRefiningSection] = useState<string | null>(null);
+  const [generationCount, setGenerationCount] = useState(() => {
+    const stored = localStorage.getItem("rhetoric_gen_count");
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [versions, setVersions] = useState<ProjectVersion[]>([]);
+  const [currentVersion, setCurrentVersion] = useState(1);
+  const [outreachTracker, setOutreachTracker] = useState<OutreachEntry[]>([]);
+  const [devSimPro, setDevSimPro] = useState(false);
+  const { subscribed, productId } = useSubscription();
+  const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+  }, []);
+
+  const loadProjects = useCallback(async () => {
+    if (!session) return;
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (!error && data) {
+      setProjects(data.map((p: any) => ({
+        id: p.id, title: p.title, mode: p.mode, raw_input: p.raw_input,
+        output_data: p.output_data as NarrativeOutputData | null,
+        detected_intent: p.detected_intent, current_thesis: p.current_thesis,
+        refinement_history: p.refinement_history || [],
+        outreach_tracker: p.outreach_tracker || [],
+        created_at: p.created_at, updated_at: p.updated_at,
+      })));
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) loadProjects();
+  }, [session, loadProjects]);
+
+  const loadVersions = useCallback(async (projectId: string) => {
+    const { data } = await supabase
+      .from("project_versions")
+      .select("id, version_number, summary, created_at")
+      .eq("project_id", projectId)
+      .order("version_number", { ascending: false });
+    if (data) {
+      setVersions(data);
+      if (data.length > 0) setCurrentVersion(data[0].version_number);
+    }
+  }, []);
+
+  const extractThesis = (parsed: NarrativeOutputData): string => {
+    const d = parsed.data as any;
+    if (parsed.mode === "fundraising") return d.thesis?.content || "";
+    if (parsed.mode === "strategy") return d.thesis || "";
+    if (parsed.mode === "board_update") return d.executiveSummary || "";
+    if (parsed.mode === "product_vision") return d.vision || "";
+    if (parsed.mode === "investor_update") return d.headline || "";
+    return "";
+  };
+
+  const saveProject = useCallback(async (parsed: NarrativeOutputData) => {
+    if (!session) return;
+    const title = (parsed as any).title || "Untitled";
+    const thesis = extractThesis(parsed);
+    if (currentProjectId) {
+      await supabase.from("projects").update({
+        title, mode: parsed.mode, raw_input: rawInput,
+        output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+      }).eq("id", currentProjectId);
+    } else {
+      const { data } = await supabase.from("projects").insert({
+        user_id: session.user.id, title, mode: parsed.mode, raw_input: rawInput,
+        output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+      }).select("id").single();
+      if (data) setCurrentProjectId(data.id);
+    }
+    loadProjects();
+  }, [session, currentProjectId, rawInput, loadProjects]);
+
+  const startLoadingPhases = useCallback(() => {
+    setLoadingPhase("structuring");
+    phaseTimerRef.current = setTimeout(() => {
+      setLoadingPhase("sharpening");
+      phaseTimerRef.current = setTimeout(() => {
+        setLoadingPhase("designing");
+        phaseTimerRef.current = setTimeout(() => {
+          setLoadingPhase("scoring");
+        }, 4000);
+      }, 3000);
+    }, 3000);
+  }, []);
+
+  const stopLoadingPhases = useCallback(() => {
+    if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
+    setLoadingPhase("idle");
+  }, []);
+
+  const generate = useCallback(async () => {
+    if (!rawInput.trim() || isGenerating) return;
+    setIsGenerating(true);
+    startLoadingPhases();
+
+    let currentThesis: string | undefined;
+    if (currentProjectId) {
+      const proj = projects.find(p => p.id === currentProjectId);
+      if (proj?.current_thesis) currentThesis = proj.current_thesis;
+    }
+
+    const attempt = async (retry: boolean): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+          body: { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile },
+        });
+        if (error) throw error;
+        if (!data?.content) throw new Error("Empty response from AI");
+
+        const cleaned = data.content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        const parsed = JSON.parse(cleaned);
+        setDetectedMode(parsed.mode);
+        setOutput(parsed);
+        const newCount = generationCount + 1;
+        setGenerationCount(newCount);
+        localStorage.setItem("rhetoric_gen_count", String(newCount));
+        await saveProject(parsed);
+      } catch (e: any) {
+        if (retry) {
+          console.warn("First attempt failed, retrying...", e);
+          return attempt(false);
+        }
+        console.error("Generation error:", e);
+        toast.error(e.message || "Generation failed. Please try again.");
+      }
+    };
+
+    await attempt(true);
+    stopLoadingPhases();
+    setIsGenerating(false);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects]);
+
+  const refineSection = useCallback(async (sectionKey: string, path: string, tone: RefinementTone) => {
+    if (!output) return;
+    setRefiningSection(sectionKey);
+    try {
+      const currentContent = getNestedValue(output.data, path);
+      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent },
+      });
+      if (error) throw error;
+      const refined = data.content;
+
+      setOutput((prev) => {
+        if (!prev) return prev;
+        const newData = JSON.parse(JSON.stringify(prev.data));
+        setNestedValue(newData, path, refined);
+        const updated = { ...prev, data: newData };
+        saveProject(updated as NarrativeOutputData);
+
+        if (currentProjectId && session) {
+          const historyEntry = { section: sectionKey, tone, timestamp: new Date().toISOString(), before: currentContent, after: refined };
+          supabase.from("projects").update({
+            refinement_history: [...(projects.find(p => p.id === currentProjectId)?.refinement_history || []), historyEntry] as any,
+          }).eq("id", currentProjectId).then();
+        }
+
+        return updated;
+      });
+    } catch (e: any) {
+      console.error("Refinement error:", e);
+      toast.error("Refinement failed. Please try again.");
+    } finally {
+      setRefiningSection(null);
+    }
+  }, [output, rawInput, saveProject, currentProjectId, session, projects]);
+
+  const reset = useCallback(() => {
+    setRawInput("");
+    setOutput(null);
+    setDetectedMode(null);
+    setCurrentProjectId(null);
+    setVersions([]);
+    setCurrentVersion(1);
+    setOutreachTracker([]);
+  }, []);
+
+  const openProject = useCallback((project: Project) => {
+    setRawInput(project.raw_input);
+    setOutput(project.output_data);
+    setDetectedMode(project.mode as OutputMode);
+    setCurrentProjectId(project.id);
+    setOutreachTracker(project.outreach_tracker || []);
+    loadVersions(project.id);
+  }, [loadVersions]);
+
+  const deleteProject = useCallback(async (id: string) => {
+    await supabase.from("projects").delete().eq("id", id);
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+    if (currentProjectId === id) reset();
+  }, [currentProjectId, reset]);
+
+  const duplicateProject = useCallback(async (id: string) => {
+    const project = projects.find((p) => p.id === id);
+    if (!project || !session) return;
+    await supabase.from("projects").insert({
+      user_id: session.user.id, title: `${project.title} (copy)`,
+      mode: project.mode, raw_input: project.raw_input,
+      output_data: project.output_data as any,
+      detected_intent: project.detected_intent, current_thesis: project.current_thesis,
+    });
+    loadProjects();
+    toast.success("Project duplicated.");
+  }, [projects, session, loadProjects]);
+
+  const saveVersion = useCallback(async (summary?: string) => {
+    if (!currentProjectId || !session || !output) return;
+    const nextVersion = versions.length > 0 ? versions[0].version_number + 1 : 1;
+    const thesis = extractThesis(output);
+    await supabase.from("project_versions").insert({
+      project_id: currentProjectId, user_id: session.user.id,
+      version_number: nextVersion, raw_input: rawInput,
+      output_data: output as any, current_thesis: thesis,
+      summary: summary || `Version ${nextVersion}`,
+    });
+    setCurrentVersion(nextVersion);
+    loadVersions(currentProjectId);
+    toast.success(`Version ${nextVersion} saved.`);
+  }, [currentProjectId, session, output, versions, rawInput, loadVersions]);
+
+  const loadVersion = useCallback(async (versionNumber: number) => {
+    if (!currentProjectId) return;
+    const { data } = await supabase
+      .from("project_versions")
+      .select("*")
+      .eq("project_id", currentProjectId)
+      .eq("version_number", versionNumber)
+      .single();
+    if (data) {
+      setRawInput(data.raw_input);
+      setOutput(data.output_data as unknown as NarrativeOutputData);
+      setCurrentVersion(data.version_number);
+      toast.success(`Restored to version ${versionNumber}.`);
+    }
+  }, [currentProjectId]);
+
+  const syncOutreach = useCallback(async (tracker: OutreachEntry[]) => {
+    if (!currentProjectId) return;
+    setOutreachTracker(tracker);
+    await supabase.from("projects").update({ outreach_tracker: tracker as any }).eq("id", currentProjectId);
+  }, [currentProjectId]);
+
+  const addOutreachEntry = useCallback(async (entry: OutreachEntry) => {
+    await syncOutreach([...outreachTracker, entry]);
+  }, [outreachTracker, syncOutreach]);
+
+  const updateOutreachEntry = useCallback(async (index: number, entry: OutreachEntry) => {
+    const updated = [...outreachTracker];
+    updated[index] = entry;
+    await syncOutreach(updated);
+  }, [outreachTracker, syncOutreach]);
+
+  const removeOutreachEntry = useCallback(async (index: number) => {
+    const updated = outreachTracker.filter((_, i) => i !== index);
+    await syncOutreach(updated);
+  }, [outreachTracker, syncOutreach]);
+
+  return (
+    <DecksmithContext.Provider
+      value={{
+        rawInput, setRawInput, selectedMode, setSelectedMode,
+        voiceProfile, setVoiceProfile,
+        detectedMode, output, isGenerating, loadingPhase, refiningSection,
+        generationCount, generate, refineSection, reset,
+        session, isPro, projects, loadProjects,
+        currentProjectId, openProject, deleteProject, duplicateProject,
+        versions, currentVersion, saveVersion, loadVersion,
+        outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
+      }}
+    >
+      {children}
+    </DecksmithContext.Provider>
+  );
+}
+
+export function useDecksmith() {
+  const ctx = useContext(DecksmithContext);
+  if (!ctx) throw new Error("useDecksmith must be used within DecksmithProvider");
+  return ctx;
+}
+
+function getNestedValue(obj: any, path: string): any {
+  return path.split(".").reduce((o, k) => o?.[k], obj);
+}
+
+function setNestedValue(obj: any, path: string, value: any): void {
+  const keys = path.split(".");
+  const last = keys.pop()!;
+  const target = keys.reduce((o, k) => o[k], obj);
+  target[last] = value;
+}
