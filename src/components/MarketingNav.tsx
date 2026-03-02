@@ -42,13 +42,10 @@ export function MarketingNav() {
             <div className="flex items-center gap-6" style={{ visibility: authReady ? "visible" : "hidden" }}>
               {session ? (
                 <>
-                  {isDashboard && !isPro && (
-                    <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
-                  )}
-                  {isPricingPage && (
+                  {!isDashboard && (
                     <button onClick={() => navigate("/dashboard")} className={linkClass("/dashboard")}>Dashboard</button>
                   )}
-                  {!isDashboard && !isPricingPage && !isPro && (
+                  {!isPro && (
                     <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
                   )}
                    <button onClick={() => navigate("/resources")} className={linkClass("/resources")}>Resources</button>

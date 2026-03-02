@@ -8,9 +8,10 @@ import type { Session } from "@supabase/supabase-js";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { subscribed, productId, loading: subLoading } = useSubscription();
+  const { subscribed, productId, subscriptionEnd, loading: subLoading } = useSubscription();
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
+  const [forcedTier, setForcedTier] = useState<string | null>(null);
 
   // Profile
   const [fullName, setFullName] = useState("");
@@ -24,8 +25,14 @@ export default function Settings() {
   // Tier display
   const isPro = subscribed && productId === TIERS.pro.product_id;
   const isHobby = subscribed && productId === TIERS.hobby.product_id;
-  const tierLabel = isPro ? "Pro" : isHobby ? "Hobby" : "Free";
-  const tierPrice = isPro ? "$29/mo" : isHobby ? "$9/mo" : "—";
+  const isForced = forcedTier === "pro" || forcedTier === "hobby";
+  const tierLabel = isForced
+    ? `${forcedTier === "pro" ? "Pro" : "Hobby"} (Admin Override)`
+    : isPro ? "Pro" : isHobby ? "Hobby" : "Free";
+  const tierPrice = isForced ? null : isPro ? "$29/mo" : isHobby ? "$9/mo" : null;
+  const renewalDate = !isForced && subscriptionEnd
+    ? new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -45,13 +52,14 @@ export default function Settings() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadProfile = async (userId: string) => {
+    const loadProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, forced_tier")
       .eq("user_id", userId)
       .maybeSingle();
     if (data?.full_name) setFullName(data.full_name);
+    if (data?.forced_tier) setForcedTier(data.forced_tier);
   };
 
   const handleSaveName = async () => {
@@ -128,16 +136,24 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-foreground font-medium">{tierLabel}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{tierPrice}</p>
+                {tierPrice && <p className="text-xs text-muted-foreground mt-0.5">{tierPrice}</p>}
+                {renewalDate && <p className="text-xs text-muted-foreground mt-0.5">Renews {renewalDate}</p>}
               </div>
-              {subscribed && (
+              {subscribed && !isForced ? (
                 <button
                   onClick={handleManageSubscription}
                   className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors flex items-center gap-1.5"
                 >
                   Manage Subscription <ExternalLink className="h-3 w-3" />
                 </button>
-              )}
+              ) : !subscribed ? (
+                <button
+                  onClick={() => navigate("/pricing")}
+                  className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors"
+                >
+                  Upgrade
+                </button>
+              ) : null}
             </div>
           )}
         </div>
