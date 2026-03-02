@@ -15,6 +15,12 @@ export default function Index() {
         setChecked(true);
       }
     });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate("/dashboard", { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   if (!checked) return null;
