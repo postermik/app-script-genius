@@ -1,14 +1,15 @@
 import { useDecksmith } from "@/context/DecksmithContext";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { OutputCard } from "@/components/OutputCard";
 import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
 import { OutreachTracker } from "@/components/OutreachTracker";
 import { ExportDropdown } from "@/components/ExportDropdown";
 import { SlidePreview } from "@/components/SlidePreview";
-import { ArrowLeft, Lock, ChevronDown, Save, ArrowRight, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 interface TabConfig { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[]; }
 
@@ -19,7 +20,27 @@ export function OutputView() {
   const [showOutreach, setShowOutreach] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
+  const outputRef = useRef(output);
+
+  // Auto-save: update project updated_at on any refinement
+  const triggerAutoSave = useCallback(async () => {
+    if (!currentProjectId) return;
+    await supabase.from("projects").update({ updated_at: new Date().toISOString() }).eq("id", currentProjectId);
+    setLastSaved(new Date());
+  }, [currentProjectId]);
+
+  // Watch for output changes to auto-save (debounced)
+  useEffect(() => {
+    if (output === outputRef.current) return;
+    outputRef.current = output;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => { triggerAutoSave(); }, 2000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [output, triggerAutoSave]);
+
   if (!output) return null;
 
   const tabs = buildTabs(output);
@@ -29,11 +50,35 @@ export function OutputView() {
 
   const projectTitle = (output as any).title || "Untitled Project";
 
-  const handleTitleEdit = () => {
-    setTitleValue(projectTitle);
-    setEditingTitle(true);
+  // Build slide preview data from deck framework
+  const getDeckPreviewSlides = () => {
+    const d = output.data as any;
+    const framework = d.deckFramework || d.boardDeckOutline || [];
+    if (!framework || framework.length === 0) return [];
+    return framework.map((slide: any, idx: number) => {
+      const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
+      const headlineLower = headline.toLowerCase();
+      let body = "";
+      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) body = d.thesis?.content || d.thesis || "";
+      else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
+      else if (headlineLower.includes("problem") || headlineLower.includes("pain") || headlineLower.includes("world")) body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
+      else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) body = d.narrativeStructure?.newModel || d.solutionFramework || "";
+      else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("moat")) body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
+      else if (headlineLower.includes("vision") || headlineLower.includes("future")) body = d.narrativeStructure?.theFuture || d.vision || "";
+      else if (headlineLower.includes("risk")) body = d.risks || d.risksFocus || "";
+      else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) body = d.roadmapNarrative || d.nextMilestones || "";
+      else if (headlineLower.includes("ask") || headlineLower.includes("funding")) body = d.askUpdate || "";
+      else if (headlineLower.includes("metric") || headlineLower.includes("traction")) body = d.metricsNarrative || d.metrics || "";
+      else if (headlineLower.includes("summary")) body = d.executiveSummary || "";
+      else body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
+      return { headline, content: body ? body.slice(0, 200) : "", slideType: slide?.metadata?.slideType, visualDirection: slide?.metadata?.visualDirection };
+    });
   };
 
+  const slidePreviewData = getDeckPreviewSlides();
+  const isDeckTab = currentTab?.key === "deck" || currentTab?.key === "boardDeck";
+
+  const handleTitleEdit = () => { setTitleValue(projectTitle); setEditingTitle(true); };
   const handleTitleSave = async () => {
     setEditingTitle(false);
     if (titleValue.trim() && titleValue !== projectTitle && currentProjectId) {
@@ -42,54 +87,8 @@ export function OutputView() {
     }
   };
 
-  // Build slide preview data from deck framework with real content
-  const getDeckPreviewSlides = () => {
-    const d = output.data as any;
-    const framework = d.deckFramework || d.boardDeckOutline || [];
-    if (!framework || framework.length === 0) return [];
-
-    return framework.map((slide: any, idx: number) => {
-      const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
-      const headlineLower = headline.toLowerCase();
-      let body = "";
-
-      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) {
-        body = d.thesis?.content || d.thesis || "";
-      } else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) {
-        body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
-      } else if (headlineLower.includes("problem") || headlineLower.includes("pain") || headlineLower.includes("world")) {
-        body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
-      } else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) {
-        body = d.narrativeStructure?.newModel || d.solutionFramework || "";
-      } else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("moat")) {
-        body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
-      } else if (headlineLower.includes("vision") || headlineLower.includes("future")) {
-        body = d.narrativeStructure?.theFuture || d.vision || "";
-      } else if (headlineLower.includes("risk")) {
-        body = d.risks || d.risksFocus || "";
-      } else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) {
-        body = d.roadmapNarrative || d.nextMilestones || "";
-      } else if (headlineLower.includes("ask") || headlineLower.includes("funding")) {
-        body = d.askUpdate || "";
-      } else if (headlineLower.includes("metric") || headlineLower.includes("traction")) {
-        body = d.metricsNarrative || d.metrics || "";
-      } else if (headlineLower.includes("summary")) {
-        body = d.executiveSummary || "";
-      } else {
-        body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
-      }
-
-      return {
-        headline,
-        content: body ? body.slice(0, 200) : "",
-        slideType: slide?.metadata?.slideType,
-        visualDirection: slide?.metadata?.visualDirection,
-      };
-    });
-  };
-
-  const slidePreviewData = getDeckPreviewSlides();
-  const isDeckTab = currentTab?.key === "deck" || currentTab?.key === "boardDeck";
+  const versionLabel = `v${currentVersion}`;
+  const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
   return (
     <div className="flex-1 flex flex-col">
@@ -104,16 +103,8 @@ export function OutputView() {
           <div className="flex items-center gap-2">
             {editingTitle ? (
               <div className="flex items-center gap-1">
-                <input
-                  value={titleValue}
-                  onChange={e => setTitleValue(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleTitleSave()}
-                  className="text-sm font-semibold tracking-wide uppercase text-foreground bg-transparent border-b border-electric outline-none px-1 max-w-[260px]"
-                  autoFocus
-                />
-                <button onClick={handleTitleSave} className="text-electric hover:text-foreground transition-colors p-0.5">
-                  <Check className="h-3.5 w-3.5" />
-                </button>
+                <input value={titleValue} onChange={e => setTitleValue(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTitleSave()} className="text-sm font-semibold tracking-wide uppercase text-foreground bg-transparent border-b border-electric outline-none px-1 max-w-[260px]" autoFocus />
+                <button onClick={handleTitleSave} className="text-electric hover:text-foreground transition-colors p-0.5"><Check className="h-3.5 w-3.5" /></button>
               </div>
             ) : (
               <button onClick={handleTitleEdit} className="text-sm font-semibold tracking-wide uppercase text-foreground hover:text-electric transition-colors flex items-center gap-1.5 group">
@@ -125,12 +116,14 @@ export function OutputView() {
             {currentProjectId && (
               <div className="relative">
                 <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">
-                  v{currentVersion}<ChevronDown className="h-3 w-3" />
+                  {versionLabel}
+                  {savedLabel && <span className="text-muted-foreground/50 ml-1">· {savedLabel}</span>}
+                  <ChevronDown className="h-3 w-3" />
                 </button>
                 {showVersions && (
-                  <div className="absolute top-full mt-1 right-0 w-52 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
+                  <div className="absolute top-full mt-1 right-0 w-56 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
                     <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border">
-                      <Save className="h-3 w-3" />Save Current Version
+                      <Save className="h-3 w-3" />Save as New Version
                     </button>
                     {versions.length > 0 ? (
                       <div className="max-h-48 overflow-y-auto">
@@ -158,7 +151,7 @@ export function OutputView() {
 
       <div className="border-b border-border px-6 py-5 bg-card/30"><div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div></div>
 
-      {/* Tabs — add "Slide Preview" tab if deck data exists */}
+      {/* Tabs — NO separate Slide Preview tab */}
       <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
           {tabs.map((tab, i) => (
@@ -166,26 +159,11 @@ export function OutputView() {
               {isTabLocked(i) && <Lock className="h-3 w-3" />}{tab.label}
             </button>
           ))}
-          {/* Add Slide Preview as a pseudo-tab */}
-          {slidePreviewData.length > 0 && (
-            <button
-              onClick={() => setActiveTab(-1)}
-              className={`relative text-sm py-3 px-5 border-b-2 transition-colors whitespace-nowrap ${activeTab === -1 ? "border-electric text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              Slide Preview
-            </button>
-          )}
         </div>
       </div>
 
       <div className="flex-1 px-6 py-10">
         <div className="max-w-[900px] mx-auto animate-fade-in">
-          {/* Slide Preview tab */}
-          {activeTab === -1 && slidePreviewData.length > 0 && (
-            <SlidePreview slides={slidePreviewData} />
-          )}
-
-          {/* Normal tab content */}
           {activeTab >= 0 && currentTab && (
             <div className="space-y-0">
               {currentTab.sections.map((section) => (
@@ -194,7 +172,7 @@ export function OutputView() {
             </div>
           )}
 
-          {/* Also show slide preview inline on deck tabs */}
+          {/* Show slide preview inline on deck tabs only */}
           {activeTab >= 0 && isDeckTab && slidePreviewData.length > 0 && (
             <SlidePreview slides={slidePreviewData} />
           )}
@@ -209,13 +187,7 @@ export function OutputView() {
               <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
               <p className="text-xs text-muted-foreground mt-0.5">Upgrade to Pro to access all sections, exports, and refinements.</p>
             </div>
-            <button
-              onClick={() => {
-                // Trigger upgrade modal via event or navigation
-                toast.info("Upgrade to Pro for full access.");
-              }}
-              className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue"
-            >
+            <button onClick={() => toast.info("Upgrade to Pro for full access.")} className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue">
               Upgrade to Pro
             </button>
           </div>
@@ -223,14 +195,6 @@ export function OutputView() {
       )}
     </div>
   );
-}
-
-function getNextSteps(mode: string, isPro: boolean) {
-  if (!isPro) return [{ label: "Upgrade to Pro", primary: true }];
-  if (mode === "fundraising") return [{ label: "Generate Investor Target List", primary: true, comingSoon: true }, { label: "Create Intro Email Draft", primary: false, comingSoon: true }, { label: "Export Pitch Deck", primary: false }];
-  if (mode === "board_update") return [{ label: "Generate Decision Slide", primary: true, comingSoon: true }, { label: "Export Board PDF", primary: false }];
-  if (mode === "strategy") return [{ label: "Generate Positioning Map", primary: true, comingSoon: true }, { label: "Export Strategy Memo", primary: false }];
-  return [{ label: "Export to Deck", primary: true }];
 }
 
 export function buildTabs(output: any): TabConfig[] {

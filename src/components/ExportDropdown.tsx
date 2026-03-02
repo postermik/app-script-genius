@@ -25,65 +25,32 @@ export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp }: Prop
   const tabs = buildTabsProp(output);
   const d = output.data as any;
 
-  // Get deck framework data with real content mapping
   const getDeckSlides = () => {
     const framework = d.deckFramework || d.boardDeckOutline || [];
     if (!framework || framework.length === 0) return [];
 
-    // Map narrative content to slide topics for body text
-    const contentMap: Record<string, string> = {};
-    for (const tab of tabs) {
-      if (tab.key === "deck" || tab.key === "boardDeck") continue;
-      for (const section of tab.sections) {
-        if (section.content) {
-          contentMap[section.label.toLowerCase()] = section.content;
-          contentMap[section.key] = section.content;
-        }
-      }
-    }
-
     return framework.map((slide: any, idx: number) => {
       const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
       const slideType = slide?.metadata?.slideType || (idx === 0 ? "headline" : "split");
-      const visualDirection = slide?.metadata?.visualDirection || "minimal";
-
-      // Match slide content from narrative data
-      let body = "";
       const headlineLower = headline.toLowerCase();
-      
-      // Try to match by headline keywords to narrative sections
-      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) {
-        body = d.thesis?.content || d.thesis || "";
-      } else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) {
-        body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n\n") : (d.marketLogic || d.marketAnalysis || "");
-      } else if (headlineLower.includes("problem") || headlineLower.includes("pain")) {
-        body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
-      } else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) {
-        body = d.narrativeStructure?.newModel || d.solutionFramework || "";
-      } else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("competitive") || headlineLower.includes("moat")) {
-        body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
-      } else if (headlineLower.includes("vision") || headlineLower.includes("future")) {
-        body = d.narrativeStructure?.theFuture || d.vision || "";
-      } else if (headlineLower.includes("risk")) {
-        body = d.risks || d.risksFocus || "";
-      } else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) {
-        body = d.roadmapNarrative || d.nextMilestones || "";
-      } else if (headlineLower.includes("team")) {
-        body = "";
-      } else if (headlineLower.includes("ask") || headlineLower.includes("funding") || headlineLower.includes("raise")) {
-        body = d.askUpdate || "";
-      } else if (headlineLower.includes("metric") || headlineLower.includes("traction") || headlineLower.includes("kpi")) {
-        body = d.metricsNarrative || d.metrics || "";
-      } else if (headlineLower.includes("summary") || headlineLower.includes("executive")) {
-        body = d.executiveSummary || "";
-      } else if (headlineLower.includes("positioning")) {
-        body = d.positioning || "";
-      } else {
-        // Fallback: use the slide's own body if it's an object
-        body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
-      }
+      let body = "";
 
-      return { headline, body, slideType, visualDirection, idx };
+      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) body = d.thesis?.content || d.thesis || "";
+      else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n\n") : (d.marketLogic || d.marketAnalysis || "");
+      else if (headlineLower.includes("problem") || headlineLower.includes("pain")) body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
+      else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) body = d.narrativeStructure?.newModel || d.solutionFramework || "";
+      else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("competitive") || headlineLower.includes("moat")) body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
+      else if (headlineLower.includes("vision") || headlineLower.includes("future")) body = d.narrativeStructure?.theFuture || d.vision || "";
+      else if (headlineLower.includes("risk")) body = d.risks || d.risksFocus || "";
+      else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) body = d.roadmapNarrative || d.nextMilestones || "";
+      else if (headlineLower.includes("team")) body = "";
+      else if (headlineLower.includes("ask") || headlineLower.includes("funding") || headlineLower.includes("raise")) body = d.askUpdate || "";
+      else if (headlineLower.includes("metric") || headlineLower.includes("traction") || headlineLower.includes("kpi")) body = d.metricsNarrative || d.metrics || "";
+      else if (headlineLower.includes("summary") || headlineLower.includes("executive")) body = d.executiveSummary || "";
+      else if (headlineLower.includes("positioning")) body = d.positioning || "";
+      else body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
+
+      return { headline, body, slideType, idx };
     });
   };
 
@@ -107,38 +74,30 @@ export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp }: Prop
       const titleSlide = pptx.addSlide();
       titleSlide.background = { color: BG };
       titleSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: ACCENT } });
-      titleSlide.addText((output as any).title || "Narrative Deck", {
-        x: 0.8, y: 2, w: 8.4, h: 1.5, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center",
-      });
-      titleSlide.addText(output.mode.replace(/_/g, " ").toUpperCase(), {
-        x: 0.8, y: 3.6, w: 8.4, fontSize: 14, fontFace: "Arial", color: ACCENT, align: "center", charSpacing: 4,
-      });
-      titleSlide.addText("Generated by Rhetoric", {
-        x: 0.8, y: 5, w: 8.4, fontSize: 10, fontFace: "Arial", color: MUTED, align: "center",
-      });
+      titleSlide.addText((output as any).title || "Narrative Deck", { x: 0.8, y: 2, w: 8.4, h: 1.5, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center" });
+      titleSlide.addText(output.mode.replace(/_/g, " ").toUpperCase(), { x: 0.8, y: 3.6, w: 8.4, fontSize: 14, fontFace: "Arial", color: ACCENT, align: "center", charSpacing: 4 });
 
-      // Generate ONLY deck framework slides with real content
+      // Only add watermark for free tier
+      if (!isPro) {
+        titleSlide.addText("Generated by Rhetoric", { x: 0.8, y: 5, w: 8.4, fontSize: 10, fontFace: "Arial", color: MUTED, align: "center" });
+      }
+
       const deckSlides = getDeckSlides();
 
       if (deckSlides.length === 0) {
-        // Fallback: if no deck framework, create slides from tab content
         for (const tab of tabs) {
           for (const section of tab.sections) {
             if (!section.content?.trim()) continue;
             const slide = pptx.addSlide();
             slide.background = { color: BG };
             slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: ACCENT } });
-            slide.addText(section.label, {
-              x: 0.6, y: 0.7, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG,
-            });
-            slide.addText(section.content, {
-              x: 0.6, y: 1.6, w: 8.8, h: 3.6, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
-            });
+            slide.addText(section.label, { x: 0.6, y: 0.7, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG });
+            slide.addText(section.content, { x: 0.6, y: 1.6, w: 8.8, h: 3.6, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top" });
+            if (!isPro) slide.addText("Generated by Rhetoric", { x: 7, y: 5.1, w: 2.8, fontSize: 8, fontFace: "Arial", color: MUTED, align: "right" });
           }
         }
       } else {
         const layouts = ["headline", "split", "bullets", "headline-body"];
-        
         for (const ds of deckSlides) {
           const slide = pptx.addSlide();
           slide.background = { color: BG };
@@ -149,52 +108,31 @@ export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp }: Prop
           const bodyText = lines.join("\n");
           const isBulletContent = lines.length >= 3 && lines.every((l: string) => l.length < 200);
 
-          // Slide number caption
-          slide.addText(`${ds.idx + 1} / ${deckSlides.length}`, {
-            x: 8.2, y: 5.1, w: 1.5, fontSize: 9, fontFace: "Arial", color: MUTED, align: "right",
-          });
+          slide.addText(`${ds.idx + 1} / ${deckSlides.length}`, { x: 8.2, y: 5.1, w: 1.5, fontSize: 9, fontFace: "Arial", color: MUTED, align: "right" });
+          // Free tier watermark per slide
+          if (!isPro) slide.addText("Generated by Rhetoric", { x: 0.3, y: 5.1, w: 3, fontSize: 8, fontFace: "Arial", color: MUTED, align: "left" });
 
-          if (layout === "headline" || (layout === "headline" && !ds.body)) {
-            // Big centered headline
-            slide.addText(ds.headline, {
-              x: 0.8, y: 1.5, w: 8.4, h: 2, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center", valign: "middle",
-            });
+          if (layout === "headline") {
+            slide.addText(ds.headline, { x: 0.8, y: 1.5, w: 8.4, h: 2, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center", valign: "middle" });
             if (bodyText) {
               slide.addShape(pptx.ShapeType.rect, { x: 3.5, y: 3.7, w: 3, h: 0.03, fill: { color: ACCENT } });
-              slide.addText(bodyText.slice(0, 400), {
-                x: 1.2, y: 4, w: 7.6, h: 1.2, fontSize: 14, fontFace: "Arial", color: FG, align: "center", lineSpacingMultiple: 1.4, valign: "top",
-              });
+              slide.addText(bodyText.slice(0, 400), { x: 1.2, y: 4, w: 7.6, h: 1.2, fontSize: 14, fontFace: "Arial", color: FG, align: "center", lineSpacingMultiple: 1.4, valign: "top" });
             }
           } else if (layout === "split" && lines.length > 1) {
-            slide.addText(ds.headline, {
-              x: 0.6, y: 0.6, w: 3.8, h: 1.2, fontSize: 36, fontFace: "Arial", bold: true, color: FG, valign: "top",
-            });
+            slide.addText(ds.headline, { x: 0.6, y: 0.6, w: 3.8, h: 1.2, fontSize: 36, fontFace: "Arial", bold: true, color: FG, valign: "top" });
             slide.addShape(pptx.ShapeType.rect, { x: 4.7, y: 0.6, w: 0.02, h: 4.2, fill: { color: ACCENT_DIM } });
-            slide.addText(bodyText, {
-              x: 5.0, y: 0.6, w: 4.4, h: 4.4, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
-            });
-          } else if ((layout === "bullets" || isBulletContent || layout === "framework") && lines.length >= 2) {
-            slide.addText(ds.headline, {
-              x: 0.6, y: 0.5, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG,
-            });
+            slide.addText(bodyText, { x: 5.0, y: 0.6, w: 4.4, h: 4.4, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top" });
+          } else if ((layout === "bullets" || isBulletContent) && lines.length >= 2) {
+            slide.addText(ds.headline, { x: 0.6, y: 0.5, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG });
             const bulletRows = lines.slice(0, 8).map((line: string) => ({
               text: line.replace(/^[-•*]\s*/, ""),
               options: { fontSize: 14, fontFace: "Arial", color: FG, bullet: { code: "2022", color: ACCENT }, lineSpacingMultiple: 1.5, paraSpaceAfter: 6 },
             }));
-            slide.addText(bulletRows as any, {
-              x: 0.8, y: 1.5, w: 8.4, h: 3.8, valign: "top",
-            });
+            slide.addText(bulletRows as any, { x: 0.8, y: 1.5, w: 8.4, h: 3.8, valign: "top" });
           } else {
-            // headline-body or default
-            slide.addText(ds.headline, {
-              x: 0.6, y: 0.5, w: 8.8, h: 1.2, fontSize: 40, fontFace: "Arial", bold: true, color: FG, valign: "top",
-            });
+            slide.addText(ds.headline, { x: 0.6, y: 0.5, w: 8.8, h: 1.2, fontSize: 40, fontFace: "Arial", bold: true, color: FG, valign: "top" });
             slide.addShape(pptx.ShapeType.rect, { x: 0.6, y: 1.9, w: 2, h: 0.03, fill: { color: ACCENT } });
-            if (bodyText) {
-              slide.addText(bodyText, {
-                x: 0.6, y: 2.3, w: 8.8, h: 3, fontSize: 15, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
-              });
-            }
+            if (bodyText) slide.addText(bodyText, { x: 0.6, y: 2.3, w: 8.8, h: 3, fontSize: 15, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top" });
           }
         }
       }
@@ -228,47 +166,47 @@ export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp }: Prop
     toast.success("PDF export opened in new tab.");
   };
 
-  const exportMarkdown = () => {
+  const exportDocx = async () => {
     setOpen(false);
+    // Generate a simple HTML-based .doc file (universally openable by Word)
     const content = tabs.map(tab => {
-      const sectionContent = tab.sections.map(s => `### ${s.label}\n\n${s.content}`).join("\n\n---\n\n");
-      return `## ${tab.label}\n\n${sectionContent}`;
-    }).join("\n\n===\n\n");
-    const md = `# ${(output as any).title || "Narrative Export"}\n\n${content}`;
-    const blob = new Blob([md], { type: "text/markdown" });
+      const sectionContent = tab.sections.map(s => `<h3>${s.label}</h3><p>${(s.content || "").replace(/\n/g, "<br/>")}</p>`).join("<hr/>");
+      return `<h2>${tab.label}</h2>${sectionContent}`;
+    }).join("");
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8"><title>${(output as any).title || "Export"}</title>
+      <style>body{font-family:Arial,sans-serif;color:#222;line-height:1.6;max-width:700px;margin:40px auto}
+      h1{font-size:24pt}h2{font-size:18pt;border-bottom:2px solid #3b82f6;padding-bottom:6px;margin-top:28px}
+      h3{font-size:14pt;color:#444;margin-top:16px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}
+      p{font-size:11pt}</style></head>
+      <body><h1>${(output as any).title || "Narrative Export"}</h1>${content}</body></html>`;
+    const blob = new Blob([html], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(output as any).title || "Rhetoric_Export"}.md`;
+    a.download = `${(output as any).title || "Rhetoric_Export"}.doc`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Exported as Markdown.");
+    toast.success("Exported as Word document.");
   };
 
   const menuItems = [
     { icon: Presentation, label: "PowerPoint (.pptx)", onClick: exportPptx, pro: true },
     { icon: FileDown, label: "PDF (Print)", onClick: exportPdf, pro: true },
-    { icon: FileText, label: "Markdown (.md)", onClick: exportMarkdown, pro: false },
+    { icon: FileText, label: "Word (.doc)", onClick: exportDocx, pro: false },
     { icon: File, label: "Google Slides", onClick: () => { setOpen(false); toast.info("Google Slides export coming soon."); }, soon: true },
     { icon: File, label: "Google Docs", onClick: () => { setOpen(false); toast.info("Google Docs export coming soon."); }, soon: true },
   ];
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="text-xs px-3 py-1.5 border border-border rounded-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-      >
+      <button onClick={() => setOpen(!open)} className="text-xs px-3 py-1.5 border border-border rounded-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
         <Download className="h-3 w-3" />Export<ChevronDown className="h-3 w-3" />
       </button>
       {open && (
         <div className="absolute top-full mt-1 right-0 w-56 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in py-1">
           {menuItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={item.onClick}
-              className="w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors flex items-center gap-2 text-foreground"
-            >
+            <button key={item.label} onClick={item.onClick} className="w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors flex items-center gap-2 text-foreground">
               <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
               {item.label}
               {item.soon && <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">Soon</span>}

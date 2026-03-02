@@ -4,6 +4,40 @@ import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Target, TrendingUp, Sh
 
 interface Props { output: NarrativeOutputData; isPro: boolean; }
 
+function getReadinessLabel(mode: string): string {
+  switch (mode) {
+    case "fundraising": return "Fundraise Readiness";
+    case "board_update": return "Board Readiness";
+    case "strategy": return "Strategy Readiness";
+    case "product_vision": return "Narrative Readiness";
+    case "investor_update": return "Investor Readiness";
+    default: return "Narrative Readiness";
+  }
+}
+
+function getScoreLabel(key: string, mode: string): string {
+  // Adapt labels per mode
+  if (mode === "board_update") {
+    const labels: Record<string, string> = {
+      clarity: "Clarity", marketFraming: "Metrics Coverage", differentiation: "Action Items",
+      riskTransparency: "Risk Transparency", persuasiveStructure: "Decision Framing",
+    };
+    return labels[key] || key;
+  }
+  if (mode === "strategy") {
+    const labels: Record<string, string> = {
+      clarity: "Clarity", marketFraming: "Market Framing", differentiation: "Differentiation",
+      riskTransparency: "Risk Assessment", persuasiveStructure: "Strategic Logic",
+    };
+    return labels[key] || key;
+  }
+  const labels: Record<string, string> = {
+    clarity: "Clarity", marketFraming: "Market Framing", differentiation: "Differentiation",
+    riskTransparency: "Risk Transparency", persuasiveStructure: "Persuasive Structure",
+  };
+  return labels[key] || key;
+}
+
 function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
   const score = output.score;
   const d = output.data as any;
@@ -98,20 +132,9 @@ function getScoreColor(value: number) {
   return "bg-destructive";
 }
 
-function getScoreLabel(key: string) {
-  const labels: Record<string, string> = {
-    clarity: "Clarity",
-    marketFraming: "Market Framing",
-    differentiation: "Differentiation",
-    riskTransparency: "Risk Transparency",
-    persuasiveStructure: "Persuasive Structure",
-  };
-  return labels[key] || key;
-}
-
 export function ReadinessIndexCard({ output, isPro }: Props) {
   const readiness = computeReadiness(output);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [detailTab, setDetailTab] = useState<"scores" | "gaps" | "swot">("scores");
   const score = output.score;
   const overall = score?.overall || 50;
@@ -119,30 +142,28 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
   const gaps = score?.gaps || [];
   const improvements = score?.improvements || [];
   const strengths = score?.strengths || [];
+  const mode = output.mode;
 
   return (
     <div>
       {/* Horizontal scorecard bar */}
       <div className="flex items-center gap-6 flex-wrap">
-        {/* Score */}
         <div className="flex items-center gap-3 shrink-0">
           <span className={`text-2xl font-bold tabular-nums ${getLevelColor(readiness.level)}`}>{overall}</span>
           <div>
-            <p className="text-xs font-medium text-foreground leading-tight">Capital Readiness</p>
+            <p className="text-xs font-medium text-foreground leading-tight">{getReadinessLabel(mode)}</p>
             <p className={`text-[11px] font-semibold ${getLevelColor(readiness.level)}`}>{readiness.level}</p>
           </div>
         </div>
 
         <div className="w-px h-8 bg-border hidden sm:block" />
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {readiness.checklist.map((item) => (
             <span key={item.label}>{getStatusBadge(item)}</span>
           ))}
         </div>
 
-        {/* Expand toggle */}
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm shrink-0"
@@ -155,7 +176,6 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
       {/* Expanded detail panel */}
       {expanded && (
         <div className="mt-5 pt-5 border-t border-border animate-fade-in">
-          {/* Detail tabs */}
           <div className="flex gap-1 mb-5">
             {[
               { key: "scores" as const, label: "Score Breakdown" },
@@ -166,9 +186,7 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
                 key={tab.key}
                 onClick={() => setDetailTab(tab.key)}
                 className={`text-[11px] px-3 py-1.5 rounded-sm transition-colors ${
-                  detailTab === tab.key
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                  detailTab === tab.key ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab.label}
@@ -180,22 +198,17 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
             <div className="space-y-3">
               {Object.entries(components).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
-                  <span className="text-[11px] text-muted-foreground w-32 shrink-0">{getScoreLabel(key)}</span>
+                  <span className="text-[11px] text-muted-foreground w-32 shrink-0">{getScoreLabel(key, mode)}</span>
                   <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${getScoreColor(value)}`}
-                      style={{ width: `${value}%` }}
-                    />
+                    <div className={`h-full rounded-full transition-all ${getScoreColor(value)}`} style={{ width: `${value}%` }} />
                   </div>
-                  <span className={`text-[11px] font-medium tabular-nums w-8 text-right ${
-                    value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-muted-foreground"
-                  }`}>{value}</span>
+                  <span className={`text-[11px] font-medium tabular-nums w-8 text-right ${value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-muted-foreground"}`}>{value}</span>
                 </div>
               ))}
-              {!components && (
-                <p className="text-xs text-muted-foreground">Score component data not available for this output.</p>
-              )}
             </div>
+          )}
+          {detailTab === "scores" && !components && (
+            <p className="text-xs text-muted-foreground">Score component data not available for this output.</p>
           )}
 
           {detailTab === "gaps" && (
@@ -241,44 +254,20 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
           {detailTab === "swot" && (
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-sm bg-emerald/5 border border-emerald/10">
-                <p className="text-[10px] font-semibold text-emerald uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <Check className="h-3 w-3" /> Strengths
-                </p>
-                {strengths.length > 0 ? (
-                  <ul className="space-y-1.5">
-                    {strengths.map((s, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {s}</li>)}
-                  </ul>
-                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+                <p className="text-[10px] font-semibold text-emerald uppercase tracking-wider mb-2 flex items-center gap-1"><Check className="h-3 w-3" /> Strengths</p>
+                {strengths.length > 0 ? (<ul className="space-y-1.5">{strengths.map((s, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {s}</li>)}</ul>) : <p className="text-[11px] text-muted-foreground">—</p>}
               </div>
               <div className="p-3 rounded-sm bg-yellow-400/5 border border-yellow-400/10">
-                <p className="text-[10px] font-semibold text-yellow-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> Weaknesses
-                </p>
-                {gaps.length > 0 ? (
-                  <ul className="space-y-1.5">
-                    {gaps.map((g, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {g}</li>)}
-                  </ul>
-                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+                <p className="text-[10px] font-semibold text-yellow-400 uppercase tracking-wider mb-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Weaknesses</p>
+                {gaps.length > 0 ? (<ul className="space-y-1.5">{gaps.map((g, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {g}</li>)}</ul>) : <p className="text-[11px] text-muted-foreground">—</p>}
               </div>
               <div className="p-3 rounded-sm bg-electric/5 border border-electric/10">
-                <p className="text-[10px] font-semibold text-electric uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <Target className="h-3 w-3" /> Opportunities
-                </p>
-                {improvements.length > 0 ? (
-                  <ul className="space-y-1.5">
-                    {improvements.map((o, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {o}</li>)}
-                  </ul>
-                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+                <p className="text-[10px] font-semibold text-electric uppercase tracking-wider mb-2 flex items-center gap-1"><Target className="h-3 w-3" /> Opportunities</p>
+                {improvements.length > 0 ? (<ul className="space-y-1.5">{improvements.map((o, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {o}</li>)}</ul>) : <p className="text-[11px] text-muted-foreground">—</p>}
               </div>
               <div className="p-3 rounded-sm bg-destructive/5 border border-destructive/10">
-                <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <Shield className="h-3 w-3" /> Threats
-                </p>
-                {readiness.missing.length > 0 ? (
-                  <ul className="space-y-1.5">
-                    {readiness.missing.map((t, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {t}</li>)}
-                  </ul>
-                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+                <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><Shield className="h-3 w-3" /> Threats</p>
+                {readiness.missing.length > 0 ? (<ul className="space-y-1.5">{readiness.missing.map((t, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {t}</li>)}</ul>) : <p className="text-[11px] text-muted-foreground">—</p>}
               </div>
             </div>
           )}
