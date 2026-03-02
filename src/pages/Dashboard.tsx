@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { LandingPage } from "@/components/LandingPage";
+import { ProductView } from "@/components/ProductView";
 
-export default function Index() {
+export default function Dashboard() {
   const navigate = useNavigate();
-  const [checked, setChecked] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard", { replace: true });
+      if (!session) {
+        navigate("/auth?next=/dashboard", { replace: true });
       } else {
-        setChecked(true);
+        setReady(true);
       }
     });
   }, [navigate]);
 
-  if (!checked) return null;
-  return <LandingPage />;
+  if (!ready) return null;
+  return <ProductView />;
 }
