@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RefinementTone } from "@/types/narrative";
-import { Loader2, Lock, Wand2 } from "lucide-react";
+import { Loader2, Lock, Pencil, ChevronDown } from "lucide-react";
 
 const REFINEMENTS: { label: string; tone: RefinementTone }[] = [
   { label: "Refine", tone: "refine" },
@@ -23,14 +23,10 @@ interface Props {
 export function OutputCard({ label, content, path, sectionKey, locked }: Props) {
   const { refineSection, refiningSection } = useDecksmith();
   const isRefining = refiningSection === sectionKey;
-  const [showTools, setShowTools] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
 
   return (
-    <div
-      className="group rounded-sm border border-border bg-card/40 p-6 mb-4 transition-colors hover:border-muted-foreground/15"
-      onMouseEnter={() => setShowTools(true)}
-      onMouseLeave={() => setShowTools(false)}
-    >
+    <div className="group rounded-sm border border-border bg-card/40 p-6 mb-4 transition-colors hover:border-muted-foreground/15">
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric/70">
           {label}
@@ -52,21 +48,38 @@ export function OutputCard({ label, content, path, sectionKey, locked }: Props) 
         )}
       </div>
 
+      {/* Always-visible refine trigger */}
       {!locked && (
-        <div className={`flex flex-wrap gap-1 mt-4 transition-all duration-200 ${
-          showTools ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none"
-        }`}>
-          <Wand2 className="h-3 w-3 text-muted-foreground/50 mr-1 mt-0.5" />
-          {REFINEMENTS.map((r) => (
+        <div className="mt-3 flex justify-end">
+          {!showRefine ? (
             <button
-              key={r.tone}
-              onClick={() => refineSection(sectionKey, path, r.tone)}
-              disabled={isRefining}
-              className="text-[10px] text-muted-foreground/60 px-2 py-0.5 rounded-sm hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30"
+              onClick={() => setShowRefine(true)}
+              className="text-[11px] text-muted-foreground/60 hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 rounded-sm hover:bg-accent"
             >
-              {r.label}
+              <Pencil className="h-3 w-3" />
+              Refine
+              <ChevronDown className="h-3 w-3" />
             </button>
-          ))}
+          ) : (
+            <div className="flex flex-wrap items-center gap-1 animate-fade-in">
+              {REFINEMENTS.map((r) => (
+                <button
+                  key={r.tone}
+                  onClick={() => { refineSection(sectionKey, path, r.tone); setShowRefine(false); }}
+                  disabled={isRefining}
+                  className="text-[10px] text-muted-foreground px-2.5 py-1 rounded-sm border border-border hover:text-foreground hover:bg-accent hover:border-muted-foreground/20 transition-colors disabled:opacity-30"
+                >
+                  {r.label}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowRefine(false)}
+                className="text-[10px] text-muted-foreground/40 hover:text-foreground px-1.5 py-1 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
