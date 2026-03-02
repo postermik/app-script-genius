@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { ReadinessIndex, NarrativeOutputData } from "@/types/narrative";
-import { Check, AlertTriangle, X, ArrowRight } from "lucide-react";
+import { Check, AlertTriangle, X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Props { output: NarrativeOutputData; isPro: boolean; }
 
@@ -12,36 +13,36 @@ function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
   const strengths: string[] = [];
 
   if (mode === "fundraising") {
-    checklist.push({ label: "Thesis Structured", status: d.thesis?.content ? "done" : "missing" });
-    checklist.push({ label: "Differentiation Framed", status: d.narrativeStructure?.whyThisWins ? "done" : "missing" });
-    checklist.push({ label: "Risks Addressed", status: d.risks && d.risks.length > 20 ? "done" : "warning" });
-    checklist.push({ label: "Deck Framework", status: d.deckFramework?.length >= 6 ? "done" : "warning" });
+    checklist.push({ label: "Thesis", status: d.thesis?.content ? "done" : "missing" });
+    checklist.push({ label: "Differentiation", status: d.narrativeStructure?.whyThisWins ? "done" : "missing" });
+    checklist.push({ label: "Risks", status: d.risks && d.risks.length > 20 ? "done" : "warning" });
+    checklist.push({ label: "Deck", status: d.deckFramework?.length >= 6 ? "done" : "warning" });
     checklist.push({ label: "Pitch Script", status: d.pitchScript ? "done" : "missing" });
     checklist.push({ label: "Market Logic", status: d.marketLogic?.length >= 2 ? "done" : "missing" });
     if (!d.thesis?.content) missing.push("Investment thesis needs development");
     if (!d.risks || d.risks.length < 20) missing.push("Risk articulation needs depth");
   } else if (mode === "board_update") {
-    checklist.push({ label: "Executive Summary", status: d.executiveSummary ? "done" : "missing" });
-    checklist.push({ label: "KPI Framing", status: d.metricsNarrative ? "done" : "warning" });
-    checklist.push({ label: "Forward Risks", status: d.risksFocus ? "done" : "warning" });
-    checklist.push({ label: "Strategic Decisions", status: d.boardDeckOutline?.length >= 4 ? "done" : "missing" });
+    checklist.push({ label: "Summary", status: d.executiveSummary ? "done" : "missing" });
+    checklist.push({ label: "KPIs", status: d.metricsNarrative ? "done" : "warning" });
+    checklist.push({ label: "Risks", status: d.risksFocus ? "done" : "warning" });
+    checklist.push({ label: "Decisions", status: d.boardDeckOutline?.length >= 4 ? "done" : "missing" });
     if (!d.risksFocus) missing.push("Forward-looking risks needed");
   } else if (mode === "strategy") {
-    checklist.push({ label: "Strategic Thesis", status: d.thesis ? "done" : "missing" });
-    checklist.push({ label: "Market Positioning", status: d.positioning ? "done" : "missing" });
-    checklist.push({ label: "Competitive Framework", status: d.competitiveFramework ? "done" : "warning" });
-    checklist.push({ label: "Market Analysis", status: d.marketAnalysis ? "done" : "missing" });
+    checklist.push({ label: "Thesis", status: d.thesis ? "done" : "missing" });
+    checklist.push({ label: "Positioning", status: d.positioning ? "done" : "missing" });
+    checklist.push({ label: "Competitive", status: d.competitiveFramework ? "done" : "warning" });
+    checklist.push({ label: "Market", status: d.marketAnalysis ? "done" : "missing" });
   } else if (mode === "product_vision") {
-    checklist.push({ label: "Vision Statement", status: d.vision ? "done" : "missing" });
-    checklist.push({ label: "Problem Definition", status: d.userProblem ? "done" : "missing" });
-    checklist.push({ label: "Solution Framework", status: d.solutionFramework ? "done" : "warning" });
+    checklist.push({ label: "Vision", status: d.vision ? "done" : "missing" });
+    checklist.push({ label: "Problem", status: d.userProblem ? "done" : "missing" });
+    checklist.push({ label: "Solution", status: d.solutionFramework ? "done" : "warning" });
     checklist.push({ label: "Roadmap", status: d.roadmapNarrative ? "done" : "missing" });
   } else if (mode === "investor_update") {
     checklist.push({ label: "Headline", status: d.headline ? "done" : "missing" });
-    checklist.push({ label: "Progress Report", status: d.progress ? "done" : "missing" });
+    checklist.push({ label: "Progress", status: d.progress ? "done" : "missing" });
     checklist.push({ label: "Metrics", status: d.metrics ? "done" : "warning" });
     checklist.push({ label: "Challenges", status: d.challenges ? "done" : "warning" });
-    checklist.push({ label: "Next Milestones", status: d.nextMilestones ? "done" : "missing" });
+    checklist.push({ label: "Milestones", status: d.nextMilestones ? "done" : "missing" });
     checklist.push({ label: "The Ask", status: d.askUpdate ? "done" : "missing" });
   }
 
@@ -55,8 +56,8 @@ function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
     level = mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready";
   } else if (overall >= 70 && ratio >= 0.7) { level = "Solid"; }
 
-  if (score?.strengths) strengths.push(...score.strengths.slice(0, 2));
-  if (score?.gaps) missing.push(...score.gaps.slice(0, 2));
+  if (score?.strengths) strengths.push(...score.strengths.slice(0, 3));
+  if (score?.gaps) missing.push(...score.gaps.slice(0, 3));
 
   let nextAction = "Continue refining sections to improve readiness.";
   if (mode === "fundraising") {
@@ -78,38 +79,87 @@ function getLevelColor(level: ReadinessIndex["level"]): string {
   }
 }
 
-function getStatusIcon(status: ReadinessIndex["checklist"][0]["status"]) {
-  switch (status) {
-    case "done": return <Check className="h-3.5 w-3.5 text-emerald" />;
-    case "warning": return <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" />;
-    case "missing": return <X className="h-3.5 w-3.5 text-muted-foreground/40" />;
+function getStatusBadge(item: ReadinessIndex["checklist"][0]) {
+  const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium";
+  switch (item.status) {
+    case "done":
+      return <span className={`${base} bg-emerald/10 text-emerald`}><Check className="h-3 w-3" />{item.label}</span>;
+    case "warning":
+      return <span className={`${base} bg-yellow-400/10 text-yellow-400`}><AlertTriangle className="h-3 w-3" />{item.label}</span>;
+    case "missing":
+      return <span className={`${base} bg-muted text-muted-foreground/50`}><X className="h-3 w-3" />{item.label}</span>;
   }
 }
 
 export function ReadinessIndexCard({ output, isPro }: Props) {
   const readiness = computeReadiness(output);
+  const [expanded, setExpanded] = useState(false);
+  const score = output.score?.overall || 50;
+
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      <div className="shrink-0">
-        <p className="text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-1.5">Capital Readiness</p>
-        <p className={`text-lg font-bold ${getLevelColor(readiness.level)}`}>{readiness.level}</p>
-      </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {readiness.checklist.map((item) => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            {getStatusIcon(item.status)}
-            <span className={`text-xs ${item.status === "done" ? "text-foreground/80" : item.status === "warning" ? "text-foreground/60" : "text-muted-foreground/40"}`}>{item.label}</span>
+    <div>
+      {/* Main horizontal scorecard bar */}
+      <div className="flex items-center gap-6 flex-wrap">
+        {/* Left: Score */}
+        <div className="flex items-center gap-3 shrink-0">
+          <span className={`text-2xl font-bold tabular-nums ${getLevelColor(readiness.level)}`}>{score}</span>
+          <div>
+            <p className="text-xs font-medium text-foreground leading-tight">Capital Readiness</p>
+            <p className={`text-[11px] font-semibold ${getLevelColor(readiness.level)}`}>{readiness.level}</p>
           </div>
-        ))}
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-border hidden sm:block" />
+
+        {/* Middle: Badges */}
+        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+          {readiness.checklist.map((item) => (
+            <span key={item.label}>{getStatusBadge(item)}</span>
+          ))}
+        </div>
+
+        {/* Right: CTA + expand toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 glow-blue">
+            {readiness.nextAction.length > 40 ? readiness.nextAction.slice(0, 38) + "…" : readiness.nextAction}
+            <ArrowRight className="h-3 w-3" />
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1"
+            title={expanded ? "Collapse" : "Show details"}
+          >
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
-      <div className="flex-1 hidden lg:flex gap-6">
-        {readiness.strengths.length > 0 && (<div><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Strengths</p><ul className="space-y-1">{readiness.strengths.map((s, i) => (<li key={i} className="text-[11px] text-foreground/80">{s}</li>))}</ul></div>)}
-        {readiness.missing.length > 0 && (<div><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">What's Missing</p><ul className="space-y-1">{readiness.missing.slice(0, 2).map((g, i) => (<li key={i} className="text-[11px] text-foreground/60">{g}</li>))}</ul></div>)}
-      </div>
-      <div className="shrink-0 hidden lg:block">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Next Action</p>
-        <p className="text-[11px] text-electric flex items-center gap-1">{readiness.nextAction}<ArrowRight className="h-3 w-3" /></p>
-      </div>
+
+      {/* Collapsible details */}
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-border flex gap-8 animate-fade-in flex-wrap">
+          {readiness.strengths.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Strengths</p>
+              <ul className="space-y-1">
+                {readiness.strengths.map((s, i) => (
+                  <li key={i} className="text-[11px] text-foreground/80">✓ {s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {readiness.missing.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Gaps</p>
+              <ul className="space-y-1">
+                {readiness.missing.map((g, i) => (
+                  <li key={i} className="text-[11px] text-foreground/60">• {g}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
