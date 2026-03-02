@@ -10,20 +10,42 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
 
   const nextUrl = searchParams.get("next") || "/dashboard";
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate(nextUrl, { replace: true });
+    console.log("[Auth] Mounting, checking session...");
+
+    // One-time session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[Auth] getSession result:", session ? "HAS SESSION" : "NO SESSION");
+      if (session) {
+        console.log("[Auth] Already authenticated, redirecting to", nextUrl);
+        navigate(nextUrl, { replace: true });
+      } else {
+        setChecking(false);
+      }
     });
+
+    // Listen for future auth changes (sign-in, sign-out) but NOT initial session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[Auth] onAuthStateChange:", event, session ? "HAS SESSION" : "NO SESSION");
+      if (event === "INITIAL_SESSION") return; // Skip — handled by getSession above
+      if (event === "SIGNED_IN" && session) {
+        console.log("[Auth] SIGNED_IN, navigating to", nextUrl);
+        navigate(nextUrl, { replace: true });
+      }
+    });
+
     return () => subscription.unsubscribe();
   }, [navigate, nextUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log("[Auth] Submitting", isSignUp ? "signUp" : "signIn", "for", email);
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
@@ -35,14 +57,17 @@ export default function Auth() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate(nextUrl, { replace: true });
+        console.log("[Auth] signIn successful, onAuthStateChange should handle redirect");
       }
     } catch (err: any) {
+      console.error("[Auth] Error:", err.message);
       toast.error(err.message || "Authentication failed.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (checking) return null;
 
   return (
     <div className="flex-1 flex items-center justify-center px-6">
