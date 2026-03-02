@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile } from "@/types/narrative";
+import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
@@ -39,6 +39,11 @@ interface DecksmithContextType {
   addOutreachEntry: (entry: OutreachEntry) => Promise<void>;
   updateOutreachEntry: (index: number, entry: OutreachEntry) => Promise<void>;
   removeOutreachEntry: (index: number) => Promise<void>;
+  activeAudience: AudienceType;
+  setActiveAudience: (a: AudienceType) => void;
+  audienceVariants: Record<string, NarrativeOutputData>;
+  adaptForAudience: (audience: AudienceType) => Promise<void>;
+  isAdapting: boolean;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -63,6 +68,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [currentVersion, setCurrentVersion] = useState(1);
   const [outreachTracker, setOutreachTracker] = useState<OutreachEntry[]>([]);
   const [devSimPro, setDevSimPro] = useState(false);
+  const [activeAudience, setActiveAudience] = useState<AudienceType>("general");
+  const [audienceVariants, setAudienceVariants] = useState<Record<string, NarrativeOutputData>>({});
+  const [isAdapting, setIsAdapting] = useState(false);
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -242,7 +250,50 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setVersions([]);
     setCurrentVersion(1);
     setOutreachTracker([]);
+    setActiveAudience("general");
+    setAudienceVariants({});
   }, []);
+
+  const adaptForAudience = useCallback(async (audience: AudienceType) => {
+    if (!output || !rawInput.trim()) return;
+    // If we already have this variant cached, just switch
+    if (audienceVariants[audience]) {
+      setActiveAudience(audience);
+      setOutput(audienceVariants[audience]);
+      return;
+    }
+    setIsAdapting(true);
+    try {
+      const audiencePrompts: Record<AudienceType, string> = {
+        general: "",
+        investors: "Adapt this for external investors. Be risk-aware, returns-focused, and persuasive. Emphasize market opportunity, traction, and exit potential.",
+        board: "Adapt this for a board of directors. Be metrics-heavy, strategic, and concise. Focus on governance, KPIs, and decision items.",
+        internal: "Adapt this for internal employees. Be transparent, motivational, and operational. Focus on team impact, roadmap, and company vision.",
+      };
+      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+        body: { mode: "generate", input: `${rawInput}\n\n---\nAUDIENCE INSTRUCTION: ${audiencePrompts[audience]}`, outputMode: output.mode, voiceProfile },
+      });
+      if (error) throw error;
+      if (!data?.content) throw new Error("Empty response");
+      const cleaned = data.content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      const parsed = JSON.parse(cleaned);
+      setAudienceVariants(prev => ({ ...prev, [audience]: parsed }));
+      setActiveAudience(audience);
+      setOutput(parsed);
+      // Save variant to project
+      if (currentProjectId) {
+        const existing = audienceVariants;
+        const allVariants = { ...existing, [audience]: parsed };
+        await supabase.from("projects").update({ audience_variants: allVariants as any }).eq("id", currentProjectId);
+      }
+      toast.success(`Adapted for ${audience} audience.`);
+    } catch (e: any) {
+      console.error("Audience adaptation error:", e);
+      toast.error("Failed to adapt for audience. Try again.");
+    } finally {
+      setIsAdapting(false);
+    }
+  }, [output, rawInput, audienceVariants, voiceProfile, currentProjectId]);
 
   const openProject = useCallback((project: Project) => {
     setRawInput(project.raw_input);
@@ -335,6 +386,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         currentProjectId, openProject, deleteProject, duplicateProject,
         versions, currentVersion, saveVersion, loadVersion,
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
+        activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
       }}
     >
       {children}
