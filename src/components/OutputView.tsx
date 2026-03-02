@@ -5,6 +5,9 @@ import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
 import { OutreachTracker } from "@/components/OutreachTracker";
 import { ExportDropdown } from "@/components/ExportDropdown";
 import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
+import { ThesisTab } from "@/components/ThesisTab";
+import { NarrativeArcTab } from "@/components/NarrativeArcTab";
+import { PitchPrepTab } from "@/components/PitchPrepTab";
 import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +100,9 @@ export function OutputView() {
 
   const slidePreviewData = getDeckPreviewSlides();
   const isDeckTab = currentTab?.key === "deck" || currentTab?.key === "boardDeck";
+  const isThesisTab = currentTab?.key === "thesis" && output.mode === "fundraising";
+  const isNarrativeTab = currentTab?.key === "narrative";
+  const isPitchTab = currentTab?.key === "pitch";
 
   const handleTitleEdit = () => { setTitleValue(projectTitle); setEditingTitle(true); };
   const handleTitleSave = async () => {
@@ -127,11 +133,9 @@ export function OutputView() {
       setActiveAudience("general");
       setShowAudiences(false);
     } else if (audienceVariants && audienceVariants[audience]) {
-      // Already cached, instant switch
       setActiveAudience(audience);
       setShowAudiences(false);
     } else {
-      // Needs regeneration - confirm first
       setAudienceConfirm(audience);
     }
   };
@@ -278,9 +282,24 @@ export function OutputView() {
                   onThemeChange={setDeckTheme}
                 />
               )}
-              {currentTab.sections.map((section) => (
-                <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
-              ))}
+
+              {isThesisTab && (
+                <ThesisTab sections={currentTab.sections} />
+              )}
+
+              {isNarrativeTab && (
+                <NarrativeArcTab sections={currentTab.sections} />
+              )}
+
+              {isPitchTab && (
+                <PitchPrepTab sections={currentTab.sections} outputData={output.data} />
+              )}
+
+              {!isDeckTab && !isThesisTab && !isNarrativeTab && !isPitchTab && (
+                currentTab.sections.map((section) => (
+                  <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
+                ))
+              )}
             </div>
           )}
         </div>
@@ -309,9 +328,9 @@ export function buildTabs(output: any): TabConfig[] {
   if (mode === "fundraising") {
     return [
       { key: "thesis", label: "Thesis", sections: [{ key: "thesis-content", path: "thesis.content", label: "Investment Thesis", content: d.thesis?.content || "" }, { key: "thesis-insight", path: "thesis.coreInsight", label: "Core Insight", content: d.thesis?.coreInsight || "" }, { key: "market-logic", path: "marketLogic", label: "Market Logic", content: Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || "") }, { key: "why-now", path: "whyNow", label: "Why Now", content: d.whyNow || "" }, { key: "risks", path: "risks", label: "Risks", content: d.risks || "" }] },
-      { key: "narrative", label: "Narrative Structure", sections: [{ key: "world-today", path: "narrativeStructure.worldToday", label: "The World Today", content: d.narrativeStructure?.worldToday || "" }, { key: "breaking-point", path: "narrativeStructure.breakingPoint", label: "The Breaking Point", content: d.narrativeStructure?.breakingPoint || "" }, { key: "new-model", path: "narrativeStructure.newModel", label: "The New Model", content: d.narrativeStructure?.newModel || "" }, { key: "why-wins", path: "narrativeStructure.whyThisWins", label: "Why This Wins", content: d.narrativeStructure?.whyThisWins || "" }, { key: "the-future", path: "narrativeStructure.theFuture", label: "The Future", content: d.narrativeStructure?.theFuture || "" }] },
-      { key: "pitch", label: "Pitch Script", sections: [{ key: "pitch-script", path: "pitchScript", label: "60-Second Pitch", content: d.pitchScript || "" }] },
-      { key: "deck", label: "Deck Framework", sections: (d.deckFramework || []).map((h: any, i: number) => ({ key: `deck-${i}`, path: `deckFramework.${i}`, label: `Slide ${i + 1}`, content: typeof h === "string" ? h : h.headline || JSON.stringify(h) })) },
+      { key: "narrative", label: "Narrative Arc", sections: [{ key: "world-today", path: "narrativeStructure.worldToday", label: "The World Today", content: d.narrativeStructure?.worldToday || "" }, { key: "breaking-point", path: "narrativeStructure.breakingPoint", label: "The Breaking Point", content: d.narrativeStructure?.breakingPoint || "" }, { key: "new-model", path: "narrativeStructure.newModel", label: "The New Model", content: d.narrativeStructure?.newModel || "" }, { key: "why-wins", path: "narrativeStructure.whyThisWins", label: "Why This Wins", content: d.narrativeStructure?.whyThisWins || "" }, { key: "the-future", path: "narrativeStructure.theFuture", label: "The Future", content: d.narrativeStructure?.theFuture || "" }] },
+      { key: "pitch", label: "Pitch Prep", sections: [{ key: "pitch-script", path: "pitchScript", label: "60-Second Pitch", content: d.pitchScript || "" }] },
+      { key: "deck", label: "Deck Framework", sections: [] },
     ];
   }
   if (mode === "board_update") {
@@ -319,7 +338,7 @@ export function buildTabs(output: any): TabConfig[] {
       { key: "summary", label: "Executive Summary", sections: [{ key: "exec-summary", path: "executiveSummary", label: "Executive Summary", content: d.executiveSummary || "" }] },
       { key: "metrics", label: "Metrics Narrative", sections: [{ key: "metrics-narr", path: "metricsNarrative", label: "Metrics Narrative", content: d.metricsNarrative || "" }] },
       { key: "risks", label: "Risks & Focus", sections: [{ key: "risks-focus", path: "risksFocus", label: "Risks & Focus", content: d.risksFocus || "" }] },
-      { key: "boardDeck", label: "Board Deck Outline", sections: (d.boardDeckOutline || []).map((h: any, i: number) => ({ key: `board-${i}`, path: `boardDeckOutline.${i}`, label: `Slide ${i + 1}`, content: typeof h === "string" ? h : h.headline || JSON.stringify(h) })) },
+      { key: "boardDeck", label: "Board Deck Outline", sections: [] },
     ];
   }
   if (mode === "strategy") {

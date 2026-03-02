@@ -18,12 +18,45 @@ interface Props {
   path: string;
   sectionKey: string;
   locked?: boolean;
+  refineOnly?: boolean;
 }
 
-export function OutputCard({ label, content, path, sectionKey, locked }: Props) {
+export function OutputCard({ label, content, path, sectionKey, locked, refineOnly }: Props) {
   const { refineSection, refiningSection } = useDecksmith();
   const isRefining = refiningSection === sectionKey;
   const [showRefine, setShowRefine] = useState(false);
+
+  // Render only the refine button inline (for use inside other components)
+  if (refineOnly) {
+    return (
+      <div className="flex justify-end">
+        {!showRefine ? (
+          <button
+            onClick={() => setShowRefine(true)}
+            className="text-xs text-electric/80 hover:text-electric flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-sm border border-electric/20 hover:bg-electric/5 hover:border-electric/30 font-medium"
+          >
+            <Pencil className="h-3 w-3" />
+            Refine
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 animate-fade-in">
+            {REFINEMENTS.map((r) => (
+              <button
+                key={r.tone}
+                onClick={() => { refineSection(sectionKey, path, r.tone); setShowRefine(false); }}
+                disabled={isRefining}
+                className="text-xs text-foreground/75 px-3 py-1.5 rounded-sm border border-border hover:text-electric hover:bg-electric/5 hover:border-electric/20 transition-colors disabled:opacity-30 font-medium"
+              >
+                {r.label}
+              </button>
+            ))}
+            <button onClick={() => setShowRefine(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors">✕</button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="group rounded-sm accent-left-border card-gradient border border-border p-8 mb-6 transition-all hover:border-muted-foreground/20 hover:shadow-lg hover:shadow-electric/[0.03]">
@@ -48,7 +81,6 @@ export function OutputCard({ label, content, path, sectionKey, locked }: Props) 
         )}
       </div>
 
-      {/* Refine trigger - always visible */}
       {!locked && (
         <div className="mt-5 pt-4 border-t border-border/50 flex justify-end">
           {!showRefine ? (
@@ -72,12 +104,7 @@ export function OutputCard({ label, content, path, sectionKey, locked }: Props) 
                   {r.label}
                 </button>
               ))}
-              <button
-                onClick={() => setShowRefine(false)}
-                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowRefine(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors">✕</button>
             </div>
           )}
         </div>
