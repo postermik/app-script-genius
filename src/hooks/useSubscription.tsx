@@ -46,6 +46,36 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setState({ subscribed: false, productId: null, subscriptionEnd: null, loading: false });
         return;
       }
+
+      // Check for admin/forced tier override in profiles table first
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("forced_tier")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.forced_tier === "pro") {
+        console.log("[Subscription] forced_tier=pro override active");
+        setState({
+          subscribed: true,
+          productId: TIERS.pro.product_id,
+          subscriptionEnd: null,
+          loading: false,
+        });
+        return;
+      }
+      if (profile?.forced_tier === "hobby") {
+        console.log("[Subscription] forced_tier=hobby override active");
+        setState({
+          subscribed: true,
+          productId: TIERS.hobby.product_id,
+          subscriptionEnd: null,
+          loading: false,
+        });
+        return;
+      }
+
+      // Fall back to Stripe subscription check
       const { data, error } = await supabase.functions.invoke("check-subscription");
       if (error) throw error;
       setState({
