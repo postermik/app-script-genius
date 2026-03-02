@@ -49,8 +49,11 @@ export function ProductView() {
   useEffect(() => {
     if (!isGenerating) { setGenStep(0); return; }
     const interval = setInterval(() => {
-      setGenStep(prev => (prev + 1) % GENERATION_STEPS.length);
-    }, 3500);
+      setGenStep(prev => {
+        if (prev >= GENERATION_STEPS.length - 1) return prev; // Stay on final step, never loop
+        return prev + 1;
+      });
+    }, 7000);
     return () => clearInterval(interval);
   }, [isGenerating]);
 
@@ -113,8 +116,10 @@ export function ProductView() {
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-5 w-5 text-electric animate-spin shrink-0" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground transition-all">{GENERATION_STEPS[genStep]}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Step {genStep + 1} of {GENERATION_STEPS.length}</p>
+                    <p className={`text-sm font-medium text-foreground transition-all ${genStep >= GENERATION_STEPS.length - 1 ? "animate-pulse" : ""}`}>{GENERATION_STEPS[genStep]}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {genStep >= GENERATION_STEPS.length - 1 ? "Almost there..." : `Step ${genStep + 1} of ${GENERATION_STEPS.length}`}
+                    </p>
                   </div>
                 </div>
                 <Progress value={progressPercent} className="h-1.5 bg-muted" />

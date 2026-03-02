@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, Pencil } from "lucide-react";
+import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown } from "lucide-react";
 
 export interface SlideData {
   headline: string;
@@ -25,25 +25,21 @@ interface Props {
   onThemeChange: (theme: DeckTheme) => void;
 }
 
+const REFINE_OPTIONS = [
+  { value: "refine", label: "Refine" },
+  { value: "sharper", label: "Sharper" },
+  { value: "visionary", label: "Visionary" },
+  { value: "analytical", label: "Analytical" },
+  { value: "condense", label: "Condense" },
+  { value: "expand", label: "Expand" },
+];
+
 function getLayoutLabel(type?: string) {
   const labels: Record<string, string> = {
     headline: "Headline", chart: "Chart", quote: "Quote", framework: "Framework",
     roadmap: "Roadmap", financial: "Financial", split: "Split Layout",
   };
   return type ? labels[type] || type : "Content";
-}
-
-function getLayoutColor(type?: string) {
-  const colors: Record<string, string> = {
-    headline: "bg-electric/20 text-electric",
-    chart: "bg-emerald/20 text-emerald",
-    quote: "bg-indigo-400/20 text-indigo-400",
-    framework: "bg-yellow-400/20 text-yellow-400",
-    roadmap: "bg-purple-400/20 text-purple-400",
-    financial: "bg-orange-400/20 text-orange-400",
-    split: "bg-cyan-400/20 text-cyan-400",
-  };
-  return type ? colors[type] || "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground";
 }
 
 function getSlideReason(headline: string, idx: number, total: number): string {
@@ -61,7 +57,9 @@ function getSlideReason(headline: string, idx: number, total: number): string {
   if (h.includes("ask") || h.includes("funding")) return "The ask comes after you've built the case, maximizing likelihood of a yes.";
   if (h.includes("vision") || h.includes("future")) return "Vision slide paints the big picture and inspires action.";
   if (h.includes("roadmap") || h.includes("milestone")) return "Roadmap shows a clear plan and gives confidence in execution.";
-  return "This slide supports the overall narrative flow and structure.";
+  if (h.includes("summary") || h.includes("executive")) return "Executive summary gives decision-makers the key takeaway upfront.";
+  if (h.includes("competitive") || h.includes("landscape")) return "Competitive landscape shows you understand the field and where you fit.";
+  return "Supporting slide that reinforces the core narrative through additional context.";
 }
 
 function getThemePreviewColors(theme: DeckTheme) {
@@ -85,6 +83,7 @@ function getLightness(hex: string): number {
 
 export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [refineOpen, setRefineOpen] = useState<number | null>(null);
 
   if (slides.length === 0) return null;
 
@@ -140,24 +139,22 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               </label>
             </div>
           )}
-          <button onClick={() => {}} className="text-xs text-muted-foreground px-3 py-1.5 border border-dashed border-border rounded-sm cursor-not-allowed ml-auto font-medium" title="Coming Soon">
-            Upload Brand Guidelines
-          </button>
         </div>
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xs font-semibold tracking-[0.15em] uppercase text-electric">Slide Framework</h3>
-        <span className="text-sm text-muted-foreground">{activeCount} of {slides.length} slides in export</span>
+        <span className="text-[13px] text-secondary-foreground">{activeCount} of {slides.length} slides in export</span>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-5">Drag to reorder · Thumbs down to exclude from export · Changes apply to exported deck</p>
+      <p className="text-[13px] text-secondary-foreground mb-5">Drag to reorder · Thumbs down to exclude from export</p>
 
-      {/* Horizontal row layout */}
-      <div className="space-y-2">
+      {/* Slide cards */}
+      <div className="space-y-3">
         {orderedSlides.map((slide, i) => {
           const isExcluded = excludedSlides.has(slide.originalIdx);
+          const contentPreview = slide.content ? slide.content.slice(0, 80) : "";
           return (
             <div
               key={slide.originalIdx}
@@ -165,56 +162,89 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               onDragStart={() => handleDragStart(i)}
               onDragOver={e => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
-              className={`flex items-center gap-4 p-4 rounded-sm border transition-all ${
-                isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient"
+              className={`flex items-stretch gap-4 p-5 rounded-sm border transition-all min-h-[120px] ${
+                isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient accent-left-border"
               } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
             >
               {/* Drag handle */}
-              <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors shrink-0">
+              <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors shrink-0 flex items-center">
                 <GripVertical className="h-4 w-4" />
               </div>
 
               {/* Slide number */}
-              <span className="text-sm font-bold text-muted-foreground w-7 text-center shrink-0">{i + 1}</span>
+              <span className="text-base font-bold text-secondary-foreground w-7 text-center shrink-0 flex items-center justify-center">{i + 1}</span>
 
-              {/* Mini preview thumbnail */}
-              <div className="w-24 h-14 rounded-sm border border-border shrink-0 flex flex-col items-center justify-center overflow-hidden"
-                style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}>
-                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${getLayoutColor(slide.slideType)}`}>
+              {/* Slide preview thumbnail — shows actual content */}
+              <div
+                className="w-[120px] h-[80px] rounded-sm border border-border shrink-0 flex flex-col justify-between overflow-hidden p-2"
+                style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}
+              >
+                <p className="font-semibold leading-tight line-clamp-2" style={{ fontSize: "7px", color: themeColors.fg }}>
+                  {slide.headline}
+                </p>
+                {contentPreview && (
+                  <p className="leading-tight line-clamp-2 mt-auto" style={{ fontSize: "5.5px", color: themeColors.muted }}>
+                    {contentPreview}
+                  </p>
+                )}
+                <span
+                  className="text-[6px] font-semibold px-1 py-0.5 rounded-sm self-start mt-0.5"
+                  style={{ backgroundColor: `${themeColors.accent}30`, color: themeColors.accent }}
+                >
                   {getLayoutLabel(slide.slideType)}
                 </span>
-                {slide.visualDirection && (
-                  <span className="text-[7px] mt-0.5 px-1 py-0.5 rounded-full bg-muted text-muted-foreground">{slide.visualDirection}</span>
-                )}
               </div>
 
               {/* Headline + reason */}
-              <div className="flex-1 min-w-0">
-                <h5 className={`text-sm font-semibold leading-tight truncate ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h5 className={`text-sm font-semibold leading-tight ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
                   {slide.headline}
                 </h5>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-1">
+                <p className="text-xs text-secondary-foreground leading-relaxed mt-1.5 line-clamp-2">
                   {getSlideReason(slide.headline, i, orderedSlides.length)}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Refine dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRefineOpen(refineOpen === i ? null : i); }}
+                    className="text-xs px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors font-medium flex items-center gap-1"
+                  >
+                    Refine <ChevronDown className="h-3 w-3" />
+                  </button>
+                  {refineOpen === i && (
+                    <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
+                      {REFINE_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={(e) => { e.stopPropagation(); setRefineOpen(null); }}
+                          className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent hover:text-foreground transition-colors font-medium"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
-                  className={`p-1.5 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
-                  title="Include in export">
-                  <ThumbsUp className="h-3.5 w-3.5" />
+                  className={`p-2 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
+                >
+                  <ThumbsUp className="h-4 w-4" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
-                  className={`p-1.5 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
-                  title="Exclude from export">
-                  <ThumbsDown className="h-3.5 w-3.5" />
+                  className={`p-2 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
+                >
+                  <ThumbsDown className="h-4 w-4" />
                 </button>
                 {isExcluded && (
                   <button onClick={() => onToggleSlide(slide.originalIdx)}
-                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm">
+                    className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm">
                     <RotateCcw className="h-3 w-3" /> Restore
                   </button>
                 )}
