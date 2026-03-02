@@ -51,8 +51,9 @@ export function MarketingNav() {
                   {!isDashboard && !isPricingPage && !isPro && (
                     <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
                   )}
-                  <button onClick={() => navigate("/resources")} className={linkClass("/resources")}>Resources</button>
-                  <button onClick={handleSignOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
+                   <button onClick={() => navigate("/resources")} className={linkClass("/resources")}>Resources</button>
+                   <button onClick={() => navigate("/settings")} className={linkClass("/settings")}>Settings</button>
+                   <button onClick={handleSignOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
                 </>
               ) : (
                 <>

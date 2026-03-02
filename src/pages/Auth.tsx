@@ -48,12 +48,17 @@ export default function Auth() {
     console.log("[Auth] Submitting", isSignUp ? "signUp" : "signIn", "for", email);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: { emailRedirectTo: window.location.origin + nextUrl },
         });
         if (error) throw error;
-        toast.success("Check your email to confirm your account.");
+        // Supabase returns an empty identities array when email already exists
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          toast.error("An account with this email already exists. Please sign in instead.");
+        } else {
+          toast.success("Check your email to confirm your account.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
