@@ -4,7 +4,7 @@ import { OutputCard } from "@/components/OutputCard";
 import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
 import { OutreachTracker } from "@/components/OutreachTracker";
 import { ExportDropdown } from "@/components/ExportDropdown";
-import { SlidePreview } from "@/components/SlidePreview";
+import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
 import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,18 +21,19 @@ export function OutputView() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
+  const [slideOrder, setSlideOrder] = useState<number[]>([]);
+  const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const outputRef = useRef(output);
 
-  // Auto-save: update project updated_at on any refinement
   const triggerAutoSave = useCallback(async () => {
     if (!currentProjectId) return;
     await supabase.from("projects").update({ updated_at: new Date().toISOString() }).eq("id", currentProjectId);
     setLastSaved(new Date());
   }, [currentProjectId]);
 
-  // Watch for output changes to auto-save (debounced)
   useEffect(() => {
     if (output === outputRef.current) return;
     outputRef.current = output;
@@ -41,37 +42,46 @@ export function OutputView() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [output, triggerAutoSave]);
 
+  // Initialize slide order when output changes
+  useEffect(() => {
+    if (!output) return;
+    const d = output.data as any;
+    const framework = d.deckFramework || d.boardDeckOutline || [];
+    if (framework.length > 0 && slideOrder.length !== framework.length) {
+      setSlideOrder(framework.map((_: any, i: number) => i));
+      setExcludedSlides(new Set());
+    }
+  }, [output]);
+
   if (!output) return null;
 
   const tabs = buildTabs(output);
   const currentTab = tabs[activeTab];
   const isFirstFree = !isPro && generationCount >= 1;
   const isTabLocked = (i: number) => isFirstFree && i >= 2;
-
   const projectTitle = (output as any).title || "Untitled Project";
 
-  // Build slide preview data from deck framework
-  const getDeckPreviewSlides = () => {
+  const getDeckPreviewSlides = (): SlideData[] => {
     const d = output.data as any;
     const framework = d.deckFramework || d.boardDeckOutline || [];
     if (!framework || framework.length === 0) return [];
     return framework.map((slide: any, idx: number) => {
       const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
-      const headlineLower = headline.toLowerCase();
+      const h = headline.toLowerCase();
       let body = "";
-      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) body = d.thesis?.content || d.thesis || "";
-      else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
-      else if (headlineLower.includes("problem") || headlineLower.includes("pain") || headlineLower.includes("world")) body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
-      else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) body = d.narrativeStructure?.newModel || d.solutionFramework || "";
-      else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("moat")) body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
-      else if (headlineLower.includes("vision") || headlineLower.includes("future")) body = d.narrativeStructure?.theFuture || d.vision || "";
-      else if (headlineLower.includes("risk")) body = d.risks || d.risksFocus || "";
-      else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) body = d.roadmapNarrative || d.nextMilestones || "";
-      else if (headlineLower.includes("ask") || headlineLower.includes("funding")) body = d.askUpdate || "";
-      else if (headlineLower.includes("metric") || headlineLower.includes("traction")) body = d.metricsNarrative || d.metrics || "";
-      else if (headlineLower.includes("summary")) body = d.executiveSummary || "";
+      if (h.includes("thesis") || h.includes("investment")) body = d.thesis?.content || d.thesis || "";
+      else if (h.includes("market") || h.includes("opportunity")) body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
+      else if (h.includes("problem") || h.includes("pain") || h.includes("world")) body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
+      else if (h.includes("solution") || h.includes("model") || h.includes("product")) body = d.narrativeStructure?.newModel || d.solutionFramework || "";
+      else if (h.includes("why") || h.includes("differentiat") || h.includes("moat")) body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
+      else if (h.includes("vision") || h.includes("future")) body = d.narrativeStructure?.theFuture || d.vision || "";
+      else if (h.includes("risk")) body = d.risks || d.risksFocus || "";
+      else if (h.includes("roadmap") || h.includes("milestone")) body = d.roadmapNarrative || d.nextMilestones || "";
+      else if (h.includes("ask") || h.includes("funding")) body = d.askUpdate || "";
+      else if (h.includes("metric") || h.includes("traction")) body = d.metricsNarrative || d.metrics || "";
+      else if (h.includes("summary")) body = d.executiveSummary || "";
       else body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
-      return { headline, content: body ? body.slice(0, 200) : "", slideType: slide?.metadata?.slideType, visualDirection: slide?.metadata?.visualDirection };
+      return { headline, content: body ? body.slice(0, 300) : "", slideType: slide?.metadata?.slideType, visualDirection: slide?.metadata?.visualDirection };
     });
   };
 
@@ -87,19 +97,24 @@ export function OutputView() {
     }
   };
 
+  const toggleSlide = (idx: number) => {
+    setExcludedSlides(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
   const versionLabel = `v${currentVersion}`;
   const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Nav bar */}
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
             <ArrowLeft className="h-3.5 w-3.5" />Dashboard
           </button>
-
-          {/* Center: Editable project title + version */}
           <div className="flex items-center gap-2">
             {editingTitle ? (
               <div className="flex items-center gap-1">
@@ -112,7 +127,6 @@ export function OutputView() {
                 <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}
-
             {currentProjectId && (
               <div className="relative">
                 <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">
@@ -139,19 +153,15 @@ export function OutputView() {
               </div>
             )}
           </div>
-
-          {/* Right: Export only */}
           <div className="flex items-center gap-2">
-            <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} />
+            <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
           </div>
         </div>
       </nav>
 
       {showOutreach && (<div className="border-b border-border px-6 py-6 bg-card/50 animate-fade-in"><div className="max-w-[900px] mx-auto"><OutreachTracker /></div></div>)}
-
       <div className="border-b border-border px-6 py-5 bg-card/30"><div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div></div>
 
-      {/* Tabs — NO separate Slide Preview tab */}
       <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
           {tabs.map((tab, i) => (
@@ -166,20 +176,34 @@ export function OutputView() {
         <div className="max-w-[900px] mx-auto animate-fade-in">
           {activeTab >= 0 && currentTab && (
             <div className="space-y-0">
+              {/* On deck tabs, show slide preview FIRST, then section details */}
+              {isDeckTab && slidePreviewData.length > 0 && (
+                <SlidePreview
+                  slides={slidePreviewData}
+                  excludedSlides={excludedSlides}
+                  onToggleSlide={toggleSlide}
+                  slideOrder={slideOrder}
+                  onReorder={setSlideOrder}
+                  theme={deckTheme}
+                  onThemeChange={setDeckTheme}
+                />
+              )}
               {currentTab.sections.map((section) => (
                 <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
               ))}
             </div>
           )}
 
-          {/* Show slide preview inline on deck tabs only */}
-          {activeTab >= 0 && isDeckTab && slidePreviewData.length > 0 && (
-            <SlidePreview slides={slidePreviewData} />
+          {activeTab >= 0 && !isDeckTab && currentTab && (
+            <div className="space-y-0">
+              {currentTab.sections.map((section) => (
+                <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
+              ))}
+            </div>
           )}
         </div>
       </div>
 
-      {/* Bottom CTA bar — only for free tier users */}
       {isFirstFree && (
         <div className="border-t border-border px-6 py-6 bg-card sticky bottom-0">
           <div className="max-w-[900px] mx-auto flex items-center justify-between">
