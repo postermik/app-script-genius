@@ -79,7 +79,7 @@ export function ProductView() {
                 <button onClick={handleGenerate} disabled={isGenerating || !rawInput.trim()} className="w-full py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
                   {isGenerating ? (<><Loader2 className="h-4 w-4 animate-spin" />{LOADING_MESSAGES[loadingPhase] || "Generating..."}</>) : "Generate"}
                 </button>
-                <p className="text-[11px] text-muted-foreground/50 text-center">Press Cmd+Enter to generate</p>
+                <p className="text-[11px] text-muted-foreground/50 text-center mb-4">Press Cmd+Enter to generate</p>
               </>
             )}
           </div>
