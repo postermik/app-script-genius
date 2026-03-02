@@ -169,12 +169,24 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
       <div className="flex items-center gap-10 flex-wrap">
         <CircularGauge value={overall} label={readiness.level} levelColor={getLevelColor(readiness.level)} />
 
-        <div className="flex-1 min-w-0 space-y-4">
+      <div className="flex-1 min-w-0 space-y-4">
           <p className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">{getReadinessLabel(mode)}</p>
           <div className="flex flex-wrap gap-2">
+            {/* Checklist badges */}
             {readiness.checklist.map((item) => (
               <span key={item.label}>{getStatusBadge(item)}</span>
             ))}
+            {/* Score-component badges: show weaknesses from score components */}
+            {components && Object.entries(components).map(([key, value]) => {
+              // Only show badges for components NOT already in checklist and scoring below 75
+              const label = getScoreLabel(key, mode);
+              const alreadyInChecklist = readiness.checklist.some(c => c.label.toLowerCase() === label.toLowerCase());
+              if (alreadyInChecklist || value >= 75) return null;
+              if (value < 60) {
+                return <span key={`score-${key}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/15 text-destructive"><X className="h-3 w-3" />{label} ({value})</span>;
+              }
+              return <span key={`score-${key}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-400/15 text-yellow-400"><AlertTriangle className="h-3 w-3" />{label} ({value})</span>;
+            })}
           </div>
           {readiness.nextAction && (
             <p className="text-sm text-muted-foreground leading-relaxed">
