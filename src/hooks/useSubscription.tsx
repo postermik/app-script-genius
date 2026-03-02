@@ -51,7 +51,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("forced_tier")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .maybeSingle();
 
       if (profile?.forced_tier === "pro") {
