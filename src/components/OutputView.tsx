@@ -36,7 +36,7 @@ export function OutputView() {
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [showAudiences, setShowAudiences] = useState(false);
-  const [audienceConfirm, setAudienceConfirm] = useState<AudienceType | null>(null);
+  
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const outputRef = useRef(output);
@@ -136,14 +136,7 @@ export function OutputView() {
       setActiveAudience(audience);
       setShowAudiences(false);
     } else {
-      setAudienceConfirm(audience);
-    }
-  };
-
-  const confirmAudienceAdapt = () => {
-    if (audienceConfirm) {
-      adaptForAudience(audienceConfirm);
-      setAudienceConfirm(null);
+      adaptForAudience(audience);
       setShowAudiences(false);
     }
   };
@@ -226,7 +219,7 @@ export function OutputView() {
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adapting for audience...
             </span>
           )}
-          {showAudiences && !audienceConfirm && (
+          {showAudiences && (
             <div className="flex items-center gap-2 animate-fade-in">
               {AUDIENCES.map(a => (
                 <button
@@ -243,13 +236,6 @@ export function OutputView() {
                   <span className="text-muted-foreground ml-1 font-normal hidden sm:inline">· {a.desc}</span>
                 </button>
               ))}
-            </div>
-          )}
-          {audienceConfirm && (
-            <div className="flex items-center gap-3 animate-fade-in p-3 border border-electric/20 rounded-sm bg-electric/5">
-              <p className="text-xs text-foreground/80">Adapting for <span className="text-electric font-semibold capitalize">{audienceConfirm}</span> uses AI credits. Continue?</p>
-              <button onClick={confirmAudienceAdapt} className="text-xs px-3 py-1.5 bg-electric text-primary-foreground rounded-sm font-medium hover:opacity-90 transition-opacity">Adapt</button>
-              <button onClick={() => setAudienceConfirm(null)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
             </div>
           )}
         </div>
