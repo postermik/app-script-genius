@@ -8,6 +8,7 @@ import { SubscriptionProvider } from "@/hooks/useSubscription";
 import { RootLayout } from "@/components/RootLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import Resources from "./pages/Resources";
@@ -32,6 +33,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/resources" element={<Resources />} />
                 <Route path="/investors" element={<Navigate to="/resources" replace />} />
