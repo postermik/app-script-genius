@@ -3,9 +3,12 @@ import { useState } from "react";
 import { OutputCard } from "@/components/OutputCard";
 import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
 import { OutreachTracker } from "@/components/OutreachTracker";
-import { ArrowLeft, Download, Lock, ChevronDown, Save, ArrowRight } from "lucide-react";
+import { ExportDropdown } from "@/components/ExportDropdown";
+import { SlidePreview } from "@/components/SlidePreview";
+import { ArrowLeft, Lock, ChevronDown, Save, ArrowRight, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface TabConfig { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[]; }
 
@@ -14,6 +17,9 @@ export function OutputView() {
   const [activeTab, setActiveTab] = useState(0);
   const [showVersions, setShowVersions] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState("");
+  const navigate = useNavigate();
   if (!output) return null;
 
   const tabs = buildTabs(output);
@@ -21,40 +27,78 @@ export function OutputView() {
   const isFirstFree = !isPro && generationCount >= 1;
   const isTabLocked = (i: number) => isFirstFree && i >= 2;
 
-  const handleSignOut = async () => { await supabase.auth.signOut(); };
+  const projectTitle = (output as any).title || "Untitled Project";
+  const nextAction = getNextSteps(output.mode, isPro)[0];
 
-  const exportPptx = async () => {
-    if (!isPro) { toast.error("Export is available on Pro."); return; }
-    try {
-      const PptxGenJS = (await import("pptxgenjs")).default;
-      const pptx = new PptxGenJS(); pptx.author = "Rhetoric"; pptx.title = "Narrative Deck"; pptx.layout = "LAYOUT_16x9";
-      const deckTab = tabs.find(t => t.key === "deck" || t.key === "boardDeck");
-      if (deckTab) {
-        deckTab.sections.forEach((s, i) => {
-          const slide = pptx.addSlide(); slide.background = { color: "0b0f14" };
-          slide.addText(s.content, { x: 0.8, y: 2, w: 8.4, fontSize: 28, fontFace: "Arial", bold: true, color: "dce0e8", align: "center" });
-          slide.addText(`Slide ${i + 1}`, { x: 0.8, y: 4.5, w: 8.4, fontSize: 12, fontFace: "Arial", color: "6b7280", align: "center" });
-        });
-      }
-      await pptx.writeFile({ fileName: "Rhetoric_Deck.pptx" }); toast.success("Deck exported.");
-    } catch { toast.error("Export failed."); }
+  const handleTitleEdit = () => {
+    setTitleValue(projectTitle);
+    setEditingTitle(true);
   };
 
-  const nextSteps = getNextSteps(output.mode, isPro);
+  const handleTitleSave = async () => {
+    setEditingTitle(false);
+    if (titleValue.trim() && titleValue !== projectTitle && currentProjectId) {
+      await supabase.from("projects").update({ title: titleValue.trim() }).eq("id", currentProjectId);
+      toast.success("Title updated.");
+    }
+  };
+
+  // Build slide preview data for deck tabs
+  const deckTab = tabs.find(t => t.key === "deck" || t.key === "boardDeck");
+  const slidePreviewData = deckTab?.sections.map(s => {
+    const d = output.data as any;
+    const framework = d.deckFramework || d.boardDeckOutline || [];
+    const slideData = framework.find((f: any) => typeof f !== "string" && f.headline === s.content) || {};
+    return {
+      headline: s.content || s.label,
+      content: typeof slideData === "object" ? (slideData.body || "") : "",
+      slideType: slideData?.metadata?.slideType,
+      visualDirection: slideData?.metadata?.visualDirection,
+    };
+  }) || [];
 
   return (
     <div className="flex-1 flex flex-col">
+      {/* Redesigned nav bar */}
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
-          <button onClick={reset} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"><ArrowLeft className="h-3.5 w-3.5" />New</button>
+          {/* Left: Dashboard link */}
+          <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+            <ArrowLeft className="h-3.5 w-3.5" />Dashboard
+          </button>
+
+          {/* Center: Editable project title + version */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold tracking-[0.15em] uppercase text-foreground cursor-pointer" onClick={reset}>Rhetoric</span>
+            {editingTitle ? (
+              <div className="flex items-center gap-1">
+                <input
+                  value={titleValue}
+                  onChange={e => setTitleValue(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleTitleSave()}
+                  className="text-sm font-semibold tracking-wide uppercase text-foreground bg-transparent border-b border-electric outline-none px-1 max-w-[260px]"
+                  autoFocus
+                />
+                <button onClick={handleTitleSave} className="text-electric hover:text-foreground transition-colors p-0.5">
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleTitleEdit} className="text-sm font-semibold tracking-wide uppercase text-foreground hover:text-electric transition-colors flex items-center gap-1.5 group">
+                {projectTitle}
+                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
+
             {currentProjectId && (
               <div className="relative">
-                <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">v{currentVersion}<ChevronDown className="h-3 w-3" /></button>
+                <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">
+                  v{currentVersion}<ChevronDown className="h-3 w-3" />
+                </button>
                 {showVersions && (
                   <div className="absolute top-full mt-1 right-0 w-52 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
-                    <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border"><Save className="h-3 w-3" />Save Current Version</button>
+                    <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border">
+                      <Save className="h-3 w-3" />Save Current Version
+                    </button>
                     {versions.length > 0 ? (
                       <div className="max-h-48 overflow-y-auto">
                         {versions.map((v) => (
@@ -69,10 +113,15 @@ export function OutputView() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            {currentProjectId && (<button onClick={() => setShowOutreach(!showOutreach)} className={`text-xs px-3 py-1.5 border rounded-sm transition-colors ${showOutreach ? "border-electric/30 text-foreground bg-accent" : "border-border text-muted-foreground hover:text-foreground"}`}>Capital Strategy</button>)}
-            <button onClick={exportPptx} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-sm"><Download className="h-3 w-3" />Export</button>
-            <button onClick={handleSignOut} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
+
+          {/* Right: Next Step + Export */}
+          <div className="flex items-center gap-2">
+            {nextAction && (
+              <button className="text-xs px-3 py-1.5 bg-electric text-primary-foreground rounded-sm font-medium hover:opacity-90 transition-all flex items-center gap-1.5 glow-blue">
+                {nextAction.label}<ArrowRight className="h-3 w-3" />
+              </button>
+            )}
+            <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} />
           </div>
         </div>
       </nav>
@@ -93,16 +142,35 @@ export function OutputView() {
 
       <div className="flex-1 px-6 py-12">
         <div className="max-w-[900px] mx-auto animate-fade-in">
-          {currentTab && (<div className="space-y-0">{currentTab.sections.map((section) => (<OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />))}</div>)}
+          {currentTab && (
+            <div className="space-y-0">
+              {currentTab.sections.map((section) => (
+                <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
+              ))}
+            </div>
+          )}
+          {/* Show slide preview on deck tabs */}
+          {(currentTab?.key === "deck" || currentTab?.key === "boardDeck") && slidePreviewData.length > 0 && (
+            <SlidePreview slides={slidePreviewData} />
+          )}
         </div>
       </div>
 
       {isFirstFree && (
         <div className="border-t border-border px-6 py-6 bg-card sticky bottom-0">
           <div className="max-w-[900px] mx-auto">
-            <div className="flex items-center justify-between mb-4"><div><p className="text-sm font-medium text-foreground">Recommended Next Move</p><p className="text-xs text-muted-foreground mt-0.5">Based on your {output.mode.replace("_", " ")} output.</p></div></div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Recommended Next Move</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Based on your {output.mode.replace("_", " ")} output.</p>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {nextSteps.map((step) => (<button key={step.label} className={`text-xs px-4 py-2 rounded-sm font-medium transition-all flex items-center gap-1.5 ${step.primary ? "bg-primary text-primary-foreground hover:opacity-90 glow-blue" : "border border-border text-foreground hover:border-muted-foreground/30"}`}>{step.label}<ArrowRight className="h-3 w-3" /></button>))}
+              {getNextSteps(output.mode, isPro).map((step) => (
+                <button key={step.label} className={`text-xs px-4 py-2 rounded-sm font-medium transition-all flex items-center gap-1.5 ${step.primary ? "bg-primary text-primary-foreground hover:opacity-90 glow-blue" : "border border-border text-foreground hover:border-muted-foreground/30"}`}>
+                  {step.label}<ArrowRight className="h-3 w-3" />
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -118,7 +186,7 @@ function getNextSteps(mode: string, isPro: boolean) {
   return [{ label: "Unlock Full Narrative", primary: true }, { label: "Export to Deck", primary: false }];
 }
 
-function buildTabs(output: any): TabConfig[] {
+export function buildTabs(output: any): TabConfig[] {
   const d = output.data as any;
   const mode = output.mode;
   if (mode === "fundraising") {
