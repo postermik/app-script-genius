@@ -33,10 +33,11 @@ export function OutputView() {
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [showAudiences, setShowAudiences] = useState(false);
+  const [audienceConfirm, setAudienceConfirm] = useState<AudienceType | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const outputRef = useRef(output);
-  const [tabKey, setTabKey] = useState(0); // for re-triggering fade animation
+  const [tabKey, setTabKey] = useState(0);
 
   const triggerAutoSave = useCallback(async () => {
     if (!currentProjectId) return;
@@ -121,6 +122,28 @@ export function OutputView() {
     }
   };
 
+  const handleAudienceSelect = (audience: AudienceType) => {
+    if (audience === "general") {
+      setActiveAudience("general");
+      setShowAudiences(false);
+    } else if (audienceVariants && audienceVariants[audience]) {
+      // Already cached, instant switch
+      setActiveAudience(audience);
+      setShowAudiences(false);
+    } else {
+      // Needs regeneration - confirm first
+      setAudienceConfirm(audience);
+    }
+  };
+
+  const confirmAudienceAdapt = () => {
+    if (audienceConfirm) {
+      adaptForAudience(audienceConfirm);
+      setAudienceConfirm(null);
+      setShowAudiences(false);
+    }
+  };
+
   const versionLabel = `v${currentVersion}`;
   const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
@@ -146,25 +169,25 @@ export function OutputView() {
             )}
             {currentProjectId && (
               <div className="relative">
-                <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">
+                <button onClick={() => setShowVersions(!showVersions)} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm">
                   {versionLabel}
-                  {savedLabel && <span className="text-muted-foreground/50 ml-1">· {savedLabel}</span>}
+                  {savedLabel && <span className="text-muted-foreground ml-1">· {savedLabel}</span>}
                   <ChevronDown className="h-3 w-3" />
                 </button>
                 {showVersions && (
                   <div className="absolute top-full mt-1 right-0 w-56 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
-                    <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border">
+                    <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border font-medium">
                       <Save className="h-3 w-3" />Save as New Version
                     </button>
                     {versions.length > 0 ? (
                       <div className="max-h-48 overflow-y-auto">
                         {versions.map((v) => (
-                          <button key={v.id} onClick={() => { loadVersion(v.version_number); setShowVersions(false); }} className={`w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors ${v.version_number === currentVersion ? "text-foreground bg-accent/50" : "text-muted-foreground"}`}>
-                            <span className="font-medium">v{v.version_number}</span><span className="ml-2 text-muted-foreground/60">{v.summary}</span>
+                          <button key={v.id} onClick={() => { loadVersion(v.version_number); setShowVersions(false); }} className={`w-full text-left text-xs px-3 py-2.5 hover:bg-accent transition-colors ${v.version_number === currentVersion ? "text-foreground bg-accent/50" : "text-secondary-foreground"}`}>
+                            <span className="font-medium">v{v.version_number}</span><span className="ml-2 text-muted-foreground">{v.summary}</span>
                           </button>
                         ))}
                       </div>
-                    ) : (<p className="text-[11px] text-muted-foreground px-3 py-2">No saved versions yet</p>)}
+                    ) : (<p className="text-xs text-muted-foreground px-3 py-2.5">No saved versions yet</p>)}
                   </div>
                 )}
               </div>
@@ -176,54 +199,53 @@ export function OutputView() {
         </div>
       </nav>
 
-      {showOutreach && (<div className="border-b border-border px-6 py-6 bg-card/50 animate-fade-in"><div className="max-w-[900px] mx-auto"><OutreachTracker /></div></div>)}
+      {showOutreach && (<div className="border-b border-border px-6 py-6 card-gradient animate-fade-in"><div className="max-w-[900px] mx-auto"><OutreachTracker /></div></div>)}
 
       {/* Readiness Score */}
-      <div className="border-b border-border px-6 py-8 bg-card/30">
+      <div className="border-b border-border px-6 py-10 bg-card/30">
         <div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div>
       </div>
 
       {/* Audience selector bar */}
-      <div className="border-b border-border px-6 py-3 bg-background/80">
-        <div className="max-w-[900px] mx-auto flex items-center gap-3">
+      <div className="border-b border-border px-6 py-4 bg-background/80">
+        <div className="max-w-[900px] mx-auto flex items-center gap-3 flex-wrap">
           <button
             onClick={() => setShowAudiences(!showAudiences)}
-            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-sm transition-colors"
+            className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-2 border border-border rounded-sm transition-colors font-medium"
           >
-            <Users className="h-3 w-3 text-electric" />
-            Audience: <span className="text-foreground font-medium capitalize">{activeAudience}</span>
+            <Users className="h-3.5 w-3.5 text-electric" />
+            Audience: <span className="text-foreground capitalize">{activeAudience}</span>
             <ChevronDown className={`h-3 w-3 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
           </button>
           {isAdapting && (
-            <span className="text-[11px] text-electric flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Adapting for audience...
+            <span className="text-xs text-electric flex items-center gap-1.5 font-medium">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adapting for audience...
             </span>
           )}
-          {showAudiences && (
-            <div className="flex items-center gap-1.5 animate-fade-in">
+          {showAudiences && !audienceConfirm && (
+            <div className="flex items-center gap-2 animate-fade-in">
               {AUDIENCES.map(a => (
                 <button
                   key={a.value}
-                  onClick={() => {
-                    if (a.value === "general") {
-                      setActiveAudience("general");
-                      setShowAudiences(false);
-                    } else {
-                      adaptForAudience(a.value);
-                      setShowAudiences(false);
-                    }
-                  }}
+                  onClick={() => handleAudienceSelect(a.value)}
                   disabled={isAdapting}
-                  className={`text-[11px] px-3 py-1.5 rounded-sm border transition-colors ${
+                  className={`text-xs px-3 py-2 rounded-sm border transition-colors font-medium ${
                     activeAudience === a.value
-                      ? "border-electric/30 text-electric bg-electric/5"
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                      ? "border-electric/30 text-electric bg-electric/10"
+                      : "border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
                   } disabled:opacity-40`}
-                  title={a.desc}
                 >
                   {a.label}
+                  <span className="text-muted-foreground ml-1 font-normal hidden sm:inline">· {a.desc}</span>
                 </button>
               ))}
+            </div>
+          )}
+          {audienceConfirm && (
+            <div className="flex items-center gap-3 animate-fade-in p-3 border border-electric/20 rounded-sm bg-electric/5">
+              <p className="text-xs text-foreground/80">Adapting for <span className="text-electric font-semibold capitalize">{audienceConfirm}</span> uses AI credits. Continue?</p>
+              <button onClick={confirmAudienceAdapt} className="text-xs px-3 py-1.5 bg-electric text-primary-foreground rounded-sm font-medium hover:opacity-90 transition-opacity">Adapt</button>
+              <button onClick={() => setAudienceConfirm(null)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
             </div>
           )}
         </div>
@@ -233,7 +255,7 @@ export function OutputView() {
       <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
           {tabs.map((tab, i) => (
-            <button key={tab.key} onClick={() => handleTabChange(i)} className={`relative text-sm py-3 px-5 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${i === activeTab ? "border-electric text-foreground" : isTabLocked(i) ? "border-transparent text-muted-foreground/30 cursor-not-allowed" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <button key={tab.key} onClick={() => handleTabChange(i)} className={`relative text-sm py-3.5 px-5 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 font-medium ${i === activeTab ? "border-electric text-foreground" : isTabLocked(i) ? "border-transparent text-muted-foreground/40 cursor-not-allowed" : "border-transparent text-secondary-foreground hover:text-foreground"}`}>
               {isTabLocked(i) && <Lock className="h-3 w-3" />}{tab.label}
             </button>
           ))}
@@ -265,13 +287,13 @@ export function OutputView() {
       </div>
 
       {isFirstFree && (
-        <div className="border-t border-border px-6 py-6 bg-card sticky bottom-0">
+        <div className="border-t border-border px-6 py-6 card-gradient sticky bottom-0">
           <div className="max-w-[900px] mx-auto flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Upgrade to Pro to access all sections, exports, and refinements.</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Upgrade to Pro to access all sections, exports, and refinements.</p>
             </div>
-            <button onClick={() => toast.info("Upgrade to Pro for full access.")} className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue">
+            <button onClick={() => toast.info("Upgrade to Pro for full access.")} className="text-xs px-4 py-2.5 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue">
               Upgrade to Pro
             </button>
           </div>
