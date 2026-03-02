@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { ReadinessIndex, NarrativeOutputData } from "@/types/narrative";
-import { Check, AlertTriangle, X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import type { ReadinessIndex, NarrativeOutputData, NarrativeScore } from "@/types/narrative";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Target, TrendingUp, Shield, Lightbulb } from "lucide-react";
 
 interface Props { output: NarrativeOutputData; isPro: boolean; }
 
@@ -91,71 +91,195 @@ function getStatusBadge(item: ReadinessIndex["checklist"][0]) {
   }
 }
 
+function getScoreColor(value: number) {
+  if (value >= 80) return "bg-emerald";
+  if (value >= 60) return "bg-electric";
+  if (value >= 40) return "bg-yellow-400";
+  return "bg-destructive";
+}
+
+function getScoreLabel(key: string) {
+  const labels: Record<string, string> = {
+    clarity: "Clarity",
+    marketFraming: "Market Framing",
+    differentiation: "Differentiation",
+    riskTransparency: "Risk Transparency",
+    persuasiveStructure: "Persuasive Structure",
+  };
+  return labels[key] || key;
+}
+
 export function ReadinessIndexCard({ output, isPro }: Props) {
   const readiness = computeReadiness(output);
   const [expanded, setExpanded] = useState(false);
-  const score = output.score?.overall || 50;
+  const [detailTab, setDetailTab] = useState<"scores" | "gaps" | "swot">("scores");
+  const score = output.score;
+  const overall = score?.overall || 50;
+  const components = score?.components;
+  const gaps = score?.gaps || [];
+  const improvements = score?.improvements || [];
+  const strengths = score?.strengths || [];
 
   return (
     <div>
-      {/* Main horizontal scorecard bar */}
+      {/* Horizontal scorecard bar */}
       <div className="flex items-center gap-6 flex-wrap">
-        {/* Left: Score */}
+        {/* Score */}
         <div className="flex items-center gap-3 shrink-0">
-          <span className={`text-2xl font-bold tabular-nums ${getLevelColor(readiness.level)}`}>{score}</span>
+          <span className={`text-2xl font-bold tabular-nums ${getLevelColor(readiness.level)}`}>{overall}</span>
           <div>
             <p className="text-xs font-medium text-foreground leading-tight">Capital Readiness</p>
             <p className={`text-[11px] font-semibold ${getLevelColor(readiness.level)}`}>{readiness.level}</p>
           </div>
         </div>
 
-        {/* Divider */}
         <div className="w-px h-8 bg-border hidden sm:block" />
 
-        {/* Middle: Badges */}
+        {/* Badges */}
         <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
           {readiness.checklist.map((item) => (
             <span key={item.label}>{getStatusBadge(item)}</span>
           ))}
         </div>
 
-        {/* Right: CTA + expand toggle */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all flex items-center gap-1.5 glow-blue">
-            {readiness.nextAction.length > 40 ? readiness.nextAction.slice(0, 38) + "…" : readiness.nextAction}
-            <ArrowRight className="h-3 w-3" />
-          </button>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1"
-            title={expanded ? "Collapse" : "Show details"}
-          >
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-        </div>
+        {/* Expand toggle */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 border border-border rounded-sm shrink-0"
+        >
+          {expanded ? "Hide" : "Details"}
+          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
       </div>
 
-      {/* Collapsible details */}
+      {/* Expanded detail panel */}
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-border flex gap-8 animate-fade-in flex-wrap">
-          {readiness.strengths.length > 0 && (
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Strengths</p>
-              <ul className="space-y-1">
-                {readiness.strengths.map((s, i) => (
-                  <li key={i} className="text-[11px] text-foreground/80">✓ {s}</li>
-                ))}
-              </ul>
+        <div className="mt-5 pt-5 border-t border-border animate-fade-in">
+          {/* Detail tabs */}
+          <div className="flex gap-1 mb-5">
+            {[
+              { key: "scores" as const, label: "Score Breakdown" },
+              { key: "gaps" as const, label: "Gaps & Actions" },
+              { key: "swot" as const, label: "SWOT Analysis" },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setDetailTab(tab.key)}
+                className={`text-[11px] px-3 py-1.5 rounded-sm transition-colors ${
+                  detailTab === tab.key
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {detailTab === "scores" && components && (
+            <div className="space-y-3">
+              {Object.entries(components).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground w-32 shrink-0">{getScoreLabel(key)}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${getScoreColor(value)}`}
+                      style={{ width: `${value}%` }}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-medium tabular-nums w-8 text-right ${
+                    value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-muted-foreground"
+                  }`}>{value}</span>
+                </div>
+              ))}
+              {!components && (
+                <p className="text-xs text-muted-foreground">Score component data not available for this output.</p>
+              )}
             </div>
           )}
-          {readiness.missing.length > 0 && (
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Gaps</p>
-              <ul className="space-y-1">
-                {readiness.missing.map((g, i) => (
-                  <li key={i} className="text-[11px] text-foreground/60">• {g}</li>
-                ))}
-              </ul>
+
+          {detailTab === "gaps" && (
+            <div className="space-y-4">
+              {gaps.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3 text-yellow-400" /> Gaps to Address
+                  </p>
+                  <div className="space-y-2">
+                    {gaps.map((gap, i) => (
+                      <div key={i} className="flex items-start gap-2 p-2.5 rounded-sm bg-muted/50 border border-border">
+                        <div className="w-5 h-5 rounded-full bg-yellow-400/10 text-yellow-400 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-[10px] font-bold">{i + 1}</span>
+                        </div>
+                        <span className="text-xs text-foreground/80 leading-relaxed">{gap}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {improvements.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Lightbulb className="h-3 w-3 text-electric" /> Recommended Improvements
+                  </p>
+                  <div className="space-y-2">
+                    {improvements.map((imp, i) => (
+                      <div key={i} className="flex items-start gap-2 p-2.5 rounded-sm bg-electric/5 border border-electric/10">
+                        <TrendingUp className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
+                        <span className="text-xs text-foreground/80 leading-relaxed">{imp}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {gaps.length === 0 && improvements.length === 0 && (
+                <p className="text-xs text-muted-foreground">No gaps or improvements data available.</p>
+              )}
+            </div>
+          )}
+
+          {detailTab === "swot" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-sm bg-emerald/5 border border-emerald/10">
+                <p className="text-[10px] font-semibold text-emerald uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Strengths
+                </p>
+                {strengths.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {strengths.map((s, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {s}</li>)}
+                  </ul>
+                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+              </div>
+              <div className="p-3 rounded-sm bg-yellow-400/5 border border-yellow-400/10">
+                <p className="text-[10px] font-semibold text-yellow-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> Weaknesses
+                </p>
+                {gaps.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {gaps.map((g, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {g}</li>)}
+                  </ul>
+                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+              </div>
+              <div className="p-3 rounded-sm bg-electric/5 border border-electric/10">
+                <p className="text-[10px] font-semibold text-electric uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Target className="h-3 w-3" /> Opportunities
+                </p>
+                {improvements.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {improvements.map((o, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {o}</li>)}
+                  </ul>
+                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+              </div>
+              <div className="p-3 rounded-sm bg-destructive/5 border border-destructive/10">
+                <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <Shield className="h-3 w-3" /> Threats
+                </p>
+                {readiness.missing.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {readiness.missing.map((t, i) => <li key={i} className="text-[11px] text-foreground/70 leading-relaxed">• {t}</li>)}
+                  </ul>
+                ) : <p className="text-[11px] text-muted-foreground">—</p>}
+              </div>
             </div>
           )}
         </div>

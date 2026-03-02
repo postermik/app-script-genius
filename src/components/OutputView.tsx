@@ -28,7 +28,6 @@ export function OutputView() {
   const isTabLocked = (i: number) => isFirstFree && i >= 2;
 
   const projectTitle = (output as any).title || "Untitled Project";
-  const nextAction = getNextSteps(output.mode, isPro)[0];
 
   const handleTitleEdit = () => {
     setTitleValue(projectTitle);
@@ -43,26 +42,60 @@ export function OutputView() {
     }
   };
 
-  // Build slide preview data for deck tabs
-  const deckTab = tabs.find(t => t.key === "deck" || t.key === "boardDeck");
-  const slidePreviewData = deckTab?.sections.map(s => {
+  // Build slide preview data from deck framework with real content
+  const getDeckPreviewSlides = () => {
     const d = output.data as any;
     const framework = d.deckFramework || d.boardDeckOutline || [];
-    const slideData = framework.find((f: any) => typeof f !== "string" && f.headline === s.content) || {};
-    return {
-      headline: s.content || s.label,
-      content: typeof slideData === "object" ? (slideData.body || "") : "",
-      slideType: slideData?.metadata?.slideType,
-      visualDirection: slideData?.metadata?.visualDirection,
-    };
-  }) || [];
+    if (!framework || framework.length === 0) return [];
+
+    return framework.map((slide: any, idx: number) => {
+      const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
+      const headlineLower = headline.toLowerCase();
+      let body = "";
+
+      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) {
+        body = d.thesis?.content || d.thesis || "";
+      } else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) {
+        body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
+      } else if (headlineLower.includes("problem") || headlineLower.includes("pain") || headlineLower.includes("world")) {
+        body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
+      } else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) {
+        body = d.narrativeStructure?.newModel || d.solutionFramework || "";
+      } else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("moat")) {
+        body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
+      } else if (headlineLower.includes("vision") || headlineLower.includes("future")) {
+        body = d.narrativeStructure?.theFuture || d.vision || "";
+      } else if (headlineLower.includes("risk")) {
+        body = d.risks || d.risksFocus || "";
+      } else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) {
+        body = d.roadmapNarrative || d.nextMilestones || "";
+      } else if (headlineLower.includes("ask") || headlineLower.includes("funding")) {
+        body = d.askUpdate || "";
+      } else if (headlineLower.includes("metric") || headlineLower.includes("traction")) {
+        body = d.metricsNarrative || d.metrics || "";
+      } else if (headlineLower.includes("summary")) {
+        body = d.executiveSummary || "";
+      } else {
+        body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
+      }
+
+      return {
+        headline,
+        content: body ? body.slice(0, 200) : "",
+        slideType: slide?.metadata?.slideType,
+        visualDirection: slide?.metadata?.visualDirection,
+      };
+    });
+  };
+
+  const slidePreviewData = getDeckPreviewSlides();
+  const isDeckTab = currentTab?.key === "deck" || currentTab?.key === "boardDeck";
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Redesigned nav bar */}
+      {/* Nav bar */}
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
-          {/* Left: Dashboard link */}
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
             <ArrowLeft className="h-3.5 w-3.5" />Dashboard
           </button>
@@ -114,13 +147,8 @@ export function OutputView() {
             )}
           </div>
 
-          {/* Right: Next Step + Export */}
+          {/* Right: Export only */}
           <div className="flex items-center gap-2">
-            {nextAction && (
-              <button className="text-xs px-3 py-1.5 bg-electric text-primary-foreground rounded-sm font-medium hover:opacity-90 transition-all flex items-center gap-1.5 glow-blue">
-                {nextAction.label}<ArrowRight className="h-3 w-3" />
-              </button>
-            )}
             <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} />
           </div>
         </div>
@@ -130,6 +158,7 @@ export function OutputView() {
 
       <div className="border-b border-border px-6 py-5 bg-card/30"><div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div></div>
 
+      {/* Tabs — add "Slide Preview" tab if deck data exists */}
       <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
           {tabs.map((tab, i) => (
@@ -137,41 +166,58 @@ export function OutputView() {
               {isTabLocked(i) && <Lock className="h-3 w-3" />}{tab.label}
             </button>
           ))}
+          {/* Add Slide Preview as a pseudo-tab */}
+          {slidePreviewData.length > 0 && (
+            <button
+              onClick={() => setActiveTab(-1)}
+              className={`relative text-sm py-3 px-5 border-b-2 transition-colors whitespace-nowrap ${activeTab === -1 ? "border-electric text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              Slide Preview
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 px-6 py-12">
+      <div className="flex-1 px-6 py-10">
         <div className="max-w-[900px] mx-auto animate-fade-in">
-          {currentTab && (
+          {/* Slide Preview tab */}
+          {activeTab === -1 && slidePreviewData.length > 0 && (
+            <SlidePreview slides={slidePreviewData} />
+          )}
+
+          {/* Normal tab content */}
+          {activeTab >= 0 && currentTab && (
             <div className="space-y-0">
               {currentTab.sections.map((section) => (
                 <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
               ))}
             </div>
           )}
-          {/* Show slide preview on deck tabs */}
-          {(currentTab?.key === "deck" || currentTab?.key === "boardDeck") && slidePreviewData.length > 0 && (
+
+          {/* Also show slide preview inline on deck tabs */}
+          {activeTab >= 0 && isDeckTab && slidePreviewData.length > 0 && (
             <SlidePreview slides={slidePreviewData} />
           )}
         </div>
       </div>
 
+      {/* Bottom CTA bar — only for free tier users */}
       {isFirstFree && (
         <div className="border-t border-border px-6 py-6 bg-card sticky bottom-0">
-          <div className="max-w-[900px] mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">Recommended Next Move</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Based on your {output.mode.replace("_", " ")} output.</p>
-              </div>
+          <div className="max-w-[900px] mx-auto flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Upgrade to Pro to access all sections, exports, and refinements.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {getNextSteps(output.mode, isPro).map((step) => (
-                <button key={step.label} className={`text-xs px-4 py-2 rounded-sm font-medium transition-all flex items-center gap-1.5 ${step.primary ? "bg-primary text-primary-foreground hover:opacity-90 glow-blue" : "border border-border text-foreground hover:border-muted-foreground/30"}`}>
-                  {step.label}<ArrowRight className="h-3 w-3" />
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => {
+                // Trigger upgrade modal via event or navigation
+                toast.info("Upgrade to Pro for full access.");
+              }}
+              className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue"
+            >
+              Upgrade to Pro
+            </button>
           </div>
         </div>
       )}
@@ -180,10 +226,11 @@ export function OutputView() {
 }
 
 function getNextSteps(mode: string, isPro: boolean) {
-  if (mode === "fundraising") return [{ label: "Unlock Full Narrative", primary: true }, { label: "Generate Investor Target List", primary: false }, { label: "Create Intro Email Draft", primary: false }, { label: "Export Pitch Deck", primary: false }];
-  if (mode === "board_update") return [{ label: "Unlock Full Narrative", primary: true }, { label: "Generate Decision Slide", primary: false }, { label: "Highlight Risk Scenarios", primary: false }, { label: "Export Board PDF", primary: false }];
-  if (mode === "strategy") return [{ label: "Unlock Full Narrative", primary: true }, { label: "Generate Positioning Map", primary: false }, { label: "Export Strategy Memo", primary: false }];
-  return [{ label: "Unlock Full Narrative", primary: true }, { label: "Export to Deck", primary: false }];
+  if (!isPro) return [{ label: "Upgrade to Pro", primary: true }];
+  if (mode === "fundraising") return [{ label: "Generate Investor Target List", primary: true, comingSoon: true }, { label: "Create Intro Email Draft", primary: false, comingSoon: true }, { label: "Export Pitch Deck", primary: false }];
+  if (mode === "board_update") return [{ label: "Generate Decision Slide", primary: true, comingSoon: true }, { label: "Export Board PDF", primary: false }];
+  if (mode === "strategy") return [{ label: "Generate Positioning Map", primary: true, comingSoon: true }, { label: "Export Strategy Memo", primary: false }];
+  return [{ label: "Export to Deck", primary: true }];
 }
 
 export function buildTabs(output: any): TabConfig[] {
