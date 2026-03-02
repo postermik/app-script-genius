@@ -15,9 +15,10 @@ export default function Auth() {
   const nextUrl = searchParams.get("next") || "/dashboard";
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) navigate(nextUrl, { replace: true });
     });
+    return () => subscription.unsubscribe();
   }, [navigate, nextUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
