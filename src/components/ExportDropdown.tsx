@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Download, FileText, FileDown, Presentation, File, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import type { NarrativeOutputData } from "@/types/narrative";
+import { buildTabs } from "@/components/OutputView";
 
 interface Props {
   output: NarrativeOutputData;
@@ -9,7 +10,7 @@ interface Props {
   buildTabs: (output: NarrativeOutputData) => { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[] }[];
 }
 
-export function ExportDropdown({ output, isPro, buildTabs }: Props) {
+export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,13 +22,69 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const tabs = buildTabs(output);
+  const tabs = buildTabsProp(output);
+  const d = output.data as any;
 
-  const getAllContent = () => {
-    return tabs.map(tab => {
-      const sectionContent = tab.sections.map(s => `### ${s.label}\n\n${s.content}`).join("\n\n---\n\n");
-      return `## ${tab.label}\n\n${sectionContent}`;
-    }).join("\n\n===\n\n");
+  // Get deck framework data with real content mapping
+  const getDeckSlides = () => {
+    const framework = d.deckFramework || d.boardDeckOutline || [];
+    if (!framework || framework.length === 0) return [];
+
+    // Map narrative content to slide topics for body text
+    const contentMap: Record<string, string> = {};
+    for (const tab of tabs) {
+      if (tab.key === "deck" || tab.key === "boardDeck") continue;
+      for (const section of tab.sections) {
+        if (section.content) {
+          contentMap[section.label.toLowerCase()] = section.content;
+          contentMap[section.key] = section.content;
+        }
+      }
+    }
+
+    return framework.map((slide: any, idx: number) => {
+      const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
+      const slideType = slide?.metadata?.slideType || (idx === 0 ? "headline" : "split");
+      const visualDirection = slide?.metadata?.visualDirection || "minimal";
+
+      // Match slide content from narrative data
+      let body = "";
+      const headlineLower = headline.toLowerCase();
+      
+      // Try to match by headline keywords to narrative sections
+      if (headlineLower.includes("thesis") || headlineLower.includes("investment")) {
+        body = d.thesis?.content || d.thesis || "";
+      } else if (headlineLower.includes("market") || headlineLower.includes("opportunity")) {
+        body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n\n") : (d.marketLogic || d.marketAnalysis || "");
+      } else if (headlineLower.includes("problem") || headlineLower.includes("pain")) {
+        body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
+      } else if (headlineLower.includes("solution") || headlineLower.includes("model") || headlineLower.includes("product")) {
+        body = d.narrativeStructure?.newModel || d.solutionFramework || "";
+      } else if (headlineLower.includes("why") || headlineLower.includes("differentiat") || headlineLower.includes("competitive") || headlineLower.includes("moat")) {
+        body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
+      } else if (headlineLower.includes("vision") || headlineLower.includes("future")) {
+        body = d.narrativeStructure?.theFuture || d.vision || "";
+      } else if (headlineLower.includes("risk")) {
+        body = d.risks || d.risksFocus || "";
+      } else if (headlineLower.includes("roadmap") || headlineLower.includes("milestone")) {
+        body = d.roadmapNarrative || d.nextMilestones || "";
+      } else if (headlineLower.includes("team")) {
+        body = "";
+      } else if (headlineLower.includes("ask") || headlineLower.includes("funding") || headlineLower.includes("raise")) {
+        body = d.askUpdate || "";
+      } else if (headlineLower.includes("metric") || headlineLower.includes("traction") || headlineLower.includes("kpi")) {
+        body = d.metricsNarrative || d.metrics || "";
+      } else if (headlineLower.includes("summary") || headlineLower.includes("executive")) {
+        body = d.executiveSummary || "";
+      } else if (headlineLower.includes("positioning")) {
+        body = d.positioning || "";
+      } else {
+        // Fallback: use the slide's own body if it's an object
+        body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
+      }
+
+      return { headline, body, slideType, visualDirection, idx };
+    });
   };
 
   const exportPptx = async () => {
@@ -40,7 +97,6 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
       pptx.title = (output as any).title || "Narrative Deck";
       pptx.layout = "LAYOUT_16x9";
 
-      // Color constants
       const BG = "0b0f14";
       const FG = "dce0e8";
       const MUTED = "6b7280";
@@ -52,7 +108,7 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
       titleSlide.background = { color: BG };
       titleSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: ACCENT } });
       titleSlide.addText((output as any).title || "Narrative Deck", {
-        x: 0.8, y: 2, w: 8.4, h: 1.5, fontSize: 40, fontFace: "Arial", bold: true, color: FG, align: "center",
+        x: 0.8, y: 2, w: 8.4, h: 1.5, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center",
       });
       titleSlide.addText(output.mode.replace(/_/g, " ").toUpperCase(), {
         x: 0.8, y: 3.6, w: 8.4, fontSize: 14, fontFace: "Arial", color: ACCENT, align: "center", charSpacing: 4,
@@ -61,78 +117,85 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
         x: 0.8, y: 5, w: 8.4, fontSize: 10, fontFace: "Arial", color: MUTED, align: "center",
       });
 
-      // Content slides - vary layouts
-      const layouts = ["full", "split", "bullets", "headline-body"];
-      let layoutIdx = 0;
+      // Generate ONLY deck framework slides with real content
+      const deckSlides = getDeckSlides();
 
-      for (const tab of tabs) {
-        for (const section of tab.sections) {
-          if (!section.content || section.content.trim().length === 0) continue;
+      if (deckSlides.length === 0) {
+        // Fallback: if no deck framework, create slides from tab content
+        for (const tab of tabs) {
+          for (const section of tab.sections) {
+            if (!section.content?.trim()) continue;
+            const slide = pptx.addSlide();
+            slide.background = { color: BG };
+            slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: ACCENT } });
+            slide.addText(section.label, {
+              x: 0.6, y: 0.7, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG,
+            });
+            slide.addText(section.content, {
+              x: 0.6, y: 1.6, w: 8.8, h: 3.6, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
+            });
+          }
+        }
+      } else {
+        const layouts = ["headline", "split", "bullets", "headline-body"];
+        
+        for (const ds of deckSlides) {
           const slide = pptx.addSlide();
           slide.background = { color: BG };
-          const layout = layouts[layoutIdx % layouts.length];
-          layoutIdx++;
-
-          // Top accent bar
           slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: ACCENT } });
 
-          // Tab label as breadcrumb
-          slide.addText(tab.label.toUpperCase(), {
-            x: 0.6, y: 0.3, w: 4, fontSize: 9, fontFace: "Arial", color: MUTED, charSpacing: 3,
+          const layout = ds.slideType && layouts.includes(ds.slideType) ? ds.slideType : layouts[ds.idx % layouts.length];
+          const lines = ds.body ? ds.body.split("\n").filter((l: string) => l.trim()) : [];
+          const bodyText = lines.join("\n");
+          const isBulletContent = lines.length >= 3 && lines.every((l: string) => l.length < 200);
+
+          // Slide number caption
+          slide.addText(`${ds.idx + 1} / ${deckSlides.length}`, {
+            x: 8.2, y: 5.1, w: 1.5, fontSize: 9, fontFace: "Arial", color: MUTED, align: "right",
           });
 
-          const lines = section.content.split("\n").filter(l => l.trim());
-          const bodyText = lines.join("\n");
-          const isBulletContent = lines.length >= 3 && lines.every(l => l.length < 200);
-
-          if (layout === "split" && lines.length > 2) {
-            // Split layout: headline left, body right
-            slide.addText(section.label, {
-              x: 0.6, y: 0.8, w: 3.5, h: 1, fontSize: 28, fontFace: "Arial", bold: true, color: FG, valign: "top",
+          if (layout === "headline" || (layout === "headline" && !ds.body)) {
+            // Big centered headline
+            slide.addText(ds.headline, {
+              x: 0.8, y: 1.5, w: 8.4, h: 2, fontSize: 44, fontFace: "Arial", bold: true, color: FG, align: "center", valign: "middle",
             });
-            slide.addShape(pptx.ShapeType.rect, { x: 4.4, y: 0.8, w: 0.02, h: 3.8, fill: { color: ACCENT_DIM } });
+            if (bodyText) {
+              slide.addShape(pptx.ShapeType.rect, { x: 3.5, y: 3.7, w: 3, h: 0.03, fill: { color: ACCENT } });
+              slide.addText(bodyText.slice(0, 400), {
+                x: 1.2, y: 4, w: 7.6, h: 1.2, fontSize: 14, fontFace: "Arial", color: FG, align: "center", lineSpacingMultiple: 1.4, valign: "top",
+              });
+            }
+          } else if (layout === "split" && lines.length > 1) {
+            slide.addText(ds.headline, {
+              x: 0.6, y: 0.6, w: 3.8, h: 1.2, fontSize: 36, fontFace: "Arial", bold: true, color: FG, valign: "top",
+            });
+            slide.addShape(pptx.ShapeType.rect, { x: 4.7, y: 0.6, w: 0.02, h: 4.2, fill: { color: ACCENT_DIM } });
             slide.addText(bodyText, {
-              x: 4.8, y: 0.8, w: 4.6, h: 4.2, fontSize: 13, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
+              x: 5.0, y: 0.6, w: 4.4, h: 4.4, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
             });
-          } else if ((layout === "bullets" || isBulletContent) && lines.length >= 3) {
-            // Bullet layout
-            slide.addText(section.label, {
-              x: 0.6, y: 0.7, w: 8.8, fontSize: 30, fontFace: "Arial", bold: true, color: FG,
+          } else if ((layout === "bullets" || isBulletContent || layout === "framework") && lines.length >= 2) {
+            slide.addText(ds.headline, {
+              x: 0.6, y: 0.5, w: 8.8, fontSize: 36, fontFace: "Arial", bold: true, color: FG,
             });
-            const bulletRows = lines.map(line => ({
+            const bulletRows = lines.slice(0, 8).map((line: string) => ({
               text: line.replace(/^[-•*]\s*/, ""),
               options: { fontSize: 14, fontFace: "Arial", color: FG, bullet: { code: "2022", color: ACCENT }, lineSpacingMultiple: 1.5, paraSpaceAfter: 6 },
             }));
             slide.addText(bulletRows as any, {
-              x: 0.8, y: 1.6, w: 8.4, h: 3.6, valign: "top",
+              x: 0.8, y: 1.5, w: 8.4, h: 3.8, valign: "top",
             });
-          } else if (layout === "headline-body") {
-            // Large headline + smaller body
-            const headline = lines[0] || section.label;
-            const rest = lines.slice(1).join("\n");
-            slide.addText(headline, {
-              x: 0.6, y: 0.8, w: 8.8, h: 1.2, fontSize: 36, fontFace: "Arial", bold: true, color: FG, valign: "top",
+          } else {
+            // headline-body or default
+            slide.addText(ds.headline, {
+              x: 0.6, y: 0.5, w: 8.8, h: 1.2, fontSize: 40, fontFace: "Arial", bold: true, color: FG, valign: "top",
             });
-            slide.addShape(pptx.ShapeType.rect, { x: 0.6, y: 2.2, w: 2, h: 0.03, fill: { color: ACCENT } });
-            if (rest) {
-              slide.addText(rest, {
-                x: 0.6, y: 2.6, w: 8.8, h: 2.8, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
+            slide.addShape(pptx.ShapeType.rect, { x: 0.6, y: 1.9, w: 2, h: 0.03, fill: { color: ACCENT } });
+            if (bodyText) {
+              slide.addText(bodyText, {
+                x: 0.6, y: 2.3, w: 8.8, h: 3, fontSize: 15, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
               });
             }
-          } else {
-            // Full content layout
-            slide.addText(section.label, {
-              x: 0.6, y: 0.7, w: 8.8, fontSize: 32, fontFace: "Arial", bold: true, color: FG,
-            });
-            slide.addText(bodyText, {
-              x: 0.6, y: 1.6, w: 8.8, h: 3.6, fontSize: 14, fontFace: "Arial", color: FG, lineSpacingMultiple: 1.4, valign: "top",
-            });
           }
-
-          // Slide footer
-          slide.addText(section.label, {
-            x: 0.6, y: 5.1, w: 4, fontSize: 8, fontFace: "Arial", color: MUTED,
-          });
         }
       }
 
@@ -146,8 +209,10 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
   const exportPdf = async () => {
     if (!isPro) { toast.error("PDF export is available on Pro."); return; }
     setOpen(false);
-    // Use browser print as PDF
-    const content = getAllContent();
+    const content = tabs.map(tab => {
+      const sectionContent = tab.sections.map(s => `### ${s.label}\n\n${s.content}`).join("\n\n---\n\n");
+      return `## ${tab.label}\n\n${sectionContent}`;
+    }).join("\n\n===\n\n");
     const win = window.open("", "_blank");
     if (!win) { toast.error("Please allow popups."); return; }
     win.document.write(`
@@ -165,8 +230,12 @@ export function ExportDropdown({ output, isPro, buildTabs }: Props) {
 
   const exportMarkdown = () => {
     setOpen(false);
-    const content = `# ${(output as any).title || "Narrative Export"}\n\n${getAllContent()}`;
-    const blob = new Blob([content], { type: "text/markdown" });
+    const content = tabs.map(tab => {
+      const sectionContent = tab.sections.map(s => `### ${s.label}\n\n${s.content}`).join("\n\n---\n\n");
+      return `## ${tab.label}\n\n${sectionContent}`;
+    }).join("\n\n===\n\n");
+    const md = `# ${(output as any).title || "Narrative Export"}\n\n${content}`;
+    const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
