@@ -8,6 +8,8 @@ import { Loader2, Copy, Trash2, ArrowRight, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, VoiceProfile } from "@/types/narrative";
 import { formatDistanceToNow } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 const MODES: { value: OutputMode | "auto"; label: string }[] = [
   { value: "auto", label: "Auto Detect" }, { value: "fundraising", label: "Fundraising" },
@@ -21,10 +23,15 @@ const VOICES: { value: VoiceProfile; label: string }[] = [
   { value: "visionary", label: "Visionary" },
 ];
 
-const LOADING_MESSAGES: Record<string, string> = {
-  structuring: "Structuring thesis...", sharpening: "Sharpening narrative...",
-  designing: "Designing deck framework...", scoring: "Computing readiness...",
-};
+const GENERATION_STEPS = [
+  "Analyzing your input...",
+  "Detecting narrative intent...",
+  "Structuring thesis...",
+  "Building narrative arc...",
+  "Scoring readiness...",
+  "Assembling deck framework...",
+  "Finalizing output...",
+];
 
 export function ProductView() {
   const navigate = useNavigate();
@@ -33,10 +40,20 @@ export function ProductView() {
   const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [genStep, setGenStep] = useState(0);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
   useEffect(() => { setVoiceProfile(localVoice); }, [localVoice, setVoiceProfile]);
+
+  // Rotate generation step messages
+  useEffect(() => {
+    if (!isGenerating) { setGenStep(0); return; }
+    const interval = setInterval(() => {
+      setGenStep(prev => (prev + 1) % GENERATION_STEPS.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
 
   const loadDraftsUsed = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -48,6 +65,8 @@ export function ProductView() {
   const handleGenerate = async () => { await generate(); await loadDraftsUsed(); };
   const handleKeyDown = (e: React.KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (!isFreeAndLocked) handleGenerate(); } };
 
+  const progressPercent = isGenerating ? Math.min(((genStep + 1) / GENERATION_STEPS.length) * 90, 90) : 0;
+
   if (output) return <OutputView />;
 
   return (
@@ -57,8 +76,8 @@ export function ProductView() {
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-4">What are you working on?</h1>
           <p className="text-base text-muted-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">We'll detect your intent and generate the right output structure.</p>
           <div className="space-y-5">
-            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or tell us what you need to create..." rows={8} disabled={isFreeAndLocked} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground/40 disabled:opacity-50" />
-            {!isFreeAndLocked && (
+            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or tell us what you need to create..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground/40 disabled:opacity-50" />
+            {!isFreeAndLocked && !isGenerating && (
               <div className="flex flex-wrap gap-1.5">
                 {MODES.map((m) => (<button key={m.value} onClick={() => setSelectedMode(m.value)} className={`text-xs px-3 py-1.5 rounded-sm border transition-colors ${selectedMode === m.value ? "border-electric/30 text-foreground bg-accent" : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"}`}>{m.label}</button>))}
                 <span className="w-px bg-border mx-1" />
@@ -74,17 +93,40 @@ export function ProductView() {
                 <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
                 <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
               </div>
+            ) : isGenerating ? (
+              /* Generation progress area */
+              <div className="border border-border rounded-sm p-6 bg-card/50 animate-fade-in space-y-5">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 text-electric animate-spin shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground transition-all">{GENERATION_STEPS[genStep]}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Step {genStep + 1} of {GENERATION_STEPS.length}</p>
+                  </div>
+                </div>
+                <Progress value={progressPercent} className="h-1.5 bg-muted" />
+                {/* Skeleton placeholder cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="border border-border rounded-sm p-4 space-y-2.5" style={{ animationDelay: `${i * 150}ms` }}>
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-2 w-full" />
+                      <Skeleton className="h-2 w-5/6" />
+                      <Skeleton className="h-2 w-2/3" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={isGenerating || !rawInput.trim()} className="w-full py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
-                  {isGenerating ? (<><Loader2 className="h-4 w-4 animate-spin" />{LOADING_MESSAGES[loadingPhase] || "Generating..."}</>) : "Generate"}
+                <button onClick={handleGenerate} disabled={!rawInput.trim()} className="w-full py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                  Generate
                 </button>
                 <p className="text-[11px] text-muted-foreground/50 text-center mb-4">Press Cmd+Enter to generate</p>
               </>
             )}
           </div>
         </div>
-        {projects.length > 0 && (
+        {!isGenerating && projects.length > 0 && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
