@@ -4,6 +4,8 @@ export type RefinementTone = "refine" | "sharper" | "visionary" | "analytical" |
 
 export type VoiceProfile = "auto" | "executive" | "investor" | "technical" | "visionary";
 
+export type AudienceType = "general" | "investors" | "board" | "internal";
+
 export type ReadinessLevel = "Developing" | "Solid" | "Investor-Ready" | "Board-Ready" | "Conference-Ready";
 
 export interface ReadinessCheckItem {
@@ -128,6 +130,7 @@ export interface Project {
   current_thesis?: string;
   refinement_history: any[];
   outreach_tracker: OutreachEntry[];
+  audience_variants?: Record<AudienceType, NarrativeOutputData>;
   created_at: string;
   updated_at: string;
 }

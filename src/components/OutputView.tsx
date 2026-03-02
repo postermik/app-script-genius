@@ -5,16 +5,24 @@ import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
 import { OutreachTracker } from "@/components/OutreachTracker";
 import { ExportDropdown } from "@/components/ExportDropdown";
 import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
-import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import type { AudienceType } from "@/types/narrative";
 
 interface TabConfig { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[]; }
 
+const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
+  { value: "general", label: "General", desc: "Default output" },
+  { value: "investors", label: "Investors", desc: "Risk-aware, returns-focused" },
+  { value: "board", label: "Board", desc: "Metrics-heavy, strategic" },
+  { value: "internal", label: "Internal", desc: "Transparent, motivational" },
+];
+
 export function OutputView() {
-  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId } = useDecksmith();
+  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting } = useDecksmith();
   const [activeTab, setActiveTab] = useState(0);
   const [showVersions, setShowVersions] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
@@ -24,9 +32,11 @@ export function OutputView() {
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
+  const [showAudiences, setShowAudiences] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const outputRef = useRef(output);
+  const [tabKey, setTabKey] = useState(0); // for re-triggering fade animation
 
   const triggerAutoSave = useCallback(async () => {
     if (!currentProjectId) return;
@@ -42,7 +52,6 @@ export function OutputView() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [output, triggerAutoSave]);
 
-  // Initialize slide order when output changes
   useEffect(() => {
     if (!output) return;
     const d = output.data as any;
@@ -105,11 +114,19 @@ export function OutputView() {
     });
   };
 
+  const handleTabChange = (i: number) => {
+    if (!isTabLocked(i)) {
+      setActiveTab(i);
+      setTabKey(prev => prev + 1);
+    }
+  };
+
   const versionLabel = `v${currentVersion}`;
   const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
   return (
     <div className="flex-1 flex flex-col">
+      {/* Top nav */}
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
         <div className="max-w-[900px] mx-auto flex items-center justify-between">
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
@@ -160,23 +177,74 @@ export function OutputView() {
       </nav>
 
       {showOutreach && (<div className="border-b border-border px-6 py-6 bg-card/50 animate-fade-in"><div className="max-w-[900px] mx-auto"><OutreachTracker /></div></div>)}
-      <div className="border-b border-border px-6 py-5 bg-card/30"><div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div></div>
 
+      {/* Readiness Score */}
+      <div className="border-b border-border px-6 py-8 bg-card/30">
+        <div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div>
+      </div>
+
+      {/* Audience selector bar */}
+      <div className="border-b border-border px-6 py-3 bg-background/80">
+        <div className="max-w-[900px] mx-auto flex items-center gap-3">
+          <button
+            onClick={() => setShowAudiences(!showAudiences)}
+            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-sm transition-colors"
+          >
+            <Users className="h-3 w-3 text-electric" />
+            Audience: <span className="text-foreground font-medium capitalize">{activeAudience}</span>
+            <ChevronDown className={`h-3 w-3 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
+          </button>
+          {isAdapting && (
+            <span className="text-[11px] text-electric flex items-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" /> Adapting for audience...
+            </span>
+          )}
+          {showAudiences && (
+            <div className="flex items-center gap-1.5 animate-fade-in">
+              {AUDIENCES.map(a => (
+                <button
+                  key={a.value}
+                  onClick={() => {
+                    if (a.value === "general") {
+                      setActiveAudience("general");
+                      setShowAudiences(false);
+                    } else {
+                      adaptForAudience(a.value);
+                      setShowAudiences(false);
+                    }
+                  }}
+                  disabled={isAdapting}
+                  className={`text-[11px] px-3 py-1.5 rounded-sm border transition-colors ${
+                    activeAudience === a.value
+                      ? "border-electric/30 text-electric bg-electric/5"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                  } disabled:opacity-40`}
+                  title={a.desc}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
       <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
           {tabs.map((tab, i) => (
-            <button key={tab.key} onClick={() => !isTabLocked(i) && setActiveTab(i)} className={`relative text-sm py-3 px-5 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${i === activeTab ? "border-electric text-foreground" : isTabLocked(i) ? "border-transparent text-muted-foreground/30 cursor-not-allowed" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            <button key={tab.key} onClick={() => handleTabChange(i)} className={`relative text-sm py-3 px-5 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${i === activeTab ? "border-electric text-foreground" : isTabLocked(i) ? "border-transparent text-muted-foreground/30 cursor-not-allowed" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               {isTabLocked(i) && <Lock className="h-3 w-3" />}{tab.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 px-6 py-10">
-        <div className="max-w-[900px] mx-auto animate-fade-in">
+      {/* Tab content */}
+      <div className="flex-1 px-6 py-12">
+        <div className="max-w-[900px] mx-auto animate-tab-enter" key={tabKey}>
           {activeTab >= 0 && currentTab && (
             <div className="space-y-0">
-              {/* On deck tabs, show slide preview FIRST, then section details */}
               {isDeckTab && slidePreviewData.length > 0 && (
                 <SlidePreview
                   slides={slidePreviewData}
@@ -188,14 +256,6 @@ export function OutputView() {
                   onThemeChange={setDeckTheme}
                 />
               )}
-              {currentTab.sections.map((section) => (
-                <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
-              ))}
-            </div>
-          )}
-
-          {activeTab >= 0 && !isDeckTab && currentTab && (
-            <div className="space-y-0">
               {currentTab.sections.map((section) => (
                 <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
               ))}
