@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Grid3X3, Layers, ThumbsUp, ThumbsDown, GripVertical, Info, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, Pencil } from "lucide-react";
 
 export interface SlideData {
   headline: string;
@@ -66,14 +66,24 @@ function getSlideReason(headline: string, idx: number, total: number): string {
 
 function getThemePreviewColors(theme: DeckTheme) {
   if (theme.scheme === "light") return { bg: "#ffffff", fg: "#1a1a2e", accent: "#3b82f6", muted: "#6b7280" };
-  if (theme.scheme === "custom") return { bg: theme.secondary || "#0b0f14", fg: "#ffffff", accent: theme.primary || "#3b82f6", muted: "#9ca3af" };
-  return { bg: "#0b0f14", fg: "#dce0e8", accent: "#3b82f6", muted: "#6b7280" };
+  if (theme.scheme === "custom") {
+    const sec = theme.secondary || "#0b0f14";
+    const bgLightness = getLightness(sec);
+    return { bg: sec, fg: bgLightness > 50 ? "#1a1a2e" : "#f0f0f5", accent: theme.primary || "#3b82f6", muted: bgLightness > 50 ? "#6b7280" : "#9ca3af" };
+  }
+  return { bg: "#0b0f14", fg: "#dce0e8", accent: "#3b82f6", muted: "#9ca3af" };
+}
+
+function getLightness(hex: string): number {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  return ((max + min) / 2) * 100;
 }
 
 export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange }: Props) {
-  const [current, setCurrent] = useState(0);
-  const [viewMode, setViewMode] = useState<"carousel" | "grid">("grid");
-  const [expandedInfo, setExpandedInfo] = useState<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   if (slides.length === 0) return null;
@@ -96,49 +106,41 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
   const themeColors = getThemePreviewColors(theme);
 
   return (
-    <div className="mt-8">
+    <div className="mb-10">
       {/* Deck Theme Panel */}
-      <div className="mb-6 p-4 rounded-sm border border-border bg-card/50">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">Deck Theme</h4>
-          <div className="flex items-center gap-3">
-            {/* Live preview swatch */}
-            <div className="flex items-center gap-1">
-              <div className="w-4 h-4 rounded-sm border border-border" style={{ backgroundColor: themeColors.bg }} />
-              <div className="w-4 h-4 rounded-sm border border-border" style={{ backgroundColor: themeColors.accent }} />
-              <div className="w-4 h-4 rounded-sm border border-border" style={{ backgroundColor: themeColors.fg }} />
-            </div>
-          </div>
+      <div className="mb-6 p-5 rounded-sm border border-border card-gradient">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Deck Theme</h4>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {(["dark", "light", "custom"] as const).map(s => (
             <button key={s} onClick={() => onThemeChange({ ...theme, scheme: s })}
-              className={`text-[11px] px-3 py-1.5 rounded-sm border transition-colors capitalize ${
-                theme.scheme === s ? "border-electric/40 text-foreground bg-accent" : "border-border text-muted-foreground hover:text-foreground"
+              className={`text-xs px-4 py-2 rounded-sm border transition-colors capitalize font-medium ${
+                theme.scheme === s ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
               }`}>
               {s}
             </button>
           ))}
           {theme.scheme === "custom" && (
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-3 ml-2">
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">Primary</span>
+                <span className="text-xs text-muted-foreground">Primary</span>
                 <input type="color" value={theme.primary || "#3b82f6"} onChange={e => onThemeChange({ ...theme, primary: e.target.value })}
-                  className="w-6 h-6 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
               </label>
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">Background</span>
+                <span className="text-xs text-muted-foreground">Background</span>
                 <input type="color" value={theme.secondary || "#0b0f14"} onChange={e => onThemeChange({ ...theme, secondary: e.target.value })}
-                  className="w-6 h-6 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
               </label>
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground">Accent</span>
+                <span className="text-xs text-muted-foreground">Accent</span>
                 <input type="color" value={theme.accent || "#1e3a5f"} onChange={e => onThemeChange({ ...theme, accent: e.target.value })}
-                  className="w-6 h-6 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
               </label>
             </div>
           )}
-          <button onClick={() => {}} className="text-[10px] text-muted-foreground/40 px-2 py-1 border border-dashed border-border rounded-sm cursor-not-allowed ml-auto" title="Coming Soon">
+          <button onClick={() => {}} className="text-xs text-muted-foreground px-3 py-1.5 border border-dashed border-border rounded-sm cursor-not-allowed ml-auto font-medium" title="Coming Soon">
             Upload Brand Guidelines
           </button>
         </div>
@@ -146,181 +148,81 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h3 className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground">Slide Preview</h3>
-          <span className="text-[10px] text-muted-foreground/50">{activeCount} of {slides.length} slides in export</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setViewMode("carousel")}
-            className={`p-1.5 rounded-sm transition-colors ${viewMode === "carousel" ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"}`}>
-            <Layers className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={() => setViewMode("grid")}
-            className={`p-1.5 rounded-sm transition-colors ${viewMode === "grid" ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"}`}>
-            <Grid3X3 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <h3 className="text-xs font-semibold tracking-[0.15em] uppercase text-electric">Slide Framework</h3>
+        <span className="text-sm text-muted-foreground">{activeCount} of {slides.length} slides in export</span>
       </div>
 
-      <p className="text-[10px] text-muted-foreground/50 mb-3">Drag to reorder • Thumbs down to exclude from export • Changes apply to exported deck</p>
+      <p className="text-sm text-muted-foreground mb-5">Drag to reorder · Thumbs down to exclude from export · Changes apply to exported deck</p>
 
-      {viewMode === "carousel" ? (
-        <div>
-          {(() => {
-            const slide = orderedSlides[current];
-            if (!slide) return null;
-            const isExcluded = excludedSlides.has(slide.originalIdx);
-            return (
-              <div className={`relative transition-opacity ${isExcluded ? "opacity-40" : ""}`}>
-                <div className="aspect-video flex flex-col justify-between p-8 relative rounded-sm border border-border"
-                  style={{ backgroundColor: themeColors.bg }}>
-                  <div className="absolute top-0 left-0 right-0 h-1 rounded-t-sm" style={{ backgroundColor: themeColors.accent }} />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getLayoutColor(slide.slideType)}`}>
-                        {getLayoutLabel(slide.slideType)}
-                      </span>
-                      {slide.visualDirection && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{slide.visualDirection}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setExpandedInfo(expandedInfo === slide.originalIdx ? null : slide.originalIdx)}
-                        className="text-muted-foreground/50 hover:text-foreground transition-colors" title="Why this slide?">
-                        <Info className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="text-[10px]" style={{ color: themeColors.muted }}>{current + 1} / {orderedSlides.length}</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-col justify-center py-4">
-                    <h4 className="text-lg font-bold leading-tight mb-3" style={{ color: themeColors.fg }}>{slide.headline}</h4>
-                    {slide.content && <p className="text-xs leading-relaxed line-clamp-4" style={{ color: themeColors.fg + "b3" }}>{slide.content}</p>}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => { if (isExcluded) onToggleSlide(slide.originalIdx); }}
-                        className={`p-1 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground/30 hover:text-emerald"}`} title="Include in export">
-                        <ThumbsUp className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => { if (!isExcluded) onToggleSlide(slide.originalIdx); }}
-                        className={`p-1 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground/30 hover:text-destructive"}`} title="Exclude from export">
-                        <ThumbsDown className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    {isExcluded && (
-                      <button onClick={() => onToggleSlide(slide.originalIdx)}
-                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
-                        <RotateCcw className="h-3 w-3" /> Restore
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {expandedInfo === slide.originalIdx && (
-                  <div className="mt-2 p-3 rounded-sm border border-border bg-card/80 text-xs text-muted-foreground leading-relaxed animate-fade-in">
-                    <span className="text-electric font-medium">Why here:</span> {getSlideReason(slide.headline, current, orderedSlides.length)}
-                  </div>
+      {/* Horizontal row layout */}
+      <div className="space-y-2">
+        {orderedSlides.map((slide, i) => {
+          const isExcluded = excludedSlides.has(slide.originalIdx);
+          return (
+            <div
+              key={slide.originalIdx}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={e => handleDragOver(e, i)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center gap-4 p-4 rounded-sm border transition-all ${
+                isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient"
+              } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
+            >
+              {/* Drag handle */}
+              <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                <GripVertical className="h-4 w-4" />
+              </div>
+
+              {/* Slide number */}
+              <span className="text-sm font-bold text-muted-foreground w-7 text-center shrink-0">{i + 1}</span>
+
+              {/* Mini preview thumbnail */}
+              <div className="w-24 h-14 rounded-sm border border-border shrink-0 flex flex-col items-center justify-center overflow-hidden"
+                style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}>
+                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${getLayoutColor(slide.slideType)}`}>
+                  {getLayoutLabel(slide.slideType)}
+                </span>
+                {slide.visualDirection && (
+                  <span className="text-[7px] mt-0.5 px-1 py-0.5 rounded-full bg-muted text-muted-foreground">{slide.visualDirection}</span>
                 )}
               </div>
-            );
-          })()}
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <button onClick={() => setCurrent(c => Math.max(0, c - 1))} disabled={current === 0}
-              className="p-1.5 rounded-sm border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="flex gap-1">
-              {orderedSlides.map((s, i) => (
-                <button key={i} onClick={() => setCurrent(i)}
-                  className={`w-2 h-2 rounded-full transition-colors ${i === current ? "bg-electric" : excludedSlides.has(s.originalIdx) ? "bg-destructive/30" : "bg-muted-foreground/30"}`} />
-              ))}
-            </div>
-            <button onClick={() => setCurrent(c => Math.min(orderedSlides.length - 1, c + 1))} disabled={current === orderedSlides.length - 1}
-              className="p-1.5 rounded-sm border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {orderedSlides.map((slide, i) => {
-            const isExcluded = excludedSlides.has(slide.originalIdx);
-            return (
-              <div
-                key={slide.originalIdx}
-                draggable
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={e => handleDragOver(e, i)}
-                onDragEnd={handleDragEnd}
-                className={`relative aspect-video flex flex-col justify-between p-4 text-left rounded-sm border transition-all ${
-                  isExcluded ? "opacity-40 border-destructive/20 bg-muted/20" : "border-border hover:border-muted-foreground/20"
-                } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.98]" : ""}`}
-                style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}
-              >
-                {/* Drag handle */}
-                <div className="absolute top-1 left-1 cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
-                  <GripVertical className="h-3 w-3" />
-                </div>
 
-                <div className="flex items-center justify-between pl-3">
-                  <div className="flex items-center gap-1">
-                    <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${getLayoutColor(slide.slideType)}`}>
-                      {getLayoutLabel(slide.slideType)}
-                    </span>
-                    {slide.visualDirection && (
-                      <span className="text-[8px] px-1 py-0.5 rounded-full bg-muted text-muted-foreground">{slide.visualDirection}</span>
-                    )}
-                  </div>
-                  <span className="text-[9px]" style={{ color: isExcluded ? undefined : themeColors.muted }}>{i + 1}</span>
-                </div>
+              {/* Headline + reason */}
+              <div className="flex-1 min-w-0">
+                <h5 className={`text-sm font-semibold leading-tight truncate ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                  {slide.headline}
+                </h5>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-1">
+                  {getSlideReason(slide.headline, i, orderedSlides.length)}
+                </p>
+              </div>
 
-                <div className="flex-1 flex flex-col justify-center py-2 pl-3">
-                  <h5 className="text-[11px] font-semibold leading-tight line-clamp-2" style={{ color: isExcluded ? undefined : themeColors.fg }}>
-                    {slide.headline}
-                  </h5>
-                  {slide.content && (
-                    <p className="text-[9px] mt-1 line-clamp-2 leading-relaxed" style={{ color: isExcluded ? undefined : themeColors.fg + "80" }}>
-                      {slide.content}
-                    </p>
-                  )}
-                </div>
-
-                {/* Thumbs */}
-                <div className="flex items-center justify-between pl-3">
-                  <div className="flex items-center gap-1">
-                    <button onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
-                      className={`p-0.5 rounded-sm transition-colors ${!isExcluded ? "text-emerald" : "text-muted-foreground/20 hover:text-emerald"}`}>
-                      <ThumbsUp className="h-3 w-3" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
-                      className={`p-0.5 rounded-sm transition-colors ${isExcluded ? "text-destructive" : "text-muted-foreground/20 hover:text-destructive"}`}>
-                      <ThumbsDown className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); setExpandedInfo(expandedInfo === slide.originalIdx ? null : slide.originalIdx); }}
-                    className="text-muted-foreground/30 hover:text-foreground transition-colors" title="Why this slide?">
-                    <Info className="h-3 w-3" />
-                  </button>
-                </div>
-
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
+                  className={`p-1.5 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
+                  title="Include in export">
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
+                  className={`p-1.5 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
+                  title="Exclude from export">
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
                 {isExcluded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-sm">
-                    <button onClick={() => onToggleSlide(slide.originalIdx)}
-                      className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm bg-card">
-                      <RotateCcw className="h-3 w-3" /> Restore
-                    </button>
-                  </div>
-                )}
-
-                {expandedInfo === slide.originalIdx && (
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-card/95 border-t border-border text-[9px] text-muted-foreground leading-relaxed rounded-b-sm animate-fade-in z-10">
-                    <span className="text-electric font-medium">Why: </span>{getSlideReason(slide.headline, i, orderedSlides.length)}
-                  </div>
+                  <button onClick={() => onToggleSlide(slide.originalIdx)}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm">
+                    <RotateCcw className="h-3 w-3" /> Restore
+                  </button>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

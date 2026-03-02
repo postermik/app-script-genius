@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RefinementTone } from "@/types/narrative";
-import { Loader2, Lock, Pencil, ChevronDown } from "lucide-react";
+import { Loader2, Lock, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 
 const REFINEMENTS: { label: string; tone: RefinementTone }[] = [
   { label: "Refine", tone: "refine" },
@@ -26,12 +26,12 @@ export function OutputCard({ label, content, path, sectionKey, locked }: Props) 
   const [showRefine, setShowRefine] = useState(false);
 
   return (
-    <div className="group rounded-sm accent-left-border card-gradient border border-border p-7 mb-6 transition-all hover:border-muted-foreground/15 hover:shadow-lg hover:shadow-electric/[0.03]">
-      <div className="flex items-start justify-between mb-4">
+    <div className="group rounded-sm accent-left-border card-gradient border border-border p-8 mb-6 transition-all hover:border-muted-foreground/20 hover:shadow-lg hover:shadow-electric/[0.03]">
+      <div className="flex items-start justify-between mb-5">
         <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">
           {label}
         </h3>
-        {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+        {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
       </div>
 
       <div className="relative">
@@ -48,33 +48,33 @@ export function OutputCard({ label, content, path, sectionKey, locked }: Props) 
         )}
       </div>
 
-      {/* Always-visible refine trigger */}
+      {/* Refine trigger - always visible */}
       {!locked && (
-        <div className="mt-4 pt-3 border-t border-border/50 flex justify-end">
+        <div className="mt-5 pt-4 border-t border-border/50 flex justify-end">
           {!showRefine ? (
             <button
               onClick={() => setShowRefine(true)}
-              className="text-[11px] text-electric/60 hover:text-electric flex items-center gap-1 transition-colors px-2 py-1 rounded-sm hover:bg-electric/5"
+              className="text-xs text-electric/80 hover:text-electric flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-sm border border-electric/20 hover:bg-electric/5 hover:border-electric/30 font-medium"
             >
               <Pencil className="h-3 w-3" />
               Refine
               <ChevronDown className="h-3 w-3" />
             </button>
           ) : (
-            <div className="flex flex-wrap items-center gap-1.5 animate-fade-in">
+            <div className="flex flex-wrap items-center gap-2 animate-fade-in">
               {REFINEMENTS.map((r) => (
                 <button
                   key={r.tone}
                   onClick={() => { refineSection(sectionKey, path, r.tone); setShowRefine(false); }}
                   disabled={isRefining}
-                  className="text-[10px] text-muted-foreground px-2.5 py-1 rounded-sm border border-border hover:text-electric hover:bg-electric/5 hover:border-electric/20 transition-colors disabled:opacity-30"
+                  className="text-xs text-foreground/75 px-3 py-1.5 rounded-sm border border-border hover:text-electric hover:bg-electric/5 hover:border-electric/20 transition-colors disabled:opacity-30 font-medium"
                 >
                   {r.label}
                 </button>
               ))}
               <button
                 onClick={() => setShowRefine(false)}
-                className="text-[10px] text-muted-foreground/40 hover:text-foreground px-1.5 py-1 transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors"
               >
                 ✕
               </button>
