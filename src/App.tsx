@@ -17,6 +17,7 @@ import Investors from "./pages/raise/Investors";
 import Outreach from "./pages/raise/Outreach";
 import DataRoom from "./pages/raise/DataRoom";
 import Pipeline from "./pages/raise/Pipeline";
+import PublicDataRoom from "./pages/PublicDataRoom";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
@@ -34,6 +35,8 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
+              {/* Public data room - outside RootLayout for clean presentation */}
+              <Route path="/room/:slug" element={<PublicDataRoom />} />
               <Route element={<RootLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
