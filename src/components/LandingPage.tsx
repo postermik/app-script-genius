@@ -134,7 +134,7 @@ export function LandingPage() {
           {PROOF.map((p) => (
             <div key={p.text} className="flex items-center gap-3">
               <p.icon className="h-5 w-5 text-electric" />
-              <span className="text-lg font-medium text-white">{p.text}</span>
+              <span className="font-medium text-white whitespace-nowrap" style={{ fontSize: "clamp(14px, 1.2vw, 18px)" }}>{p.text}</span>
             </div>
           ))}
         </div>
