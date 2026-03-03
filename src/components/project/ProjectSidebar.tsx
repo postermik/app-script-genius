@@ -20,7 +20,7 @@ export function ProjectSidebar({ activeSection, onSectionChange }: Props) {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-52 shrink-0 fixed top-[73px] left-0 h-[calc(100vh-73px)] overflow-y-auto bg-[hsl(222_24%_4%)] border-r border-border z-10 flex flex-col">
+    <aside className="w-52 shrink-0 sticky top-[57px] self-start h-[calc(100vh-57px)] overflow-y-auto bg-[hsl(222_24%_4%)] border-r border-border z-10 flex flex-col">
       <div className="flex-1 px-3 pt-6">
         <nav className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {

@@ -53,10 +53,12 @@ export default function Raise() {
   if (location.pathname === "/raise") return null;
 
   return (
-    <div className="pl-52">
+    <div className="flex flex-1">
       <RaiseSidebar />
-      <div className="max-w-[900px] mx-auto px-6 py-8">
-        <Outlet />
+      <div className="flex-1 min-w-0">
+        <div className="max-w-[900px] mx-auto px-6 py-8">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
