@@ -2,6 +2,8 @@ import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { DesignShowcase } from "@/components/landing/DesignShowcase";
+import { BeyondTheDeck } from "@/components/landing/BeyondTheDeck";
+import { WorkflowSteps } from "@/components/landing/WorkflowSteps";
 
 const OUTPUTS = [
   {
@@ -16,12 +18,10 @@ const OUTPUTS = [
     title: "Strategy Memo",
     description: "Strategic positioning and decision logic your team can align around.",
   },
-];
-
-const METHOD_CARDS = [
-  { title: "Clarify the core claim", description: "Before slides, before design, we identify the single argument your company must prove." },
-  { title: "Build the logic", description: "We structure the narrative so each slide earns the next. No filler. No decorative momentum." },
-  { title: "Pressure-test the story", description: "We surface gaps, weak assumptions, and missing proof before your audience does." },
+  {
+    title: "Investor Update",
+    description: "Monthly progress reports with metrics framing, challenges, and milestone tracking.",
+  },
 ];
 
 const EXAMPLES = [
@@ -53,26 +53,34 @@ const PLANS = [
     name: "Free",
     price: "$0",
     period: "",
-    description: "One draft to try it out.",
-    features: ["1 draft creation", "All output modes", "No exports"],
+    description: "Try it out with one draft.",
+    features: ["1 draft creation", "All output modes", "Basic readiness score", "No exports", "No Raise features"],
     cta: "Get Started",
     highlighted: false,
   },
   {
     name: "Hobby",
     price: "$20",
-    period: "/seat/mo",
+    period: "/mo",
     description: "For founders getting started.",
-    features: ["Unlimited drafts", "Limited refinements", "Thesis and pitch script", "No exports"],
+    features: ["Unlimited drafts", "Full readiness scoring + coaching", "Pitch prep", "Export to PPT + PDF", "Dark deck theme only", "No Raise features"],
     cta: "Choose Hobby",
     highlighted: false,
   },
   {
     name: "Pro",
     price: "$100",
-    period: "/seat/mo",
-    description: "Full capital readiness.",
-    features: ["Unlimited projects", "Unlimited refinements", "All output modes", "Export to PPT and PDF", "Board and fundraising templates", "Priority processing"],
+    period: "/mo",
+    description: "Full capital readiness + raise tools.",
+    features: [
+      "Everything in Hobby",
+      "Investor discovery with AI matching",
+      "Pipeline tracker",
+      "Data room with analytics",
+      "All export formats incl. DOCX",
+      "Custom deck themes + brand colors",
+      "Audience-specific versions",
+    ],
     cta: "Get Pro",
     highlighted: true,
   },
@@ -92,13 +100,13 @@ export function LandingPage() {
             Craft the narrative.
           </h1>
           <p className="text-lg text-muted-foreground max-w-[620px] mx-auto leading-relaxed mb-12">
-            Turn scattered ideas into structured narratives, strategy memos, and presentations that hold up under pressure.
+            Turn raw thinking into investor-grade decks, memos, and pitch scripts — then find the right investors and manage your raise. All in one platform.
           </p>
           <button
             onClick={() => navigate("/auth?signup=true&next=/dashboard")}
             className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2 glow-blue"
           >
-            Generate Your First Narrative
+            Start Free
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -109,7 +117,7 @@ export function LandingPage() {
         <div className="max-w-[1100px] mx-auto">
           <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Where It Applies</p>
           <h2 className="text-3xl font-bold text-foreground mb-16 tracking-tight">Structured narratives for real decisions.</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {OUTPUTS.map((f) => (
               <div key={f.title} className="bg-card/50 border border-border rounded-sm p-8 hover:border-muted-foreground/20 transition-all hover:-translate-y-0.5">
                 <h3 className="text-lg font-semibold text-foreground mb-3">{f.title}</h3>
@@ -121,6 +129,8 @@ export function LandingPage() {
       </section>
 
       <DesignShowcase />
+
+      <BeyondTheDeck />
 
       {/* Example Gallery */}
       <section className="px-6 py-24">
@@ -146,26 +156,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="px-6 py-20">
-        <div className="max-w-[1100px] mx-auto">
-          <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">How It Works</p>
-          <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Thinking, structured properly.</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[540px] mb-14">
-            You bring the raw thinking.<br />
-            We turn it into an investor-grade narrative.<br />
-            You walk away with a deck that holds up in serious rooms.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {METHOD_CARDS.map((card) => (
-              <div key={card.title} className="border border-border rounded-sm p-7 hover:border-muted-foreground/20 transition-colors">
-                <h3 className="text-[15px] font-semibold text-foreground mb-2.5">{card.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{card.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <WorkflowSteps />
 
       {/* Pricing */}
       <section className="px-6 py-24">
