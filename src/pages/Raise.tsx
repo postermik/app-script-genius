@@ -32,6 +32,12 @@ export default function Raise() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    if (ready && !loading && isPro && location.pathname === "/raise") {
+      navigate("/raise/investors", { replace: true });
+    }
+  }, [ready, loading, isPro, location.pathname, navigate]);
+
   if (!ready || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -40,16 +46,11 @@ export default function Raise() {
     );
   }
 
-  // Hobby users see the upgrade landing
   if (!isPro) {
     return <RaiseUpgradeLanding />;
   }
 
-  // Pro users: redirect to /raise/investors if on bare /raise
-  if (location.pathname === "/raise") {
-    navigate("/raise/investors", { replace: true });
-    return null;
-  }
+  if (location.pathname === "/raise") return null;
 
   return (
     <div className="max-w-[1100px] mx-auto px-6 py-8">

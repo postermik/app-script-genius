@@ -13,7 +13,7 @@ export function RaiseSidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-48 shrink-0">
+    <aside className="w-48 shrink-0 sticky top-[73px] self-start h-[calc(100vh-73px)] overflow-y-auto">
       <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric mb-4 px-3">
         Raise
       </h3>

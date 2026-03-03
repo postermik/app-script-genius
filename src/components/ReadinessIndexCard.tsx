@@ -144,10 +144,8 @@ function generateCoachingItems(output: NarrativeOutputData): CoachingItem[] {
   const items: CoachingItem[] = [];
   const score = output.score;
   const components = score?.components;
-  const gaps = score?.gaps || [];
   const improvements = score?.improvements || [];
   const missing = computeReadiness(output).missing;
-  const d = output.data as any;
 
   if (components) {
     const entries = Object.entries(components) as [string, number][];
@@ -194,20 +192,18 @@ function generateCoachingItems(output: NarrativeOutputData): CoachingItem[] {
     }
   }
 
-  // Generate objections from threats/missing items
   const threats = missing.filter(m => m.length > 0);
   if (threats.length > 0) {
     for (const threat of threats.slice(0, 3)) {
       const t = threat.toLowerCase();
       let response = "Acknowledge the concern directly, then pivot to your mitigation plan with specific evidence.";
       if (t.includes("risk")) response = "\"We've mapped our top risks and have concrete mitigation strategies for each. Let me walk you through them.\"";
-      else if (t.includes("thesis") || t.includes("thesis")) response = "\"Our thesis is grounded in [specific market data]. Here's the evidence...\"";
+      else if (t.includes("thesis")) response = "\"Our thesis is grounded in [specific market data]. Here's the evidence...\"";
       else if (t.includes("traction") || t.includes("metric")) response = "\"While early, our leading indicators show [specific trend]. Here's our traction trajectory...\"";
       items.push({ type: "objection", title: threat, detail: "Investors will likely probe this area. Being prepared with a confident, data-backed response turns a weakness into a signal of maturity.", fix: response, linkPitchPrep: true });
     }
   }
 
-  // Opportunities from improvements
   for (const imp of improvements.slice(0, 2)) {
     items.push({ type: "opportunity", title: imp, detail: "This improvement could meaningfully increase your narrative score and investor conviction.", fix: `Apply this recommendation and refine the relevant section using the "Sharper" or "Analytical" tone.` });
   }
@@ -220,8 +216,6 @@ function generateCoachingItems(output: NarrativeOutputData): CoachingItem[] {
 export function ReadinessIndexCard({ output, isPro }: Props) {
   const navigate = useNavigate();
   const readiness = computeReadiness(output);
-  const [expanded, setExpanded] = useState(true);
-  const [detailTab, setDetailTab] = useState<"scores" | "coaching">("scores");
   const score = output.score;
   const overall = score?.overall || 50;
   const components = score?.components;
@@ -236,150 +230,134 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
   }, []);
 
   return (
-    <div className="card-gradient rounded-sm border border-border p-8">
-      {/* Top row: gauge + checklist */}
-      <div className="flex items-center gap-10 flex-wrap">
-        <CircularGauge value={overall} label={readiness.level} levelColor={getLevelColor(readiness.level)} />
-
-        <div className="flex-1 min-w-0 space-y-4">
-          <p className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">{getReadinessLabel(mode)}</p>
-          <div className="flex flex-wrap gap-2">
-            {components && Object.entries(components).map(([key, value]) => {
-              const label = getScoreLabel(key, mode);
-              if (value >= 80) return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald/15 text-emerald"><Check className="h-3 w-3" />{label}</span>;
-              if (value >= 65) return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-400/15 text-yellow-400"><AlertTriangle className="h-3 w-3" />{label} ({value})</span>;
-              return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/15 text-destructive"><X className="h-3 w-3" />{label} ({value})</span>;
-            })}
-          </div>
-
-          {/* CTA or next action */}
-          {showInvestorCTA ? (
-            <div className="flex items-center gap-3">
-              <button onClick={() => navigate("/raise/investors")}
-                className="flex items-center gap-2 px-5 py-2.5 bg-electric text-primary-foreground rounded-sm font-semibold text-sm hover:opacity-90 transition-opacity">
-                Find Matching Investors <ArrowRight className="h-4 w-4" />
-              </button>
-              <span className="text-xs text-muted-foreground">We've identified investors that match your profile based on this narrative.</span>
+    <div className="space-y-8">
+      {/* Top: gauge + badges */}
+      <div className="card-gradient rounded-sm border border-border p-8">
+        <div className="flex items-center gap-10 flex-wrap">
+          <CircularGauge value={overall} label={readiness.level} levelColor={getLevelColor(readiness.level)} />
+          <div className="flex-1 min-w-0 space-y-4">
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">{getReadinessLabel(mode)}</p>
+            <div className="flex flex-wrap gap-2">
+              {components && Object.entries(components).map(([key, value]) => {
+                const label = getScoreLabel(key, mode);
+                if (value >= 80) return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald/15 text-emerald"><Check className="h-3 w-3" />{label}</span>;
+                if (value >= 65) return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-400/15 text-yellow-400"><AlertTriangle className="h-3 w-3" />{label} ({value})</span>;
+                return <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/15 text-destructive"><X className="h-3 w-3" />{label} ({value})</span>;
+              })}
             </div>
-          ) : readiness.nextAction && readiness.nextAction !== "find_investors" ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              <span className="text-electric font-medium">Next:</span> {readiness.nextAction}
-            </p>
-          ) : null}
-        </div>
 
-        <button onClick={() => setExpanded(!expanded)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-3 py-1.5 border border-border rounded-sm shrink-0">
-          {expanded ? "Hide" : "Details"}
-          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        </button>
+            {/* Next action text */}
+            {!showInvestorCTA && readiness.nextAction && readiness.nextAction !== "find_investors" && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="text-electric font-medium">Next:</span> {readiness.nextAction}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Expanded detail panel */}
-      {expanded && (
-        <div className="mt-8 pt-8 border-t border-border animate-tab-enter">
-          <div className="flex gap-1 mb-8">
-            {([
-              { key: "scores" as const, label: "Score Breakdown" },
-              { key: "coaching" as const, label: `Coaching (${coachingItems.length})` },
-            ]).map(tab => (
-              <button key={tab.key} onClick={() => setDetailTab(tab.key)}
-                className={`text-xs px-4 py-2 rounded-sm transition-colors font-medium ${
-                  detailTab === tab.key ? "bg-electric/10 text-electric border border-electric/20" : "text-muted-foreground hover:text-foreground"
-                }`}>{tab.label}</button>
+      {/* Score Breakdown */}
+      {components && (
+        <div className="card-gradient rounded-sm border border-border p-8">
+          <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric mb-6">Score Breakdown</h3>
+          <div className="space-y-5">
+            {Object.entries(components).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-4">
+                <span className="text-xs text-foreground/80 w-40 shrink-0 font-medium">{getScoreLabel(key, mode)}</span>
+                <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${getScoreColor(value)} ${animatedScores ? "animate-score-fill" : ""}`} style={{ width: `${value}%` }} />
+                </div>
+                <span className={`text-sm font-semibold tabular-nums w-8 text-right ${value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/70"}`}>{value}</span>
+              </div>
             ))}
           </div>
+        </div>
+      )}
 
-          <div className="animate-tab-enter" key={detailTab}>
-            {detailTab === "scores" && components && (
-              <div className="space-y-5">
-                {Object.entries(components).map(([key, value]) => (
-                  <div key={key} className="flex items-center gap-4">
-                    <span className="text-xs text-foreground/80 w-40 shrink-0 font-medium">{getScoreLabel(key, mode)}</span>
-                    <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${getScoreColor(value)} ${animatedScores ? "animate-score-fill" : ""}`} style={{ width: `${value}%` }} />
-                    </div>
-                    <span className={`text-sm font-semibold tabular-nums w-8 text-right ${value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/70"}`}>{value}</span>
-                  </div>
-                ))}
+      {/* Coaching */}
+      {coachingItems.length > 0 && (
+        <div className="card-gradient rounded-sm border border-border p-8">
+          <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric mb-6">Coaching ({coachingItems.length})</h3>
+          <div className="space-y-6">
+            {/* Weaknesses */}
+            {coachingItems.filter(i => i.type === "weakness").length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
+                  <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" /> Areas to Strengthen
+                </p>
+                <div className="space-y-3">
+                  {coachingItems.filter(i => i.type === "weakness").map((item, idx) => (
+                    <CoachingCard key={`w-${idx}`} item={item} navigate={navigate} />
+                  ))}
+                </div>
               </div>
             )}
-            {detailTab === "scores" && !components && (
-              <p className="text-sm text-muted-foreground">Score component data not available for this output.</p>
+
+            {/* Objections */}
+            {coachingItems.filter(i => i.type === "objection").length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
+                  <MessageCircleQuestion className="h-3.5 w-3.5 text-destructive" /> Objections Investors Will Raise
+                </p>
+                <div className="space-y-3">
+                  {coachingItems.filter(i => i.type === "objection").map((item, idx) => (
+                    <div key={`o-${idx}`} className="p-4 rounded-sm bg-destructive/5 border border-destructive/15">
+                      <p className="text-sm font-semibold text-foreground mb-1.5">"{item.title}"</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-3">{item.detail}</p>
+                      <div className="p-3 rounded-sm bg-background/50 border border-border">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-1">Suggested Response</p>
+                        <p className="text-sm text-foreground/80 leading-relaxed italic">{item.fix}</p>
+                      </div>
+                      {item.linkPitchPrep && (
+                        <p className="text-xs text-electric mt-2 flex items-center gap-1">
+                          <Link2 className="h-3 w-3" /> You'll likely get asked about this — see Common Investor Questions in Pitch Prep
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {detailTab === "coaching" && (
-              <div className="space-y-4">
-                {coachingItems.length === 0 && (
-                  <div className="text-center py-8">
-                    <Check className="h-8 w-8 text-emerald mx-auto mb-3" />
-                    <p className="text-sm text-foreground font-medium">Looking great!</p>
-                    <p className="text-xs text-muted-foreground mt-1">No major coaching items identified. Keep refining to push scores higher.</p>
-                  </div>
-                )}
-
-                {/* Weaknesses */}
-                {coachingItems.filter(i => i.type === "weakness").length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
-                      <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" /> Areas to Strengthen
-                    </p>
-                    <div className="space-y-3">
-                      {coachingItems.filter(i => i.type === "weakness").map((item, idx) => (
-                        <CoachingCard key={`w-${idx}`} item={item} navigate={navigate} />
-                      ))}
+            {/* Opportunities */}
+            {coachingItems.filter(i => i.type === "opportunity").length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
+                  <TrendingUp className="h-3.5 w-3.5 text-electric" /> Opportunities
+                </p>
+                <div className="space-y-3">
+                  {coachingItems.filter(i => i.type === "opportunity").map((item, idx) => (
+                    <div key={`op-${idx}`} className="flex items-start gap-3 p-4 rounded-sm bg-electric/5 border border-electric/10">
+                      <Lightbulb className="h-4 w-4 text-electric shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground mb-1">{item.title}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{item.fix}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Objections */}
-                {coachingItems.filter(i => i.type === "objection").length > 0 && (
-                  <div className="mt-6">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
-                      <MessageCircleQuestion className="h-3.5 w-3.5 text-destructive" /> Objections Investors Will Raise
-                    </p>
-                    <div className="space-y-3">
-                      {coachingItems.filter(i => i.type === "objection").map((item, idx) => (
-                        <div key={`o-${idx}`} className="p-4 rounded-sm bg-destructive/5 border border-destructive/15">
-                          <p className="text-sm font-semibold text-foreground mb-1.5">"{item.title}"</p>
-                          <p className="text-xs text-muted-foreground leading-relaxed mb-3">{item.detail}</p>
-                          <div className="p-3 rounded-sm bg-background/50 border border-border">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-1">Suggested Response</p>
-                            <p className="text-sm text-foreground/80 leading-relaxed italic">{item.fix}</p>
-                          </div>
-                          {item.linkPitchPrep && (
-                            <p className="text-xs text-electric mt-2 flex items-center gap-1">
-                              <Link2 className="h-3 w-3" /> You'll likely get asked about this — see Common Investor Questions in Pitch Prep
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Opportunities */}
-                {coachingItems.filter(i => i.type === "opportunity").length > 0 && (
-                  <div className="mt-6">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-medium">
-                      <TrendingUp className="h-3.5 w-3.5 text-electric" /> Opportunities
-                    </p>
-                    <div className="space-y-3">
-                      {coachingItems.filter(i => i.type === "opportunity").map((item, idx) => (
-                        <div key={`op-${idx}`} className="flex items-start gap-3 p-4 rounded-sm bg-electric/5 border border-electric/10">
-                          <Lightbulb className="h-4 w-4 text-electric shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium text-foreground mb-1">{item.title}</p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">{item.fix}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {coachingItems.length === 0 && (
+        <div className="card-gradient rounded-sm border border-border p-8 text-center">
+          <Check className="h-8 w-8 text-emerald mx-auto mb-3" />
+          <p className="text-sm text-foreground font-medium">Looking great!</p>
+          <p className="text-xs text-muted-foreground mt-1">No major coaching items identified. Keep refining to push scores higher.</p>
+        </div>
+      )}
+
+      {/* Find Matching Investors CTA */}
+      {showInvestorCTA && (
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/raise/investors")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-electric text-primary-foreground rounded-sm font-semibold text-sm hover:opacity-90 transition-opacity">
+            Find Matching Investors <ArrowRight className="h-4 w-4" />
+          </button>
+          <span className="text-xs text-muted-foreground">We've identified investors that match your profile based on this narrative.</span>
         </div>
       )}
     </div>

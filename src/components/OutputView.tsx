@@ -8,6 +8,7 @@ import { SlidePreview, type SlideData, type DeckTheme } from "@/components/Slide
 import { ThesisTab } from "@/components/ThesisTab";
 import { NarrativeArcTab } from "@/components/NarrativeArcTab";
 import { PitchPrepTab } from "@/components/PitchPrepTab";
+import { ProjectSidebar, type ProjectSection } from "@/components/project/ProjectSidebar";
 import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,9 +27,8 @@ const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
 
 export function OutputView() {
   const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting } = useDecksmith();
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeSection, setActiveSection] = useState<ProjectSection>("readiness");
   const [showVersions, setShowVersions] = useState(false);
-  const [showOutreach, setShowOutreach] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -40,7 +40,6 @@ export function OutputView() {
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const outputRef = useRef(output);
-  const [tabKey, setTabKey] = useState(0);
 
   const triggerAutoSave = useCallback(async () => {
     if (!currentProjectId) return;
@@ -69,9 +68,7 @@ export function OutputView() {
   if (!output) return null;
 
   const tabs = buildTabs(output);
-  const currentTab = tabs[activeTab];
   const isFirstFree = !isPro && generationCount >= 1;
-  const isTabLocked = (i: number) => isFirstFree && i >= 2;
   const projectTitle = (output as any).title || "Untitled Project";
 
   const getDeckPreviewSlides = (): SlideData[] => {
@@ -99,10 +96,25 @@ export function OutputView() {
   };
 
   const slidePreviewData = getDeckPreviewSlides();
-  const isDeckTab = currentTab?.key === "deck" || currentTab?.key === "boardDeck";
-  const isThesisTab = currentTab?.key === "thesis" && output.mode === "fundraising";
-  const isNarrativeTab = currentTab?.key === "narrative";
-  const isPitchTab = currentTab?.key === "pitch";
+
+  // Map activeSection to tab data
+  const getTabForSection = (section: ProjectSection) => {
+    const keyMap: Record<ProjectSection, string[]> = {
+      readiness: [],
+      thesis: ["thesis", "summary", "vision", "headline"],
+      narrative: ["narrative", "metrics", "problem", "progress"],
+      pitch: ["pitch", "risks", "competitive", "challenges", "solution"],
+      deck: ["deck", "boardDeck", "roadmap", "next", "ask"],
+    };
+    const keys = keyMap[section];
+    return tabs.find(t => keys.includes(t.key));
+  };
+
+  const currentTab = getTabForSection(activeSection);
+  const isDeckSection = activeSection === "deck";
+  const isThesisSection = activeSection === "thesis" && output.mode === "fundraising";
+  const isNarrativeSection = activeSection === "narrative" && output.mode === "fundraising";
+  const isPitchSection = activeSection === "pitch" && output.mode === "fundraising";
 
   const handleTitleEdit = () => { setTitleValue(projectTitle); setEditingTitle(true); };
   const handleTitleSave = async () => {
@@ -119,13 +131,6 @@ export function OutputView() {
       if (next.has(idx)) next.delete(idx); else next.add(idx);
       return next;
     });
-  };
-
-  const handleTabChange = (i: number) => {
-    if (!isTabLocked(i)) {
-      setActiveTab(i);
-      setTabKey(prev => prev + 1);
-    }
   };
 
   const handleAudienceSelect = (audience: AudienceType) => {
@@ -148,9 +153,9 @@ export function OutputView() {
     <div className="flex-1 flex flex-col">
       {/* Top nav */}
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
-        <div className="max-w-[900px] mx-auto flex items-center justify-between">
+        <div className="max-w-[1100px] mx-auto flex items-center justify-between">
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" />Dashboard
+            <ArrowLeft className="h-3.5 w-3.5" />Projects
           </button>
           <div className="flex items-center gap-2">
             {editingTitle ? (
@@ -191,109 +196,104 @@ export function OutputView() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Audience selector */}
+            <button
+              onClick={() => setShowAudiences(!showAudiences)}
+              className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-2 border border-border rounded-sm transition-colors font-medium"
+            >
+              <Users className="h-3.5 w-3.5 text-electric" />
+              <span className="text-foreground capitalize">{activeAudience}</span>
+              <ChevronDown className={`h-3 w-3 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
+            </button>
+            {isAdapting && (
+              <span className="text-xs text-electric flex items-center gap-1.5 font-medium">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              </span>
+            )}
             <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
           </div>
         </div>
+        {showAudiences && (
+          <div className="max-w-[1100px] mx-auto flex items-center gap-2 mt-3 animate-fade-in">
+            {AUDIENCES.map(a => (
+              <button
+                key={a.value}
+                onClick={() => handleAudienceSelect(a.value)}
+                disabled={isAdapting}
+                className={`text-xs px-3 py-2 rounded-sm border transition-colors font-medium ${
+                  activeAudience === a.value
+                    ? "border-electric/30 text-electric bg-electric/10"
+                    : "border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
+                } disabled:opacity-40`}
+              >
+                {a.label}
+                <span className="text-muted-foreground ml-1 font-normal hidden sm:inline">· {a.desc}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </nav>
 
-      {showOutreach && (<div className="border-b border-border px-6 py-6 card-gradient animate-fade-in"><div className="max-w-[900px] mx-auto"><OutreachTracker /></div></div>)}
+      {/* Main content with sidebar */}
+      <div className="max-w-[1100px] mx-auto px-6 py-8 w-full">
+        <div className="flex gap-8">
+          <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+          <div className="flex-1 min-w-0 animate-fade-in" key={activeSection}>
+            {/* Readiness section */}
+            {activeSection === "readiness" && (
+              <ReadinessIndexCard output={output} isPro={isPro} />
+            )}
 
-      {/* Readiness Score */}
-      <div className="border-b border-border px-6 py-10 bg-card/30">
-        <div className="max-w-[900px] mx-auto"><ReadinessIndexCard output={output} isPro={isPro} /></div>
-      </div>
+            {/* Thesis section (fundraising mode) */}
+            {isThesisSection && currentTab && (
+              <ThesisTab sections={currentTab.sections} />
+            )}
 
-      {/* Audience selector bar */}
-      <div className="border-b border-border px-6 py-4 bg-background/80">
-        <div className="max-w-[900px] mx-auto flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setShowAudiences(!showAudiences)}
-            className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-2 border border-border rounded-sm transition-colors font-medium"
-          >
-            <Users className="h-3.5 w-3.5 text-electric" />
-            Audience: <span className="text-foreground capitalize">{activeAudience}</span>
-            <ChevronDown className={`h-3 w-3 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
-          </button>
-          {isAdapting && (
-            <span className="text-xs text-electric flex items-center gap-1.5 font-medium">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Adapting for audience...
-            </span>
-          )}
-          {showAudiences && (
-            <div className="flex items-center gap-2 animate-fade-in">
-              {AUDIENCES.map(a => (
-                <button
-                  key={a.value}
-                  onClick={() => handleAudienceSelect(a.value)}
-                  disabled={isAdapting}
-                  className={`text-xs px-3 py-2 rounded-sm border transition-colors font-medium ${
-                    activeAudience === a.value
-                      ? "border-electric/30 text-electric bg-electric/10"
-                      : "border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
-                  } disabled:opacity-40`}
-                >
-                  {a.label}
-                  <span className="text-muted-foreground ml-1 font-normal hidden sm:inline">· {a.desc}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+            {/* Narrative Arc section (fundraising mode) */}
+            {isNarrativeSection && currentTab && (
+              <NarrativeArcTab sections={currentTab.sections} />
+            )}
 
-      {/* Tabs */}
-      <div className="border-b border-border px-6 sticky top-[57px] bg-background/95 backdrop-blur-sm z-10">
-        <div className="max-w-[900px] mx-auto flex gap-0 overflow-x-auto">
-          {tabs.map((tab, i) => (
-            <button key={tab.key} onClick={() => handleTabChange(i)} className={`relative text-sm py-3.5 px-5 border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 font-medium ${i === activeTab ? "border-electric text-foreground" : isTabLocked(i) ? "border-transparent text-muted-foreground/40 cursor-not-allowed" : "border-transparent text-secondary-foreground hover:text-foreground"}`}>
-              {isTabLocked(i) && <Lock className="h-3 w-3" />}{tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+            {/* Pitch Prep section (fundraising mode) */}
+            {isPitchSection && currentTab && (
+              <PitchPrepTab sections={currentTab.sections} outputData={output.data} />
+            )}
 
-      {/* Tab content */}
-      <div className="flex-1 px-6 py-12">
-        <div className="max-w-[900px] mx-auto animate-tab-enter" key={tabKey}>
-          {activeTab >= 0 && currentTab && (
-            <div className="space-y-0">
-              {isDeckTab && slidePreviewData.length > 0 && (
-                <SlidePreview
-                  slides={slidePreviewData}
-                  excludedSlides={excludedSlides}
-                  onToggleSlide={toggleSlide}
-                  slideOrder={slideOrder}
-                  onReorder={setSlideOrder}
-                  theme={deckTheme}
-                  onThemeChange={setDeckTheme}
-                />
-              )}
+            {/* Deck Framework section */}
+            {isDeckSection && slidePreviewData.length > 0 && (
+              <SlidePreview
+                slides={slidePreviewData}
+                excludedSlides={excludedSlides}
+                onToggleSlide={toggleSlide}
+                slideOrder={slideOrder}
+                onReorder={setSlideOrder}
+                theme={deckTheme}
+                onThemeChange={setDeckTheme}
+              />
+            )}
 
-              {isThesisTab && (
-                <ThesisTab sections={currentTab.sections} />
-              )}
-
-              {isNarrativeTab && (
-                <NarrativeArcTab sections={currentTab.sections} />
-              )}
-
-              {isPitchTab && (
-                <PitchPrepTab sections={currentTab.sections} outputData={output.data} />
-              )}
-
-              {!isDeckTab && !isThesisTab && !isNarrativeTab && !isPitchTab && (
-                currentTab.sections.map((section) => (
+            {/* Generic tab content for non-fundraising modes */}
+            {!["readiness"].includes(activeSection) && !isThesisSection && !isNarrativeSection && !isPitchSection && !isDeckSection && currentTab && (
+              <div className="space-y-0">
+                {currentTab.sections.map((section) => (
                   <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
-                ))
-              )}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+
+            {/* Fallback when no tab matches */}
+            {!["readiness"].includes(activeSection) && !currentTab && (
+              <div className="text-center py-12">
+                <p className="text-sm text-muted-foreground">This section is not available for the current output mode.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {isFirstFree && (
         <div className="border-t border-border px-6 py-6 card-gradient sticky bottom-0">
-          <div className="max-w-[900px] mx-auto flex items-center justify-between">
+          <div className="max-w-[1100px] mx-auto flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
               <p className="text-sm text-muted-foreground mt-0.5">Upgrade to Pro to access all sections, exports, and refinements.</p>

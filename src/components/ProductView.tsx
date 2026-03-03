@@ -76,6 +76,7 @@ export function ProductView() {
       <div className="flex-1 flex flex-col items-center px-6 pt-20">
         <div className="max-w-[720px] w-full animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-4">What are you working on?</h1>
+
           <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">We'll detect your intent and generate the right output structure.</p>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or tell us what you need to create..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
