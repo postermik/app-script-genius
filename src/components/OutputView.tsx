@@ -235,10 +235,10 @@ export function OutputView() {
       </nav>
 
       {/* Main content with sidebar */}
-      <div className="pl-52">
-        <div className="max-w-[900px] mx-auto px-6 py-8 w-full">
-          <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-          <div className="animate-fade-in" key={activeSection}>
+      <div className="flex flex-1">
+        <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <div className="flex-1 min-w-0">
+          <div className="max-w-[900px] mx-auto px-6 py-8 w-full animate-fade-in" key={activeSection}>
             {/* Readiness section */}
             {activeSection === "readiness" && (
               <ReadinessIndexCard output={output} isPro={isPro} />
