@@ -11,7 +11,7 @@ function AnimatedEntry({ children, className = "" }: { children: React.ReactNode
   }, []);
 
   return (
-    <div ref={ref} className={`transition-all duration-700 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} ${className}`}>
+    <div ref={ref} className={`transition-all duration-700 flex flex-col ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} ${className}`}>
       {children}
     </div>
   );
@@ -40,12 +40,12 @@ function GenerationPreview() {
   }, []);
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Generating narrative…</span>
         <span className="text-xs text-electric font-medium">{progress}%</span>
       </div>
-      <div className="p-5 space-y-3">
+      <div className="p-5 space-y-3 flex-1">
         <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
           <div className="h-full bg-electric rounded-full transition-all duration-100" style={{ width: `${progress}%` }} />
         </div>
@@ -80,11 +80,11 @@ function ReadinessPreview() {
   ];
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
       <div className="px-5 py-3 border-b border-border">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Readiness Coaching</span>
       </div>
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-4 flex-1">
         {categories.map((c, i) => (
           <div key={c.label}>
             <div className="flex items-center justify-between mb-1.5">
@@ -109,7 +109,7 @@ function ReadinessPreview() {
 /* ── Slide Preview ── */
 function SlidePreviewCard() {
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Slide Preview</span>
         <div className="flex gap-1.5">
@@ -118,7 +118,7 @@ function SlidePreviewCard() {
           ))}
         </div>
       </div>
-      <div className="aspect-[16/10] bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden">
+      <div className="aspect-[16/10] bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden flex-1">
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "32px 32px"
@@ -151,11 +151,11 @@ function InvestorPreview() {
   ];
 
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
       <div className="px-5 py-3 border-b border-border">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Investor Discovery</span>
       </div>
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border flex-1">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
             <div>
@@ -177,11 +177,11 @@ export function ProductShowcase() {
       <div className="max-w-[1000px] mx-auto space-y-24">
         {/* Row 1: Generation + Readiness */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <AnimatedEntry>
+          <AnimatedEntry className="flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
           </AnimatedEntry>
-          <AnimatedEntry className="md:mt-12">
+          <AnimatedEntry className="md:mt-12 flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Coaching & Scoring</p>
             <ReadinessPreview />
           </AnimatedEntry>
@@ -189,11 +189,11 @@ export function ProductShowcase() {
 
         {/* Row 2: Slides + Discovery */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <AnimatedEntry>
+          <AnimatedEntry className="flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Design-Aware Slides</p>
             <SlidePreviewCard />
           </AnimatedEntry>
-          <AnimatedEntry className="md:mt-12">
+          <AnimatedEntry className="md:mt-12 flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
