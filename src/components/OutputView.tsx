@@ -9,6 +9,7 @@ import { ThesisTab } from "@/components/ThesisTab";
 import { NarrativeArcTab } from "@/components/NarrativeArcTab";
 import { PitchPrepTab } from "@/components/PitchPrepTab";
 import { ProjectSidebar, type ProjectSection } from "@/components/project/ProjectSidebar";
+import { OriginalInputSection } from "@/components/project/OriginalInputSection";
 import { ArrowLeft, Lock, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,7 @@ const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
 ];
 
 export function OutputView() {
-  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting } = useDecksmith();
+  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput } = useDecksmith();
   const [activeSection, setActiveSection] = useState<ProjectSection>("readiness");
   const [showVersions, setShowVersions] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -241,7 +242,10 @@ export function OutputView() {
           <div className="max-w-[900px] mx-auto px-6 py-8 w-full animate-fade-in" key={activeSection}>
             {/* Readiness section */}
             {activeSection === "readiness" && (
-              <ReadinessIndexCard output={output} isPro={isPro} />
+              <>
+                {rawInput && <OriginalInputSection rawInput={rawInput} />}
+                <ReadinessIndexCard output={output} isPro={isPro} />
+              </>
             )}
 
             {/* Thesis section (fundraising mode) */}
