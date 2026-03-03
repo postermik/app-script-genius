@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
+/* ── Scroll-triggered fade-in ── */
 function AnimatedEntry({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.2 });
+    const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.15 });
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
 
   return (
-    <div ref={ref} className={`transition-all duration-700 flex flex-col ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"} ${className}`}>
+    <div
+      ref={ref}
+      className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[30px]"} ${className}`}
+    >
       {children}
     </div>
   );
@@ -80,11 +84,11 @@ function ReadinessPreview() {
   ];
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
+    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Readiness Coaching</span>
       </div>
-      <div className="p-5 space-y-4 flex-1">
+      <div className="p-5 space-y-4">
         {categories.map((c, i) => (
           <div key={c.label}>
             <div className="flex items-center justify-between mb-1.5">
@@ -137,7 +141,7 @@ function RevenueSparkline() {
 /* ── Slide Preview ── */
 function SlidePreviewCard() {
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
+    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Slide Preview</span>
         <div className="flex gap-1.5">
@@ -146,7 +150,7 @@ function SlidePreviewCard() {
           ))}
         </div>
       </div>
-      <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden flex-1">
+      <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: 220 }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "32px 32px"
@@ -182,11 +186,11 @@ function InvestorPreview() {
   ];
 
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
+    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Investor Discovery</span>
       </div>
-      <div className="divide-y divide-border/50 flex-1">
+      <div className="divide-y divide-border/50">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
             <div>
@@ -201,30 +205,64 @@ function InvestorPreview() {
   );
 }
 
+/* ── Diagonal connector line (SVG) ── */
+function DiagonalConnector({ direction }: { direction: "left-to-right" | "right-to-left" }) {
+  const isLR = direction === "left-to-right";
+  return (
+    <div className="hidden md:block relative h-8 w-full pointer-events-none" aria-hidden>
+      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+        <line
+          x1={isLR ? "48%" : "52%"}
+          y1="0"
+          x2={isLR ? "52%" : "48%"}
+          y2="100%"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth="1"
+          strokeDasharray="6 4"
+        />
+      </svg>
+    </div>
+  );
+}
+
 /* ── Main Showcase ── */
 export function ProductShowcase() {
   return (
-    <section className="px-6 py-24">
-      <div className="max-w-[1000px] mx-auto space-y-24">
-        {/* Row 1: Generation + Readiness */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
+    <section className="px-6 py-24 overflow-hidden">
+      <div className="max-w-[1000px] mx-auto">
+        {/* Panel 1: Left-aligned */}
+        <div className="md:w-[48%]">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
           </AnimatedEntry>
-          <AnimatedEntry className="md:mt-12">
+        </div>
+
+        <DiagonalConnector direction="left-to-right" />
+
+        {/* Panel 2: Right-aligned, offset down */}
+        <div className="md:w-[48%] md:ml-auto md:mt-[60px] mt-8">
+          <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Coaching & Scoring</p>
             <ReadinessPreview />
           </AnimatedEntry>
         </div>
 
-        {/* Row 2: Slides + Discovery */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
-          <AnimatedEntry className="flex flex-col">
+        <DiagonalConnector direction="right-to-left" />
+
+        {/* Panel 3: Left-aligned, pulls up slightly */}
+        <div className="md:w-[48%] md:-mt-4 mt-8">
+          <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Design-Aware Slides</p>
             <SlidePreviewCard />
           </AnimatedEntry>
-          <AnimatedEntry className="md:mt-12 flex flex-col">
+        </div>
+
+        <DiagonalConnector direction="left-to-right" />
+
+        {/* Panel 4: Right-aligned, offset down */}
+        <div className="md:w-[48%] md:ml-auto md:mt-[60px] mt-8">
+          <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
