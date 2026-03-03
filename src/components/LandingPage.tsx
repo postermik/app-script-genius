@@ -132,9 +132,9 @@ export function LandingPage() {
       <section className="px-6 py-12 border-y border-border">
         <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
           {PROOF.map((p) => (
-            <div key={p.text} className="flex items-center gap-2.5">
-              <p.icon className="h-4 w-4 text-electric/70" />
-              <span className="text-sm text-foreground/70">{p.text}</span>
+            <div key={p.text} className="flex items-center gap-3">
+              <p.icon className="h-5 w-5 text-electric" />
+              <span className="text-lg font-medium text-white">{p.text}</span>
             </div>
           ))}
         </div>
