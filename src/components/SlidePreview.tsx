@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown } from "lucide-react";
+import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info } from "lucide-react";
 
 export interface SlideData {
   headline: string;
@@ -60,6 +60,51 @@ function getSlideReason(headline: string, idx: number, total: number): string {
   if (h.includes("summary") || h.includes("executive")) return "Executive summary gives decision-makers the key takeaway upfront.";
   if (h.includes("competitive") || h.includes("landscape")) return "Competitive landscape shows you understand the field and where you fit.";
   return "Supporting slide that reinforces the core narrative through additional context.";
+}
+
+function getSlideSubheader(headline: string, content: string): string {
+  const h = headline.toLowerCase();
+  if (h.includes("problem") || h.includes("pain")) return "The critical challenge your market faces today";
+  if (h.includes("solution") || h.includes("model")) return "How your approach fundamentally changes the game";
+  if (h.includes("market") || h.includes("opportunity")) return "The scale and trajectory of your target market";
+  if (h.includes("thesis") || h.includes("investment")) return "The core argument for why this investment wins";
+  if (h.includes("why") || h.includes("differentiat") || h.includes("moat")) return "What makes you defensible against competitors";
+  if (h.includes("traction") || h.includes("metric")) return "Evidence that validates your approach is working";
+  if (h.includes("team")) return "The people who make this vision executable";
+  if (h.includes("risk")) return "Honest assessment and mitigation strategies";
+  if (h.includes("ask") || h.includes("funding")) return "What we need and how we'll deploy it";
+  if (h.includes("vision") || h.includes("future")) return "Where this is headed in the next 3-5 years";
+  if (h.includes("roadmap") || h.includes("milestone")) return "Key milestones and the path to get there";
+  if (h.includes("summary") || h.includes("executive")) return "The essential takeaway for decision-makers";
+  if (h.includes("competitive") || h.includes("landscape")) return "How you stack up against alternatives";
+  // Derive from content if no match
+  if (content) {
+    const firstSentence = content.split(/[.!?]/)[0]?.trim();
+    if (firstSentence && firstSentence.length < 80) return firstSentence;
+  }
+  return "Key supporting context for your narrative";
+}
+
+function getSlideBodyPoints(headline: string, content: string): string[] {
+  const h = headline.toLowerCase();
+  // Extract bullet points from content if available
+  if (content) {
+    // Try splitting by newlines or bullet markers
+    const lines = content.split(/[\n•·–—]/).map(l => l.trim()).filter(l => l.length > 10 && l.length < 120);
+    if (lines.length >= 2) return lines.slice(0, 4);
+    // Try splitting by sentences
+    const sentences = content.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 15 && s.length < 120);
+    if (sentences.length >= 2) return sentences.slice(0, 4);
+  }
+  // Fallback contextual bullets
+  if (h.includes("problem") || h.includes("pain")) return ["Current solutions are costly and inefficient", "Market pain is growing with scale", "No incumbent addresses the root cause"];
+  if (h.includes("solution") || h.includes("model")) return ["Novel approach that eliminates key friction", "10x improvement over existing alternatives", "Built for scale from day one"];
+  if (h.includes("market") || h.includes("opportunity")) return ["Total addressable market size and growth", "Target segment and beachhead strategy", "Market timing and tailwinds"];
+  if (h.includes("thesis") || h.includes("investment")) return ["Core value proposition", "Unfair advantage in execution", "Clear path to category leadership"];
+  if (h.includes("traction") || h.includes("metric")) return ["Key growth metrics and trends", "Customer acquisition milestones", "Revenue or engagement trajectory"];
+  if (h.includes("team")) return ["Founder domain expertise", "Key hires and advisory board", "Track record of execution"];
+  if (h.includes("ask") || h.includes("funding")) return ["Funding amount and use of proceeds", "Key milestones this enables", "Expected runway and next raise"];
+  return ["Key supporting data point", "Strategic context and framing", "Evidence that reinforces the narrative"];
 }
 
 function getThemePreviewColors(theme: DeckTheme) {
@@ -151,10 +196,11 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
       <p className="text-[13px] text-secondary-foreground mb-5">Drag to reorder · Thumbs down to exclude from export</p>
 
       {/* Slide cards */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {orderedSlides.map((slide, i) => {
           const isExcluded = excludedSlides.has(slide.originalIdx);
-          const contentPreview = slide.content ? slide.content.slice(0, 80) : "";
+          const subheader = getSlideSubheader(slide.headline, slide.content);
+          const bodyPoints = getSlideBodyPoints(slide.headline, slide.content);
           return (
             <div
               key={slide.originalIdx}
@@ -162,51 +208,72 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               onDragStart={() => handleDragStart(i)}
               onDragOver={e => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
-              className={`flex items-stretch gap-4 p-5 rounded-sm border transition-all min-h-[120px] ${
+              className={`flex gap-4 p-5 rounded-sm border transition-all min-h-[160px] ${
                 isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient accent-left-border"
               } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
             >
-              {/* Drag handle */}
-              <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors shrink-0 flex items-center">
-                <GripVertical className="h-4 w-4" />
+              {/* Drag handle + slide number */}
+              <div className="flex flex-col items-center justify-center gap-2 shrink-0">
+                <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors">
+                  <GripVertical className="h-5 w-5" />
+                </div>
+                <span className="text-lg font-bold text-secondary-foreground">{i + 1}</span>
               </div>
 
-              {/* Slide number */}
-              <span className="text-base font-bold text-secondary-foreground w-7 text-center shrink-0 flex items-center justify-center">{i + 1}</span>
-
-              {/* Slide preview thumbnail — shows actual content */}
+              {/* Slide preview thumbnail — 140x100, shows headline + subheader */}
               <div
-                className="w-[120px] h-[80px] rounded-sm border border-border shrink-0 flex flex-col justify-between overflow-hidden p-2"
+                className="w-[140px] h-[100px] rounded-sm border border-border shrink-0 flex flex-col justify-between overflow-hidden p-2.5 self-center"
                 style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}
               >
-                <p className="font-semibold leading-tight line-clamp-2" style={{ fontSize: "7px", color: themeColors.fg }}>
-                  {slide.headline}
-                </p>
-                {contentPreview && (
-                  <p className="leading-tight line-clamp-2 mt-auto" style={{ fontSize: "5.5px", color: themeColors.muted }}>
-                    {contentPreview}
+                <div>
+                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.fg }}>
+                    {slide.headline}
                   </p>
-                )}
-                <span
-                  className="text-[6px] font-semibold px-1 py-0.5 rounded-sm self-start mt-0.5"
-                  style={{ backgroundColor: `${themeColors.accent}30`, color: themeColors.accent }}
-                >
-                  {getLayoutLabel(slide.slideType)}
-                </span>
+                  <p className="leading-tight line-clamp-2 mt-1" style={{ fontSize: "6px", color: themeColors.muted }}>
+                    {subheader}
+                  </p>
+                </div>
+                <div className="flex items-end justify-between mt-auto">
+                  <span
+                    className="text-[5.5px] font-semibold px-1 py-0.5 rounded-sm"
+                    style={{ backgroundColor: `${themeColors.accent}30`, color: themeColors.accent }}
+                  >
+                    {getLayoutLabel(slide.slideType)}
+                  </span>
+                  {bodyPoints.length > 0 && (
+                    <span style={{ fontSize: "5px", color: themeColors.muted }}>
+                      {bodyPoints.length} points
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Headline + reason */}
-              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <h5 className={`text-sm font-semibold leading-tight ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
+              {/* Content section — headline, subheader, body points, narrative purpose */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                <h5 className={`text-base font-bold leading-tight ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
                   {slide.headline}
                 </h5>
-                <p className="text-xs text-secondary-foreground leading-relaxed mt-1.5 line-clamp-2">
-                  {getSlideReason(slide.headline, i, orderedSlides.length)}
+                <p className="text-sm text-secondary-foreground leading-snug">
+                  {subheader}
+                </p>
+                {bodyPoints.length > 0 && (
+                  <ul className="mt-1 space-y-0.5">
+                    {bodyPoints.map((point, pi) => (
+                      <li key={pi} className="text-[13px] text-muted-foreground leading-snug flex items-start gap-1.5">
+                        <span className="text-electric mt-0.5 shrink-0">•</span>
+                        <span className="line-clamp-1">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-electric/60" />
+                  <span className="italic">{getSlideReason(slide.headline, i, orderedSlides.length)}</span>
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-end justify-center gap-2 shrink-0">
                 {/* Refine dropdown */}
                 <div className="relative">
                   <button
@@ -230,18 +297,20 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   )}
                 </div>
 
-                <button
-                  onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
-                  className={`p-2 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
-                  className={`p-2 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
-                >
-                  <ThumbsDown className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
+                    className={`p-2 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
+                    className={`p-2 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                  </button>
+                </div>
                 {isExcluded && (
                   <button onClick={() => onToggleSlide(slide.originalIdx)}
                     className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm">
