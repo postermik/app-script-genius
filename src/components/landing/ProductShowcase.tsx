@@ -209,12 +209,12 @@ function InvestorPreview() {
 function DiagonalConnector({ direction }: { direction: "left-to-right" | "right-to-left" }) {
   const isLR = direction === "left-to-right";
   return (
-    <div className="hidden md:block relative h-8 w-full pointer-events-none" aria-hidden>
+    <div className="hidden md:block relative h-5 w-full pointer-events-none" aria-hidden>
       <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
         <line
-          x1={isLR ? "48%" : "52%"}
+          x1={isLR ? "30%" : "70%"}
           y1="0"
-          x2={isLR ? "52%" : "48%"}
+          x2={isLR ? "50%" : "50%"}
           y2="100%"
           stroke="rgba(255,255,255,0.08)"
           strokeWidth="1"
@@ -230,8 +230,8 @@ export function ProductShowcase() {
   return (
     <section className="px-6 py-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
-        {/* Panel 1: Left-aligned */}
-        <div className="md:w-[48%]">
+        {/* Panel 1: Left */}
+        <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
@@ -240,8 +240,8 @@ export function ProductShowcase() {
 
         <DiagonalConnector direction="left-to-right" />
 
-        {/* Panel 2: Right-aligned, offset down */}
-        <div className="md:w-[48%] md:ml-auto md:mt-[60px] mt-8">
+        {/* Panel 2: Right, offset down */}
+        <div className="md:w-[52%] md:ml-[43%] md:mt-[40px] mt-8">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Coaching & Scoring</p>
             <ReadinessPreview />
@@ -250,8 +250,8 @@ export function ProductShowcase() {
 
         <DiagonalConnector direction="right-to-left" />
 
-        {/* Panel 3: Left-aligned, pulls up slightly */}
-        <div className="md:w-[48%] md:-mt-4 mt-8">
+        {/* Panel 3: Left */}
+        <div className="md:w-[52%] md:ml-[5%] md:-mt-4 mt-8">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Design-Aware Slides</p>
             <SlidePreviewCard />
@@ -260,8 +260,8 @@ export function ProductShowcase() {
 
         <DiagonalConnector direction="left-to-right" />
 
-        {/* Panel 4: Right-aligned, offset down */}
-        <div className="md:w-[48%] md:ml-auto md:mt-[60px] mt-8">
+        {/* Panel 4: Right, offset down */}
+        <div className="md:w-[52%] md:ml-[43%] md:mt-[40px] mt-8">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Find Your Investors</p>
             <InvestorPreview />
