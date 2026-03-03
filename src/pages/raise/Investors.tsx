@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, Bookmark, BookmarkCheck, MapPin, ExternalLink, Filter, X, Sparkles, Plus, Check, ArrowRight } from "lucide-react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -119,27 +119,23 @@ function scoreInvestor(inv: Investor, signals: NarrativeSignals): ScoredInvestor
   let score = 0;
   const reasons: string[] = [];
 
-  // Stage match (high weight)
   const matchedStages = signals.stages.filter(s => inv.stages.includes(s));
   if (matchedStages.length > 0) {
     score += 30 * matchedStages.length;
     reasons.push(`Invests in ${matchedStages.map(s => STAGE_LABELS[s] || s).join(", ")}`);
   }
 
-  // Sector match (medium-high weight)
   const matchedSectors = signals.sectors.filter(s => inv.sectors.includes(s));
   if (matchedSectors.length > 0) {
     score += 20 * matchedSectors.length;
     reasons.push(`Focuses on ${matchedSectors.map(s => SECTOR_LABELS[s] || s).join(", ")}`);
   }
 
-  // Solo founder boost
   if (signals.soloFounder && inv.solo_founder_friendly) {
     score += 15;
     reasons.push("Solo founder friendly");
   }
 
-  // Thesis keyword overlap
   if (inv.thesis_keywords.length > 0 && signals.rawInput) {
     const inputLower = signals.rawInput.toLowerCase();
     const kwMatches = inv.thesis_keywords.filter(kw => inputLower.includes(kw.toLowerCase()));
@@ -158,10 +154,6 @@ export default function Investors() {
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem("rhetoric_saved_investors");
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
   const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [narrativeSignals, setNarrativeSignals] = useState<NarrativeSignals | null>(null);
@@ -171,10 +163,8 @@ export default function Investors() {
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [selectedCheckSize, setSelectedCheckSize] = useState<number | null>(null);
-  const [soloFriendly, setSoloFriendly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Load latest project for narrative signals
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -194,7 +184,6 @@ export default function Investors() {
         setNarrativeSignals(signals);
       }
 
-      // Load existing pipeline entries to know what's already added
       const { data: pipelineData } = await supabase
         .from("pipeline_entries")
         .select("investor_id")
@@ -205,7 +194,6 @@ export default function Investors() {
     })();
   }, []);
 
-  // Load investors
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -246,15 +234,6 @@ export default function Investors() {
     setAddingToPipeline(null);
   }, [userId]);
 
-  const toggleSave = (id: string) => {
-    setSavedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      localStorage.setItem("rhetoric_saved_investors", JSON.stringify([...next]));
-      return next;
-    });
-  };
-
   const toggleFilter = (arr: string[], val: string, setter: (v: string[]) => void) => {
     setter(arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]);
   };
@@ -263,19 +242,15 @@ export default function Investors() {
     setSelectedStages([]);
     setSelectedSectors([]);
     setSelectedCheckSize(null);
-    setSoloFriendly(false);
   };
 
-  const hasFilters = selectedStages.length > 0 || selectedSectors.length > 0 || selectedCheckSize !== null || soloFriendly;
+  const hasFilters = selectedStages.length > 0 || selectedSectors.length > 0 || selectedCheckSize !== null;
 
-  // Score and split investors into recommended vs all
   const { recommended, allFiltered } = useMemo(() => {
-    // Score all investors
     const scored: ScoredInvestor[] = narrativeSignals
       ? investors.map(inv => scoreInvestor(inv, narrativeSignals))
       : investors.map(inv => ({ ...inv, matchScore: 0, matchReasons: [] }));
 
-    // Apply filters to all investors
     const applyFilters = (list: ScoredInvestor[]) => list.filter(inv => {
       if (search) {
         const q = search.toLowerCase();
@@ -291,13 +266,11 @@ export default function Investors() {
           if (inv.check_size_max && inv.check_size_max < range.min) return false;
         }
       }
-      if (soloFriendly && !inv.solo_founder_friendly) return false;
       return true;
     });
 
     const filteredScored = applyFilters(scored);
 
-    // Recommended: score >= 30, sorted by score desc, max 6
     const rec = filteredScored
       .filter(i => i.matchScore >= 30)
       .sort((a, b) => b.matchScore - a.matchScore)
@@ -307,7 +280,7 @@ export default function Investors() {
     const rest = filteredScored.filter(i => !recIds.has(i.id));
 
     return { recommended: rec, allFiltered: rest };
-  }, [investors, narrativeSignals, search, selectedStages, selectedSectors, selectedCheckSize, soloFriendly]);
+  }, [investors, narrativeSignals, search, selectedStages, selectedSectors, selectedCheckSize]);
 
   const totalCount = recommended.length + allFiltered.length;
 
@@ -336,7 +309,6 @@ export default function Investors() {
             {narrativeSignals.sectors.length > 0 && (
               <span className="text-muted-foreground"> · {narrativeSignals.sectors.map(s => SECTOR_LABELS[s] || s).join(", ")}</span>
             )}
-            {narrativeSignals.soloFounder && <span className="text-muted-foreground"> · Solo founder</span>}
           </p>
         </div>
       )}
@@ -354,7 +326,7 @@ export default function Investors() {
           }`}>
           <Filter className="h-4 w-4" /> Filters
           {hasFilters && <span className="text-xs bg-electric text-primary-foreground px-1.5 py-0.5 rounded-sm font-bold">
-            {selectedStages.length + selectedSectors.length + (selectedCheckSize !== null ? 1 : 0) + (soloFriendly ? 1 : 0)}
+            {selectedStages.length + selectedSectors.length + (selectedCheckSize !== null ? 1 : 0)}
           </span>}
         </button>
       </div>
@@ -395,17 +367,13 @@ export default function Investors() {
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <button onClick={() => setSoloFriendly(!soloFriendly)}
-              className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
-                soloFriendly ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
-              }`}>Solo Founder Friendly</button>
-            {hasFilters && (
+          {hasFilters && (
+            <div className="flex justify-end">
               <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
                 <X className="h-3 w-3" /> Clear all
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -435,8 +403,7 @@ export default function Investors() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recommended.map(inv => (
-              <InvestorCard key={inv.id} inv={inv} matchReasons={inv.matchReasons} matchScore={inv.matchScore}
-                saved={savedIds.has(inv.id)} onToggleSave={() => toggleSave(inv.id)}
+              <InvestorCard key={inv.id} inv={inv}
                 inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}
                 isAdding={addingToPipeline === inv.id} isRecommended />
             ))}
@@ -455,8 +422,7 @@ export default function Investors() {
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {allFiltered.map(inv => (
-              <InvestorCard key={inv.id} inv={inv} matchReasons={inv.matchReasons} matchScore={inv.matchScore}
-                saved={savedIds.has(inv.id)} onToggleSave={() => toggleSave(inv.id)}
+              <InvestorCard key={inv.id} inv={inv}
                 inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}
                 isAdding={addingToPipeline === inv.id} />
             ))}
@@ -469,57 +435,40 @@ export default function Investors() {
 
 // ── Investor Card ──────────────────────────────────────
 
-function InvestorCard({ inv, matchReasons, matchScore, saved, onToggleSave, inPipeline, onAddToPipeline, isAdding, isRecommended }: {
+function InvestorCard({ inv, inPipeline, onAddToPipeline, isAdding, isRecommended }: {
   inv: Investor;
-  matchReasons: string[];
-  matchScore: number;
-  saved: boolean;
-  onToggleSave: () => void;
   inPipeline: boolean;
   onAddToPipeline: () => void;
   isAdding: boolean;
   isRecommended?: boolean;
 }) {
+  const MAX_SECTORS = 3;
+  const visibleSectors = inv.sectors.slice(0, MAX_SECTORS);
+  const overflowCount = inv.sectors.length - MAX_SECTORS;
+
   return (
-    <div className={`p-5 rounded-sm border transition-colors ${
+    <div className={`p-5 rounded-sm border transition-colors group ${
       isRecommended ? "border-electric/20 bg-electric/[0.03] hover:border-electric/30" : "border-border card-gradient hover:border-muted-foreground/20"
     }`}>
-      {/* Match reason banner */}
-      {isRecommended && matchReasons.length > 0 && (
-        <div className="flex items-start gap-2 mb-3 pb-3 border-b border-electric/10">
-          <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
-          <p className="text-xs text-electric leading-relaxed">
-            {matchReasons.join(". ")}.
-          </p>
-        </div>
-      )}
-
-      {/* Top row: name + type + save */}
+      {/* Top row: name + type badge */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-foreground leading-tight">{inv.firm_name}</h3>
           {inv.location_city && (
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
               <MapPin className="h-3 w-3 shrink-0" />
-              {[inv.location_city, inv.location_state, inv.location_country].filter(Boolean).join(", ")}
+              {[inv.location_city, inv.location_state].filter(Boolean).join(", ")}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-semibold px-2 py-1 rounded-sm bg-electric/10 text-electric uppercase tracking-wide">
-            {TYPE_LABELS[inv.investor_type] || inv.investor_type}
-          </span>
-          <button onClick={onToggleSave}
-            className={`p-1.5 rounded-sm transition-colors ${saved ? "text-electric bg-electric/10" : "text-muted-foreground hover:text-electric hover:bg-electric/5"}`}
-            title={saved ? "Saved" : "Save"}>
-            {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-          </button>
-        </div>
+        <span className="text-[10px] font-semibold px-2 py-1 rounded-sm bg-electric/10 text-electric uppercase tracking-wide shrink-0">
+          {TYPE_LABELS[inv.investor_type] || inv.investor_type}
+        </span>
       </div>
 
       {/* Stages */}
       {inv.stages.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1.5 mb-2">
           {inv.stages.map(s => (
             <span key={s} className="text-[10px] font-medium px-2 py-0.5 rounded-sm border border-border text-secondary-foreground">
               {STAGE_LABELS[s] || s}
@@ -530,59 +479,55 @@ function InvestorCard({ inv, matchReasons, matchScore, saved, onToggleSave, inPi
 
       {/* Check size */}
       <p className="text-xs text-secondary-foreground mb-2">
-        <span className="text-muted-foreground">Check size:</span> {formatCheckSize(inv.check_size_min, inv.check_size_max)}
+        <span className="text-muted-foreground">Check:</span> {formatCheckSize(inv.check_size_min, inv.check_size_max)}
       </p>
 
-      {inv.description && (
-        <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">{inv.description}</p>
-      )}
-
-      {/* Sectors */}
+      {/* Sectors (max 3 + overflow) */}
       {inv.sectors.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {inv.sectors.slice(0, 5).map(s => (
+          {visibleSectors.map(s => (
             <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted/40 text-muted-foreground">
               {SECTOR_LABELS[s] || s}
             </span>
           ))}
-          {inv.sectors.length > 5 && <span className="text-[10px] text-muted-foreground">+{inv.sectors.length - 5}</span>}
+          {overflowCount > 0 && <span className="text-[10px] text-muted-foreground">+{overflowCount}</span>}
         </div>
       )}
 
-      {/* Footer: solo + links + pipeline */}
-      <div className="flex items-center justify-between pt-3 border-t border-border">
-        <div className="flex items-center gap-3">
-          {inv.solo_founder_friendly && (
-            <span className="text-[10px] font-medium text-emerald">✓ Solo founder friendly</span>
-          )}
+      {/* Solo founder + website on hover */}
+      <div className="h-0 overflow-hidden group-hover:h-auto group-hover:mb-3 transition-all">
+        <div className="flex items-center gap-3 text-[10px]">
+          {inv.solo_founder_friendly && <span className="text-emerald font-medium">✓ Solo founder friendly</span>}
           {inv.website_url && (
             <a href={inv.website_url} target="_blank" rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-electric flex items-center gap-1 transition-colors">
-              <ExternalLink className="h-3 w-3" /> Website
-            </a>
+              className="text-muted-foreground hover:text-electric transition-colors">Website →</a>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {inv.application_url && (
-            <a href={inv.application_url} target="_blank" rel="noopener noreferrer"
-              className="text-xs text-electric hover:underline font-medium">Apply</a>
-          )}
-          {inPipeline ? (
-            <span className="flex items-center gap-1 text-xs text-emerald font-medium px-2.5 py-1.5 rounded-sm bg-emerald/10">
-              <Check className="h-3 w-3" /> In Pipeline
-            </span>
-          ) : (
-            <button onClick={onAddToPipeline} disabled={isAdding}
-              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors disabled:opacity-50">
-              {isAdding ? (
-                <div className="h-3 w-3 border border-electric border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <ArrowRight className="h-3 w-3" />
-              )}
-              Add to Pipeline
-            </button>
-          )}
-        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-3 border-t border-border">
+        {inv.application_url && (
+          <a href={inv.application_url} target="_blank" rel="noopener noreferrer"
+            className="flex-1 text-center text-xs font-medium py-2 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors">
+            Apply
+          </a>
+        )}
+        {inPipeline ? (
+          <span className="flex-1 flex items-center justify-center gap-1 text-xs text-emerald font-medium py-2 rounded-sm bg-emerald/10">
+            <Check className="h-3 w-3" /> In Pipeline
+          </span>
+        ) : (
+          <button onClick={onAddToPipeline} disabled={isAdding}
+            className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-2 rounded-sm border border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30 transition-colors disabled:opacity-50">
+            {isAdding ? (
+              <div className="h-3 w-3 border border-electric border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <ArrowRight className="h-3 w-3" />
+            )}
+            Add to Pipeline
+          </button>
+        )}
       </div>
     </div>
   );

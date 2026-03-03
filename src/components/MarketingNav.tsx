@@ -21,8 +21,6 @@ export function MarketingNav() {
   }, []);
 
   const isActive = (path: string) => location.pathname === path;
-  const isDashboard = location.pathname === "/dashboard";
-  const isPricingPage = location.pathname === "/pricing";
   const isPro = subscribed && productId === TIERS.pro.product_id;
 
   const linkClass = (path: string) =>
@@ -42,7 +40,7 @@ export function MarketingNav() {
             <div className="flex items-center gap-6" style={{ visibility: authReady ? "visible" : "hidden" }}>
               {session ? (
                 <>
-                  <button onClick={() => navigate("/dashboard")} className={linkClass("/dashboard")}>Dashboard</button>
+                  <button onClick={() => navigate("/dashboard")} className={linkClass("/dashboard")}>Projects</button>
                   <button onClick={() => navigate("/raise")} className={`text-sm transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
                   {!isPro && (
                     <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
