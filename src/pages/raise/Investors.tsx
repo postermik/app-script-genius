@@ -401,7 +401,7 @@ export default function Investors() {
             <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Recommended for You</h3>
             <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{recommended.length}</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommended.map(inv => (
               <InvestorCard key={inv.id} inv={inv}
                 inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}
@@ -420,7 +420,7 @@ export default function Investors() {
               <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{allFiltered.length}</span>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {allFiltered.map(inv => (
               <InvestorCard key={inv.id} inv={inv}
                 inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}

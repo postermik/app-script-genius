@@ -155,7 +155,7 @@ export function OutputView() {
       <nav className="border-b border-border px-6 py-4 sticky top-0 bg-background/95 backdrop-blur-sm z-20">
         <div className="max-w-[1100px] mx-auto flex items-center justify-between">
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" />Projects
+            <ArrowLeft className="h-3.5 w-3.5" />Dashboard
           </button>
           <div className="flex items-center gap-2">
             {editingTitle ? (
@@ -235,10 +235,10 @@ export function OutputView() {
       </nav>
 
       {/* Main content with sidebar */}
-      <div className="max-w-[1100px] mx-auto px-6 py-8 w-full">
-        <div className="flex gap-8">
+      <div className="pl-52">
+        <div className="max-w-[900px] mx-auto px-6 py-8 w-full">
           <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-          <div className="flex-1 min-w-0 animate-fade-in" key={activeSection}>
+          <div className="animate-fade-in" key={activeSection}>
             {/* Readiness section */}
             {activeSection === "readiness" && (
               <ReadinessIndexCard output={output} isPro={isPro} />
