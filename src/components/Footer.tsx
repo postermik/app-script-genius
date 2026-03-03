@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 
+const PRODUCT_LINKS = [
+  { label: "Product", path: "/" },
+  { label: "Pricing", path: "/pricing" },
+];
+
 const SUPPORT_LINKS = [
   { label: "FAQ", path: "/faq" },
   { label: "Contact", path: "/contact" },
@@ -25,6 +30,23 @@ export function Footer() {
             </div>
 
             <div className="flex gap-16">
+              <div>
+                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
+                  Product
+                </p>
+                <ul className="space-y-2.5">
+                  {PRODUCT_LINKS.map((link) => (
+                    <li key={link.path}>
+                      <Link
+                        to={link.path}
+                        className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <div>
                 <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
                   Support
