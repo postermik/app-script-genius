@@ -12,6 +12,11 @@ import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import Resources from "./pages/Resources";
+import Raise from "./pages/Raise";
+import Investors from "./pages/raise/Investors";
+import Outreach from "./pages/raise/Outreach";
+import DataRoom from "./pages/raise/DataRoom";
+import Pipeline from "./pages/raise/Pipeline";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
@@ -36,7 +41,13 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/resources" element={<Resources />} />
-                <Route path="/investors" element={<Navigate to="/resources" replace />} />
+                <Route path="/investors" element={<Navigate to="/raise/investors" replace />} />
+                <Route path="/raise" element={<Raise />}>
+                  <Route path="investors" element={<Investors />} />
+                  <Route path="outreach" element={<Outreach />} />
+                  <Route path="data-room" element={<DataRoom />} />
+                  <Route path="pipeline" element={<Pipeline />} />
+                </Route>
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/terms" element={<Terms />} />
