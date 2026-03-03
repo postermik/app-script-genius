@@ -53,7 +53,7 @@ const PLANS = [
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
   { icon: BarChart3, text: "500+ narratives generated" },
-  { icon: Users, text: "Powered by Claude AI" },
+  { icon: Users, text: "Built on decades of investor relations and design expertise" },
 ];
 
 export function LandingPage() {
