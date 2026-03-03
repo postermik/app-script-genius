@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0a0a0f"/>
+  <rect width="1200" height="630" fill="url(#grad)" opacity="0.5"/>
+  <defs>
+    <radialGradient id="grad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
+    </radialGradient>
+  </defs>
+  <!-- Subtle top accent line -->
+  <rect x="0" y="0" width="1200" height="2" fill="#6366f1" opacity="0.6"/>
+  <!-- Logo mark - stylized R -->
+  <text x="600" y="220" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#ffffff" letter-spacing="8">RHETORIC</text>
+  <!-- Divider -->
+  <line x1="520" y1="260" x2="680" y2="260" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+  <!-- Headline -->
+  <text x="600" y="340" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-style="italic" fill="rgba(255,255,255,0.9)">Craft the narrative.</text>
+  <!-- Subline -->
+  <text x="600" y="410" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.45)">Investor-grade decks, memos, and pitch scripts — generated in minutes.</text>
+  <!-- URL -->
+  <text x="600" y="560" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="rgba(255,255,255,0.3)" letter-spacing="2">getrhetoric.ai</text>
+</svg>
