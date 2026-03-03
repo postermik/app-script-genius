@@ -207,19 +207,19 @@ export function ProductShowcase() {
     <section className="px-6 py-24">
       <div className="max-w-[1000px] mx-auto space-y-24">
         {/* Row 1: Generation + Readiness */}
-        <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 md:items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
           </AnimatedEntry>
-          <AnimatedEntry className="md:mt-12 flex flex-col">
+          <AnimatedEntry className="md:mt-12">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Coaching & Scoring</p>
             <ReadinessPreview />
           </AnimatedEntry>
         </div>
 
         {/* Row 2: Slides + Discovery */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:items-start">
           <AnimatedEntry className="flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Design-Aware Slides</p>
             <SlidePreviewCard />
