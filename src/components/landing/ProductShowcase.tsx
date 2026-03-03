@@ -40,12 +40,12 @@ function GenerationPreview() {
   }, []);
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden flex-1 flex flex-col">
+    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Generating narrative…</span>
         <span className="text-xs text-electric font-medium">{progress}%</span>
       </div>
-      <div className="p-5 space-y-3 flex-1">
+      <div className="p-5 space-y-3">
         <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
           <div className="h-full bg-electric rounded-full transition-all duration-100" style={{ width: `${progress}%` }} />
         </div>
@@ -207,8 +207,8 @@ export function ProductShowcase() {
     <section className="px-6 py-24">
       <div className="max-w-[1000px] mx-auto space-y-24">
         {/* Row 1: Generation + Readiness */}
-        <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6">
-          <AnimatedEntry className="flex flex-col">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 md:items-start">
+          <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
           </AnimatedEntry>
