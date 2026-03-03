@@ -106,6 +106,34 @@ function ReadinessPreview() {
   );
 }
 
+/* ── Sparkline ── */
+function RevenueSparkline() {
+  const points = [20, 28, 25, 38, 42, 55, 60, 72, 68, 85, 95, 100];
+  const w = 280, h = 80, px = 0, py = 4;
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const coords = points.map((v, i) => {
+    const x = px + (i / (points.length - 1)) * (w - 2 * px);
+    const y = py + (1 - (v - min) / (max - min)) * (h - 2 * py);
+    return `${x},${y}`;
+  });
+  const line = `M${coords.join(" L")}`;
+  const area = `${line} L${w},${h} L0,${h} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#4ADE80" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#sparkFill)" />
+      <path d={line} fill="none" stroke="#4ADE80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /* ── Slide Preview ── */
 function SlidePreviewCard() {
   return (
@@ -114,27 +142,30 @@ function SlidePreviewCard() {
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Slide Preview</span>
         <div className="flex gap-1.5">
           {["Dark", "Light", "Minimal"].map((t) => (
-            <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-sm border ${t === "Dark" ? "border-electric/40 text-electric" : "border-border text-muted-foreground/50"}`}>{t}</span>
+            <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-sm border ${t === "Dark" ? "border-electric/40 text-electric" : "border-border text-foreground/50"}`}>{t}</span>
           ))}
         </div>
       </div>
-      <div className="aspect-[16/10] bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden flex-1">
+      <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden flex-1">
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "32px 32px"
         }} />
         <div className="relative z-10">
-          <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-muted-foreground/60 mb-1">Annual Recurring Revenue</p>
-          <p className="text-3xl font-bold text-white tracking-tight">$1.8M</p>
+          <p className="text-xs font-medium tracking-[0.12em] uppercase" style={{ color: "rgba(255,255,255,0.7)" }}>Annual Recurring Revenue</p>
+          <p className="text-3xl font-bold text-white tracking-tight mt-1">$1.8M</p>
         </div>
-        <div className="relative z-10 flex gap-6">
+        <div className="relative z-10 flex-1 my-4">
+          <RevenueSparkline />
+        </div>
+        <div className="relative z-10 flex gap-8">
           <div>
-            <p className="text-[9px] tracking-[0.1em] uppercase text-muted-foreground/50">QoQ</p>
-            <p className="text-sm font-semibold text-emerald">+34%</p>
+            <p className="text-[10px] tracking-[0.1em] uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>QoQ</p>
+            <p className="text-base font-bold" style={{ color: "#4ADE80" }}>+34%</p>
           </div>
           <div>
-            <p className="text-[9px] tracking-[0.1em] uppercase text-muted-foreground/50">NRR</p>
-            <p className="text-sm font-semibold text-foreground/80">128%</p>
+            <p className="text-[10px] tracking-[0.1em] uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>NRR</p>
+            <p className="text-base font-bold text-white">128%</p>
           </div>
         </div>
       </div>
@@ -155,7 +186,7 @@ function InvestorPreview() {
       <div className="px-5 py-3 border-b border-border">
         <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Investor Discovery</span>
       </div>
-      <div className="divide-y divide-border flex-1">
+      <div className="divide-y divide-border/50 flex-1">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
             <div>
@@ -176,7 +207,7 @@ export function ProductShowcase() {
     <section className="px-6 py-24">
       <div className="max-w-[1000px] mx-auto space-y-24">
         {/* Row 1: Generation + Readiness */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6">
           <AnimatedEntry className="flex flex-col">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
