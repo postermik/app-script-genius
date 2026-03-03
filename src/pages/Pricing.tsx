@@ -11,16 +11,16 @@ const PLANS = [
     name: "Free",
     monthlyPrice: 0,
     tierId: null,
-    description: "One free draft to try it out.",
-    features: ["1 draft creation", "All output modes", "No exports", "No refinements"],
+    description: "Try it out.",
+    features: ["1 narrative draft", "Readiness score", "All output modes"],
     highlighted: false,
   },
   {
     name: "Hobby",
     monthlyPrice: 20,
     tierId: "hobby" as const,
-    description: "For founders getting started.",
-    features: ["Unlimited drafts", "Limited refinements", "Thesis and pitch script only", "No exports", "Partial tabs locked"],
+    description: "For active founders.",
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Pitch prep tools", "Export to PPT & PDF", "Deck theme customization"],
     highlighted: false,
   },
   {
@@ -28,7 +28,7 @@ const PLANS = [
     monthlyPrice: 100,
     tierId: "pro" as const,
     description: "Full capital readiness.",
-    features: ["Unlimited projects", "Unlimited refinements", "All output modes unlocked", "Export to PPT and PDF", "Board and fundraising templates", "Deck framework generation", "Advanced optimization", "Priority processing"],
+    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Audience-specific versions"],
     highlighted: true,
   },
 ];
@@ -115,10 +115,10 @@ export default function Pricing() {
         <div className="max-w-[1100px] mx-auto text-center">
           <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight mb-4">
-            Simple, transparent pricing.
+            Start free. Scale when ready.
           </h1>
-          <p className="text-base text-muted-foreground max-w-[500px] mx-auto mb-10">
-            Start free. Upgrade when you need the full capital readiness suite.
+          <p className="text-base text-foreground/70 max-w-[500px] mx-auto mb-10">
+            Every tier includes only what matters. Upgrade when you need more.
           </p>
 
           <div className="flex items-center justify-center gap-3 mb-16">
