@@ -13,7 +13,7 @@ import { AnalysisTab } from "@/components/tabs/AnalysisTab";
 import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
-import { ArrowLeft, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Save, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -21,19 +21,11 @@ import { format } from "date-fns";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Logo } from "@/components/Logo";
-import type { AudienceType } from "@/types/narrative";
-
-const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
-  { value: "general", label: "General", desc: "Default output" },
-  { value: "investors", label: "Investors", desc: "Risk-aware, returns-focused" },
-  { value: "board", label: "Board", desc: "Metrics-heavy, strategic" },
-  { value: "internal", label: "Internal", desc: "Transparent, motivational" },
-];
 
 const NAV_HEIGHT = 56;
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput, isEvaluation } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, rawInput, isEvaluation } = useDecksmith();
   const navigate = useNavigate();
   const location = useLocation();
   const { subscribed, productId } = useSubscription();
@@ -57,7 +49,6 @@ export function OutputView() {
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
-  const [showAudiences, setShowAudiences] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,19 +103,6 @@ export function OutputView() {
       if (next.has(idx)) next.delete(idx); else next.add(idx);
       return next;
     });
-  };
-
-  const handleAudienceSelect = (audience: AudienceType) => {
-    if (audience === "general") {
-      setActiveAudience("general");
-      setShowAudiences(false);
-    } else if (audienceVariants && audienceVariants[audience]) {
-      setActiveAudience(audience);
-      setShowAudiences(false);
-    } else {
-      adaptForAudience(audience);
-      setShowAudiences(false);
-    }
   };
 
   const versionLabel = `v${currentVersion}`;
@@ -234,16 +212,6 @@ export function OutputView() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowAudiences(!showAudiences)} className="text-[11px] text-secondary-foreground hover:text-foreground flex items-center gap-1 px-2 py-1.5 border border-border rounded-sm transition-colors font-medium">
-            <Users className="h-3 w-3 text-electric" />
-            <span className="text-foreground capitalize">{activeAudience}</span>
-            <ChevronDown className={`h-2.5 w-2.5 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
-          </button>
-          {isAdapting && (
-            <span className="text-xs text-electric flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" />
-            </span>
-          )}
           <ExportDropdown output={output} isPro={isPro} deliverable={deliverable} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
 
           <div className="w-px h-5 bg-border" />
@@ -257,27 +225,6 @@ export function OutputView() {
         </div>
       </nav>
 
-      {showAudiences && (
-        <div className="border-b border-border px-5 py-2 bg-background/95 backdrop-blur-sm z-40 sticky" style={{ top: `${NAV_HEIGHT}px` }}>
-          <div className="flex items-center gap-2 ml-[200px]">
-            {AUDIENCES.map(a => (
-              <button
-                key={a.value}
-                onClick={() => handleAudienceSelect(a.value)}
-                disabled={isAdapting}
-                className={`text-[11px] px-2.5 py-1.5 rounded-sm border transition-colors font-medium ${
-                  activeAudience === a.value
-                    ? "border-electric/30 text-electric bg-electric/10"
-                    : "border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
-                } disabled:opacity-40`}
-              >
-                {a.label}
-                <span className="text-muted-foreground ml-1 font-normal hidden sm:inline">· {a.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Main content with sidebar */}
       <div className="flex-1">

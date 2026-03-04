@@ -44,7 +44,7 @@ function getScoreLabel(key: string, _mode: string): string {
 
 function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
   const score = output.score;
-  const d = (output.data || output.supporting || {}) as any;
+  const d = ((output as any).data || (output as any).supporting || {}) as any;
   const del = (output as any).deliverable || {};
   const mode = output.mode;
   const checklist: ReadinessIndex["checklist"] = [];
@@ -222,7 +222,7 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
 
   const handleRebuild = () => {
     // Extract thesis and key points from the evaluation
-    const d = (output.data || output.supporting || {}) as any;
+    const d = ((output as any).data || (output as any).supporting || {}) as any;
     const thesis = d.thesis?.content || d.thesis || d.executiveSummary || d.vision || d.headline || "";
     const coreInsight = d.thesis?.coreInsight || "";
     const whyNow = d.whyNow || "";
