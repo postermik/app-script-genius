@@ -76,11 +76,10 @@ export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
-  const [stepsJustExpanded, setStepsJustExpanded] = useState(false);
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
+  const [generationDone, setGenerationDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevStepsRef = useRef<StepDef[]>(steps);
 
   useEffect(() => {
     setStepStartTime(Date.now());
@@ -102,6 +101,7 @@ export function GenerationStepper() {
     if (isGenerating) {
       setSteps(getStepsForContext(selectedMode, isEvaluation));
       setCurrentStepIndex(0);
+      setGenerationDone(false);
     }
   }, [isGenerating, selectedMode, isEvaluation]);
 
@@ -116,27 +116,16 @@ export function GenerationStepper() {
       { mode: "investor_update", patterns: ['"mode": "investor_update"', '"mode":"investor_update"'] },
     ];
 
-    let detectedNewSteps = false;
     for (const { mode, patterns } of modeMatches) {
       if (patterns.some(p => streamingText.includes(p)) && STEP_SETS[mode]) {
         setSteps(prev => {
           if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) {
-            detectedNewSteps = true;
-            if (prev === INITIAL_STEPS) {
-              setStepsJustExpanded(true);
-              setTimeout(() => setStepsJustExpanded(false), 600);
-            }
             return STEP_SETS[mode];
           }
           return prev;
         });
         break;
       }
-    }
-
-    if (detectedNewSteps && steps === INITIAL_STEPS) {
-      setCurrentStepIndex(1);
-      return;
     }
 
     if (steps === INITIAL_STEPS) return;
@@ -151,74 +140,81 @@ export function GenerationStepper() {
     if (highest > 0) setCurrentStepIndex(highest);
   }, [streamingText, isStreaming, steps]);
 
+  // "Done" step only shows after streaming ends and output is parsed
   useEffect(() => {
     if (!isStreaming && isGenerating && streamingText.length > 0) {
-      setCurrentStepIndex(steps.length - 1);
+      // Mark last non-complete step as done, then show "Done"
+      setCurrentStepIndex(steps.length - 2);
+      setTimeout(() => {
+        setGenerationDone(true);
+        setCurrentStepIndex(steps.length - 1);
+      }, 400);
     }
   }, [isStreaming, isGenerating, streamingText, steps.length]);
+
+  // Only show completed + active steps. "Done" only when generationDone.
+  const visibleSteps = steps.filter((step, index) => {
+    if (step.key === "complete") return generationDone;
+    return index <= currentStepIndex;
+  });
 
   return (
     <div className="flex flex-col items-center justify-center py-4 animate-fade-in">
       <div className="space-y-2">
-        {steps.map((step, index) => {
-          const isComplete = currentStepIndex > index;
-          const isActive = currentStepIndex === index;
-          const isPending = currentStepIndex < index;
+        {visibleSteps.map((step) => {
+          const realIndex = steps.indexOf(step);
+          const isComplete = currentStepIndex > realIndex;
+          const isActive = currentStepIndex === realIndex;
           const StepIcon = iconMap[step.icon] || Search;
+          const isDoneStep = step.key === "complete";
 
           return (
-            <div
-              key={step.key}
-              className={`flex items-center gap-3 transition-all duration-500 ease-out ${isPending ? "opacity-30" : "opacity-100"}`}
-              style={
-                stepsJustExpanded && index > 0
-                  ? { opacity: 0, animation: `fade-in 0.3s ease-out ${index * 75}ms forwards` }
-                  : undefined
-              }
-            >
-              <div className={`
-                flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
-                ${isComplete ? "bg-emerald-500/20 text-emerald-400" : ""}
-                ${isActive ? "bg-primary/20 text-primary" : ""}
-                ${isPending ? "bg-muted/50 text-muted-foreground" : ""}
-              `}>
-                {isComplete ? (
-                  <CheckCircle className="w-3.5 h-3.5" />
-                ) : (
-                  <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
+            <div key={step.key}>
+              <div
+                className="flex items-center gap-3 animate-fade-in"
+              >
+                <div className={`
+                  flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
+                  ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
+                  ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
+                `}>
+                  {isComplete || isDoneStep ? (
+                    <CheckCircle className="w-3.5 h-3.5" />
+                  ) : (
+                    <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
+                  )}
+                </div>
+                <span className={`
+                  text-base transition-all duration-500
+                  ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
+                  ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
+                `}>
+                  {step.label}
+                  {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
+                    <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
+                      {secondsOnStep >= 35 ? "— almost done" : "— still working"}
+                    </span>
+                  )}
+                </span>
+                {isActive && !isDoneStep && isStreaming && (
+                  <div className="flex items-center gap-1 ml-1">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
                 )}
               </div>
-              <span className={`
-                text-base transition-all duration-500
-                ${isComplete ? "text-emerald-400/80" : ""}
-                ${isActive ? "text-primary font-medium" : ""}
-                ${isPending ? "text-muted-foreground" : ""}
-              `}>
-                {step.label}
-                {isActive && !isComplete && isStreaming && secondsOnStep >= 15 && (
-                  <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
-                    {secondsOnStep >= 35 ? "— almost done" : "— still working"}
-                  </span>
-                )}
-              </span>
-              {isActive && isStreaming && (
-                <div className="flex items-center gap-1 ml-1">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
+              {isActive && !isDoneStep && isStreaming && (
+                <button
+                  onClick={stopGenerating}
+                  className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors ml-10 mt-1.5"
+                >
+                  Stop generating
+                </button>
               )}
             </div>
           );
         })}
-        {isStreaming && currentStepIndex < steps.length - 1 && (
-          <button
-            onClick={stopGenerating}
-            className="text-sm text-muted-foreground/70 hover:text-foreground border border-border rounded-md px-3 py-1.5 hover:border-muted-foreground transition-colors ml-10 mt-4"
-          >
-            Stop generating
-          </button>
-        )}
       </div>
     </div>
   );
