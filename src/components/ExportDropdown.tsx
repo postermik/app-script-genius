@@ -79,8 +79,13 @@ export function ExportDropdown({ output, isPro, buildTabs: buildTabsProp, exclud
     toast.success("Exported as Word document.");
   };
 
+  const hasDeck = (() => {
+    const d = output.data as any;
+    return !!(d.deckFramework?.length || d.boardDeckOutline?.length);
+  })();
+
   const menuItems = [
-    { icon: Presentation, label: "PowerPoint (.pptx)", onClick: handleExportPptx, pro: true },
+    ...(hasDeck ? [{ icon: Presentation, label: "PowerPoint (.pptx)", onClick: handleExportPptx, pro: true }] : []),
     { icon: FileDown, label: "PDF (Print)", onClick: exportPdf, pro: true },
     { icon: FileText, label: "Word (.doc)", onClick: exportDocx, pro: false },
     { icon: File, label: "Google Slides", onClick: () => { setOpen(false); toast.info("Google Slides export coming soon."); }, soon: true },

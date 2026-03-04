@@ -11,7 +11,19 @@ const SCORE_LABELS: Record<string, string> = {
   marketFraming: "Market Framing",
   differentiation: "Differentiation",
   riskTransparency: "Risk Transparency",
-  persuasiveStructure: "Persuasion",
+  persuasiveStructure: "Persuasive Structure",
+  metricCompleteness: "Metric Completeness",
+  strategicAlignment: "Strategic Alignment",
+  actionability: "Actionability",
+  marketInsight: "Market Insight",
+  competitivePositioning: "Competitive Positioning",
+  feasibility: "Feasibility",
+  userInsight: "User Insight",
+  solutionFit: "Solution Fit",
+  narrativeCoherence: "Narrative Coherence",
+  transparency: "Transparency",
+  momentumSignal: "Momentum Signal",
+  brevity: "Brevity",
 };
 
 function getScoreColor(score: number): string {

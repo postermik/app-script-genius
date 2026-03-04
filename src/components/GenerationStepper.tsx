@@ -93,9 +93,28 @@ export function GenerationStepper() {
     }
   }, [isGenerating, selectedMode, isEvaluation]);
 
-  // Detect steps from streaming text
   useEffect(() => {
     if (!isStreaming || !streamingText) return;
+
+    // Auto-detect mode from streaming text
+    const modeMatches = [
+      { mode: "board_update", patterns: ['"mode": "board_update"', '"mode":"board_update"'] },
+      { mode: "strategy", patterns: ['"mode": "strategy"', '"mode":"strategy"'] },
+      { mode: "product_vision", patterns: ['"mode": "product_vision"', '"mode":"product_vision"'] },
+      { mode: "investor_update", patterns: ['"mode": "investor_update"', '"mode":"investor_update"'] },
+    ];
+
+    for (const { mode, patterns } of modeMatches) {
+      if (patterns.some(p => streamingText.includes(p)) && STEP_SETS[mode]) {
+        setSteps(prev => {
+          if (prev !== STEP_SETS[mode]) return STEP_SETS[mode];
+          return prev;
+        });
+        break;
+      }
+    }
+
+    // Detect step progress
     let highest = 0;
     for (let i = 1; i < steps.length - 1; i++) {
       const trigger = steps[i].trigger;

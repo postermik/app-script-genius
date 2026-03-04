@@ -271,7 +271,7 @@ export function OutputView() {
 
       {/* Main content with sidebar */}
       <div className="flex-1">
-        <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} mode={output.mode} />
         <div style={{ marginLeft: 200 }}>
           <div className="max-w-[900px] mx-auto px-6 py-6 w-full animate-fade-in" key={activeSection}>
             {/* Readiness section */}
