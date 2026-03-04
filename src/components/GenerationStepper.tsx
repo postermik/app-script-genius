@@ -114,7 +114,7 @@ export function GenerationStepper() {
   }, [isStreaming, isGenerating, streamingText, steps.length]);
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
+    <div className="flex flex-col items-center justify-center py-4 animate-fade-in">
       <div className="space-y-2">
         {steps.map((step, index) => {
           const isComplete = currentStepIndex > index;
@@ -140,7 +140,7 @@ export function GenerationStepper() {
                 )}
               </div>
               <span className={`
-                text-sm transition-all duration-500
+                text-base transition-all duration-500
                 ${isComplete ? "text-emerald-400/80" : ""}
                 ${isActive ? "text-primary font-medium" : ""}
                 ${isPending ? "text-muted-foreground" : ""}
@@ -162,7 +162,7 @@ export function GenerationStepper() {
         {isStreaming && currentStepIndex < steps.length - 1 && (
           <button
             onClick={stopGenerating}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-10 mt-1"
+            className="text-sm text-muted-foreground/70 hover:text-foreground transition-colors ml-10 mt-1"
           >
             Stop generating
           </button>
