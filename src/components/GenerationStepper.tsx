@@ -81,7 +81,7 @@ function getStepsForContext(selectedMode: string, isEvaluation: boolean): StepDe
 }
 
 export function GenerationStepper() {
-  const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation } = useDecksmith();
+  const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
 
@@ -114,9 +114,9 @@ export function GenerationStepper() {
   }, [isStreaming, isGenerating, streamingText, steps.length]);
 
   return (
-    <div className="border border-border rounded-sm p-6 card-gradient animate-fade-in">
-      <div className="w-full max-w-sm mx-auto py-4">
-        <div className="space-y-2.5">
+    <div className="border border-border rounded-sm p-4 card-gradient animate-fade-in">
+      <div className="w-full py-2">
+        <div className="space-y-2">
           {steps.map((step, index) => {
             const isComplete = currentStepIndex > index;
             const isActive = currentStepIndex === index;
@@ -153,12 +153,20 @@ export function GenerationStepper() {
           })}
         </div>
 
-        {/* Bouncing dots activity indicator */}
+        {/* Bouncing dots activity indicator + stop button */}
         {isStreaming && currentStepIndex < steps.length - 1 && (
-          <div className="flex items-center justify-center gap-1 mt-5">
-            <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="flex flex-col items-start gap-2 mt-3">
+            <div className="flex items-center gap-1">
+              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+            <button
+              onClick={stopGenerating}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Stop generating
+            </button>
           </div>
         )}
       </div>
