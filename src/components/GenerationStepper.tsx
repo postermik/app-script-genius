@@ -74,18 +74,21 @@ function getStepsForContext(selectedMode: string, isEvaluation: boolean): StepDe
 
 export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [targetStepIndex, setTargetStepIndex] = useState(0);
+  const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
   const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Reset step timer when displayed step changes
   useEffect(() => {
     setStepStartTime(Date.now());
     setSecondsOnStep(0);
-  }, [currentStepIndex]);
+  }, [displayedStepIndex]);
 
+  // Tick seconds on current step
   useEffect(() => {
     if (isStreaming) {
       timerRef.current = setInterval(() => {
@@ -97,14 +100,17 @@ export function GenerationStepper() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isStreaming, stepStartTime]);
 
+  // Reset on new generation
   useEffect(() => {
     if (isGenerating) {
       setSteps(getStepsForContext(selectedMode, isEvaluation));
-      setCurrentStepIndex(0);
+      setTargetStepIndex(0);
+      setDisplayedStepIndex(0);
       setGenerationDone(false);
     }
   }, [isGenerating, selectedMode, isEvaluation]);
 
+  // Detect mode and step triggers from stream
   useEffect(() => {
     if (!isStreaming || !streamingText) return;
 
@@ -119,9 +125,7 @@ export function GenerationStepper() {
     for (const { mode, patterns } of modeMatches) {
       if (patterns.some(p => streamingText.includes(p)) && STEP_SETS[mode]) {
         setSteps(prev => {
-          if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) {
-            return STEP_SETS[mode];
-          }
+          if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) return STEP_SETS[mode];
           return prev;
         });
         break;
@@ -137,25 +141,32 @@ export function GenerationStepper() {
         highest = i;
       }
     }
-    if (highest > 0) setCurrentStepIndex(highest);
+    if (highest > 0) setTargetStepIndex(prev => Math.max(prev, highest));
   }, [streamingText, isStreaming, steps]);
 
-  // "Done" step only shows after streaming ends and output is parsed
+  // Pacing: increment displayedStepIndex toward targetStepIndex with 4s delay
+  useEffect(() => {
+    if (generationDone) return; // skip pacing once done
+    if (displayedStepIndex < targetStepIndex) {
+      const timer = setTimeout(() => {
+        setDisplayedStepIndex(prev => prev + 1);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [displayedStepIndex, targetStepIndex, generationDone]);
+
+  // When streaming ends, skip pacing and jump to Done
   useEffect(() => {
     if (!isStreaming && isGenerating && streamingText.length > 0) {
-      // Mark last non-complete step as done, then show "Done"
-      setCurrentStepIndex(steps.length - 2);
-      setTimeout(() => {
-        setGenerationDone(true);
-        setCurrentStepIndex(steps.length - 1);
-      }, 400);
+      setGenerationDone(true);
+      setDisplayedStepIndex(steps.length - 1);
     }
   }, [isStreaming, isGenerating, streamingText, steps.length]);
 
   // Only show completed + active steps. "Done" only when generationDone.
   const visibleSteps = steps.filter((step, index) => {
     if (step.key === "complete") return generationDone;
-    return index <= currentStepIndex;
+    return index <= displayedStepIndex;
   });
 
   return (
@@ -163,16 +174,14 @@ export function GenerationStepper() {
       <div className="space-y-2">
         {visibleSteps.map((step) => {
           const realIndex = steps.indexOf(step);
-          const isComplete = currentStepIndex > realIndex;
-          const isActive = currentStepIndex === realIndex;
+          const isComplete = displayedStepIndex > realIndex;
+          const isActive = displayedStepIndex === realIndex;
           const StepIcon = iconMap[step.icon] || Search;
           const isDoneStep = step.key === "complete";
 
           return (
             <div key={step.key}>
-              <div
-                className="flex items-center gap-3 animate-fade-in"
-              >
+              <div className="flex items-center gap-3 animate-fade-in">
                 <div className={`
                   flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
                   ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
