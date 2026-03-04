@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Search, Lightbulb, FileText, Mic, Layout, Target, CheckCircle,
@@ -84,6 +84,27 @@ export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
+  const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
+  const [secondsOnStep, setSecondsOnStep] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Reset stepStartTime when currentStepIndex changes
+  useEffect(() => {
+    setStepStartTime(Date.now());
+    setSecondsOnStep(0);
+  }, [currentStepIndex]);
+
+  // Tick every second to update secondsOnStep while streaming
+  useEffect(() => {
+    if (isStreaming) {
+      timerRef.current = setInterval(() => {
+        setSecondsOnStep(Math.floor((Date.now() - stepStartTime) / 1000));
+      }, 1000);
+    } else {
+      setSecondsOnStep(0);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isStreaming, stepStartTime]);
 
   // Set steps when generation starts
   useEffect(() => {
@@ -165,8 +186,12 @@ export function GenerationStepper() {
                 ${isPending ? "text-muted-foreground" : ""}
               `}>
                 {step.label}
+                {isActive && isStreaming && secondsOnStep >= 8 && (
+                  <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
+                    {secondsOnStep >= 20 ? "— almost there" : "— this is the longest step"}
+                  </span>
+                )}
               </span>
-              {/* Inline bouncing dots next to active step */}
               {isActive && isStreaming && (
                 <div className="flex items-center gap-1 ml-1">
                   <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
