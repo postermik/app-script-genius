@@ -4,7 +4,7 @@ import { useDecksmith } from "@/context/DecksmithContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText } from "lucide-react";
+import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, VoiceProfile } from "@/types/narrative";
 import { formatDistanceToNow } from "date-fns";
@@ -37,13 +37,13 @@ const GENERATION_STEPS = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile, evaluateDeck } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile } = useDecksmith();
   const { subscribed } = useSubscription();
   const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [genStep, setGenStep] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
@@ -90,31 +90,16 @@ export function ProductView() {
         return;
       }
       setUploadingFile(null);
-      await evaluateDeck(extractedText);
+      setRawInput(`Evaluate this deck:\n\n${extractedText}`);
+      toast.success(`Extracted text from ${file.name}. Review and hit Generate.`);
     } catch (e: any) {
       console.error("File parsing error:", e);
       toast.error(e.message || "Failed to parse the file.");
     } finally {
       setUploadingFile(null);
     }
-  }, [evaluateDeck]);
+  }, [setRawInput]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileUpload(file);
-  }, [handleFileUpload]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
 
   const progressPercent = isGenerating ? Math.min(((genStep + 1) / GENERATION_STEPS.length) * 90, 90) : 0;
 
@@ -186,62 +171,31 @@ export function ProductView() {
               </div>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={!rawInput.trim()} className="w-full py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
-                  Generate
-                </button>
-                <p className="text-xs text-muted-foreground text-center mb-4">Press Cmd+Enter to generate</p>
+                <div className="flex gap-2">
+                  <button onClick={handleGenerate} disabled={!rawInput.trim()} className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                    Generate
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.pptx"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={!!uploadingFile} className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-sm hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
+                    {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploadingFile ? "Extracting…" : "Upload"}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground text-center mb-4">Press Cmd+Enter to generate · Upload a PDF or PPTX to evaluate</p>
               </>
             )}
           </div>
 
-          {/* Evaluate existing deck dropzone */}
-          {!isGenerating && !isFreeAndLocked && (
-            <div className="mt-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground font-medium">Or evaluate an existing deck</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.pptx"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(file);
-                  e.target.value = "";
-                }}
-              />
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all ${
-                  isDragging
-                    ? "border-electric/60 bg-electric/5"
-                    : "border-border hover:border-muted-foreground/40 hover:bg-card/50"
-                } ${uploadingFile ? "pointer-events-none opacity-60" : ""}`}
-              >
-                {uploadingFile ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-6 w-6 text-electric animate-spin" />
-                    <p className="text-sm text-foreground font-medium">Extracting text from {uploadingFile}...</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-foreground font-medium">Drop your deck here or click to browse</p>
-                    <p className="text-xs text-muted-foreground">PDF or PPTX · Max 20MB</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
         {!isGenerating && projects.length > 0 && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
