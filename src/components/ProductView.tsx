@@ -6,7 +6,7 @@ import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { OutputMode, VoiceProfile } from "@/types/narrative";
+import type { OutputMode } from "@/types/narrative";
 import { formatDistanceToNow } from "date-fns";
 import { parseDeckFile } from "@/lib/parseDeck";
 import { GenerationStepper } from "@/components/GenerationStepper";
@@ -18,26 +18,19 @@ const MODES: { value: OutputMode | "auto"; label: string }[] = [
   { value: "product_vision", label: "Product Vision" }, { value: "investor_update", label: "Investor Update" },
 ];
 
-const VOICES: { value: VoiceProfile; label: string }[] = [
-  { value: "executive", label: "Executive" },
-  { value: "investor", label: "Investor" }, { value: "technical", label: "Technical" },
-  { value: "visionary", label: "Visionary" },
-];
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject } = useDecksmith();
   const { subscribed } = useSubscription();
-  const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
-  const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
+  const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
-  useEffect(() => { setVoiceProfile(localVoice); }, [localVoice, setVoiceProfile]);
 
   const loadDraftsUsed = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -90,8 +83,8 @@ export function ProductView() {
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {!isFreeAndLocked && !isGenerating && (
               <div className="space-y-3">
-                {/* Mode selector */}
-                <div className="flex flex-wrap gap-1.5">
+                {/* Mode selector - centered */}
+                <div className="flex flex-wrap gap-1.5 justify-center">
                   {MODES.map((m) => (
                     <button key={m.value} onClick={() => setSelectedMode(m.value)}
                       className={`text-xs px-3.5 py-2 rounded-sm border transition-all font-medium ${
@@ -102,14 +95,6 @@ export function ProductView() {
                       {m.label}
                     </button>
                   ))}
-                </div>
-                {/* Voice selector */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Voice:</span>
-                  <select value={localVoice} onChange={(e) => setLocalVoice(e.target.value as VoiceProfile)}
-                    className="text-xs px-3 py-1.5 rounded-sm border border-border bg-card text-secondary-foreground hover:text-foreground transition-colors focus:outline-none focus:border-electric/40">
-                    {VOICES.map((v) => (<option key={v.value} value={v.value}>{v.label}</option>))}
-                  </select>
                 </div>
               </div>
             )}
