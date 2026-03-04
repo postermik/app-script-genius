@@ -51,6 +51,7 @@ interface DecksmithContextType {
   isAdapting: boolean;
   isStreaming: boolean;
   streamingText: string;
+  stopGenerating: () => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -385,6 +386,17 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
   }, [output, rawInput, saveProject, currentProjectId, session, projects]);
 
+  const stopGenerating = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setIsGenerating(false);
+    setStreamingText("");
+    toast.info("Generation stopped.");
+  }, []);
+
   const reset = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -538,7 +550,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         versions, currentVersion, saveVersion, loadVersion,
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
-        isStreaming, streamingText,
+        isStreaming, streamingText, stopGenerating,
       }}
     >
       {children}
