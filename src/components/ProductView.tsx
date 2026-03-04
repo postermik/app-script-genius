@@ -8,9 +8,8 @@ import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, VoiceProfile } from "@/types/narrative";
 import { formatDistanceToNow } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { parseDeckFile } from "@/lib/parseDeck";
+import { GenerationStepper } from "@/components/GenerationStepper";
 import { toast } from "sonner";
 
 const MODES: { value: OutputMode | "auto"; label: string }[] = [
@@ -25,42 +24,20 @@ const VOICES: { value: VoiceProfile; label: string }[] = [
   { value: "visionary", label: "Visionary" },
 ];
 
-const GENERATION_STEPS = [
-  "Analyzing your input...",
-  "Detecting narrative intent...",
-  "Structuring thesis...",
-  "Building narrative arc...",
-  "Scoring readiness...",
-  "Assembling deck framework...",
-  "Finalizing output...",
-];
-
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile, isStreaming, streamingText } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile } = useDecksmith();
   const { subscribed } = useSubscription();
   const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [genStep, setGenStep] = useState(0);
-  
+
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
   useEffect(() => { setVoiceProfile(localVoice); }, [localVoice, setVoiceProfile]);
-
-  useEffect(() => {
-    if (!isGenerating) { setGenStep(0); return; }
-    const interval = setInterval(() => {
-      setGenStep(prev => {
-        if (prev >= GENERATION_STEPS.length - 1) return prev; // Stay on final step, never loop
-        return prev + 1;
-      });
-    }, 7000);
-    return () => clearInterval(interval);
-  }, [isGenerating]);
 
   const loadDraftsUsed = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -99,9 +76,6 @@ export function ProductView() {
       setUploadingFile(null);
     }
   }, [setRawInput]);
-
-
-  const progressPercent = isGenerating ? Math.min(((genStep + 1) / GENERATION_STEPS.length) * 90, 90) : 0;
 
   if (output) return <OutputView />;
 
@@ -147,34 +121,7 @@ export function ProductView() {
                 <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
               </div>
             ) : isGenerating ? (
-              <div className="border border-border rounded-sm p-6 card-gradient animate-fade-in space-y-5">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="h-5 w-5 text-electric animate-spin shrink-0" />
-                  <div className="flex-1">
-                    <p className={`text-sm font-medium text-foreground transition-all ${genStep >= GENERATION_STEPS.length - 1 ? "animate-pulse" : ""}`}>{GENERATION_STEPS[genStep]}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {genStep >= GENERATION_STEPS.length - 1 ? "Almost there..." : `Step ${genStep + 1} of ${GENERATION_STEPS.length}`}
-                    </p>
-                  </div>
-                </div>
-                {isStreaming && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="animate-pulse w-2 h-2 bg-electric rounded-full" />
-                    <span>Generating narrative... ({streamingText.length.toLocaleString()} chars)</span>
-                  </div>
-                )}
-                <Progress value={progressPercent} className="h-1.5 bg-muted" />
-                <div className="grid grid-cols-2 gap-3">
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i} className="border border-border rounded-sm p-4 space-y-2.5 card-gradient" style={{ animationDelay: `${i * 150}ms` }}>
-                      <Skeleton className="h-3 w-3/4" />
-                      <Skeleton className="h-2 w-full" />
-                      <Skeleton className="h-2 w-5/6" />
-                      <Skeleton className="h-2 w-2/3" />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <GenerationStepper />
             ) : (
               <>
                 <div className="flex gap-2">
@@ -197,11 +144,9 @@ export function ProductView() {
                     {uploadingFile ? "Extracting…" : "Upload"}
                   </button>
                 </div>
-                
               </>
             )}
           </div>
-
         </div>
         {!isGenerating && projects.length > 0 && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
