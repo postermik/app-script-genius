@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDecksmith } from "@/context/DecksmithContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Loader2, Copy, Trash2, ArrowRight, Lock } from "lucide-react";
+import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, VoiceProfile } from "@/types/narrative";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { parseDeckFile } from "@/lib/parseDeck";
+import { toast } from "sonner";
 
 const MODES: { value: OutputMode | "auto"; label: string }[] = [
   { value: "auto", label: "Auto Detect" }, { value: "fundraising", label: "Fundraising" },
@@ -35,12 +37,15 @@ const GENERATION_STEPS = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile, evaluateDeck } = useDecksmith();
   const { subscribed } = useSubscription();
   const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [genStep, setGenStep] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
@@ -66,6 +71,50 @@ export function ProductView() {
 
   const handleGenerate = async () => { await generate(); await loadDraftsUsed(); };
   const handleKeyDown = (e: React.KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (!isFreeAndLocked) handleGenerate(); } };
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "pdf" && ext !== "pptx") {
+      toast.error("Please upload a PDF or PPTX file.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File is too large. Maximum size is 20MB.");
+      return;
+    }
+    setUploadingFile(file.name);
+    try {
+      const extractedText = await parseDeckFile(file);
+      if (!extractedText.trim()) {
+        toast.error("No text could be extracted from this file.");
+        return;
+      }
+      setUploadingFile(null);
+      await evaluateDeck(extractedText);
+    } catch (e: any) {
+      console.error("File parsing error:", e);
+      toast.error(e.message || "Failed to parse the file.");
+    } finally {
+      setUploadingFile(null);
+    }
+  }, [evaluateDeck]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const progressPercent = isGenerating ? Math.min(((genStep + 1) / GENERATION_STEPS.length) * 90, 90) : 0;
 
@@ -144,6 +193,55 @@ export function ProductView() {
               </>
             )}
           </div>
+
+          {/* Evaluate existing deck dropzone */}
+          {!isGenerating && !isFreeAndLocked && (
+            <div className="mt-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground font-medium">Or evaluate an existing deck</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.pptx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all ${
+                  isDragging
+                    ? "border-electric/60 bg-electric/5"
+                    : "border-border hover:border-muted-foreground/40 hover:bg-card/50"
+                } ${uploadingFile ? "pointer-events-none opacity-60" : ""}`}
+              >
+                {uploadingFile ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 text-electric animate-spin" />
+                    <p className="text-sm text-foreground font-medium">Extracting text from {uploadingFile}...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-foreground font-medium">Drop your deck here or click to browse</p>
+                    <p className="text-xs text-muted-foreground">PDF or PPTX · Max 20MB</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         {!isGenerating && projects.length > 0 && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
@@ -153,7 +251,12 @@ export function ProductView() {
                 <div key={project.id} className="card-gradient border border-border rounded-sm p-5 group cursor-pointer hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all" onClick={() => openProject(project)}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-foreground truncate">{project.title}</h3>
+                      <h3 className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                        {project.title}
+                        {project.detected_intent === "evaluate" && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0">Evaluation</span>
+                        )}
+                      </h3>
                       <p className="text-xs text-muted-foreground mt-1">{project.mode.replace("_", " ")} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}</p>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
