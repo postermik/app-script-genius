@@ -1,15 +1,18 @@
 import { useDecksmith } from "@/context/DecksmithContext";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { OutputCard } from "@/components/OutputCard";
-import { ReadinessIndexCard } from "@/components/ReadinessIndexCard";
-import { OutreachTracker } from "@/components/OutreachTracker";
 import { ExportDropdown } from "@/components/ExportDropdown";
-import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
-import { ThesisTab } from "@/components/ThesisTab";
-import { NarrativeArcTab } from "@/components/NarrativeArcTab";
-import { PitchPrepTab } from "@/components/PitchPrepTab";
-import { ProjectSidebar, type ProjectSection } from "@/components/project/ProjectSidebar";
+import { ProjectSidebar } from "@/components/project/ProjectSidebar";
 import { OriginalInputSection } from "@/components/project/OriginalInputSection";
+import { DeckView } from "@/components/deliverable/DeckView";
+import { MemoView } from "@/components/deliverable/MemoView";
+import { EmailView } from "@/components/deliverable/EmailView";
+import { DocumentView } from "@/components/deliverable/DocumentView";
+import { ScoreTab } from "@/components/tabs/ScoreTab";
+import { CoachingTab } from "@/components/tabs/CoachingTab";
+import { AnalysisTab } from "@/components/tabs/AnalysisTab";
+import type { DeckTheme } from "@/components/SlidePreview";
+import type { OutputTabKey } from "@/types/rhetoric";
+import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
 import { ArrowLeft, ChevronDown, Save, Pencil, Check, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,8 +23,6 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { Logo } from "@/components/Logo";
 import type { AudienceType } from "@/types/narrative";
 
-interface TabConfig { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[]; }
-
 const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
   { value: "general", label: "General", desc: "Default output" },
   { value: "investors", label: "Investors", desc: "Risk-aware, returns-focused" },
@@ -29,11 +30,26 @@ const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
   { value: "internal", label: "Internal", desc: "Transparent, motivational" },
 ];
 
-const NAV_HEIGHT = 56; // px — single merged header height
+const NAV_HEIGHT = 56;
 
 export function OutputView() {
-  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput } = useDecksmith();
-  const [activeSection, setActiveSection] = useState<ProjectSection>("readiness");
+  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput, isEvaluation } = useDecksmith();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { subscribed, productId } = useSubscription();
+  const isProNav = subscribed && productId === TIERS.pro.product_id;
+
+  // Derived data from output
+  const intent = output ? getOutputIntent(output) : "create";
+  const deliverable = output ? getDeliverable(output) : null;
+  const score = output ? getScore(output) : null;
+  const analysis = output ? getAnalysis(output) : null;
+
+  // If isEvaluation from context, override intent
+  const effectiveIntent = isEvaluation ? "evaluate" : intent;
+  const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "preview";
+
+  const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
   const [showVersions, setShowVersions] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
@@ -43,13 +59,9 @@ export function OutputView() {
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [showAudiences, setShowAudiences] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  
+
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
   const outputRef = useRef(output);
-  const { subscribed, productId } = useSubscription();
-  const isProNav = subscribed && productId === TIERS.pro.product_id;
 
   const handleSignOut = async () => { await supabase.auth.signOut(); navigate("/"); };
   const isActive = (path: string) => location.pathname === path;
@@ -70,65 +82,20 @@ export function OutputView() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [output, triggerAutoSave]);
 
+  // Initialize slide order from deliverable
   useEffect(() => {
-    if (!output) return;
-    const d = output.data as any;
-    const framework = d.deckFramework || d.boardDeckOutline || [];
+    if (!deliverable) return;
+    const framework = deliverable.deckFramework || deliverable.boardDeckOutline || [];
     if (framework.length > 0 && slideOrder.length !== framework.length) {
       setSlideOrder(framework.map((_: any, i: number) => i));
       setExcludedSlides(new Set());
     }
-  }, [output]);
+  }, [deliverable]);
 
   if (!output) return null;
 
-  const tabs = buildTabs(output);
-  const isFirstFree = !isPro && generationCount >= 1;
   const projectTitle = (output as any).title || "Untitled Project";
-
-  const getDeckPreviewSlides = (): SlideData[] => {
-    const d = output.data as any;
-    const framework = d.deckFramework || d.boardDeckOutline || [];
-    if (!framework || framework.length === 0) return [];
-    return framework.map((slide: any, idx: number) => {
-      const headline = typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`);
-      const h = headline.toLowerCase();
-      let body = "";
-      if (h.includes("thesis") || h.includes("investment")) body = d.thesis?.content || d.thesis || "";
-      else if (h.includes("market") || h.includes("opportunity")) body = Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || d.marketAnalysis || "");
-      else if (h.includes("problem") || h.includes("pain") || h.includes("world")) body = d.narrativeStructure?.worldToday || d.narrativeStructure?.breakingPoint || d.userProblem || "";
-      else if (h.includes("solution") || h.includes("model") || h.includes("product")) body = d.narrativeStructure?.newModel || d.solutionFramework || "";
-      else if (h.includes("why") || h.includes("differentiat") || h.includes("moat")) body = d.narrativeStructure?.whyThisWins || d.competitiveFramework || "";
-      else if (h.includes("vision") || h.includes("future")) body = d.narrativeStructure?.theFuture || d.vision || "";
-      else if (h.includes("risk")) body = d.risks || d.risksFocus || "";
-      else if (h.includes("roadmap") || h.includes("milestone")) body = d.roadmapNarrative || d.nextMilestones || "";
-      else if (h.includes("ask") || h.includes("funding")) body = d.askUpdate || "";
-      else if (h.includes("metric") || h.includes("traction")) body = d.metricsNarrative || d.metrics || "";
-      else if (h.includes("summary")) body = d.executiveSummary || "";
-      else body = typeof slide === "object" ? (slide.body || slide.content || "") : "";
-      return { headline, content: body ? body.slice(0, 300) : "", slideType: slide?.metadata?.slideType, visualDirection: slide?.metadata?.visualDirection };
-    });
-  };
-
-  const slidePreviewData = getDeckPreviewSlides();
-
-  const getTabForSection = (section: ProjectSection) => {
-    const keyMap: Record<ProjectSection, string[]> = {
-      readiness: [],
-      thesis: ["thesis", "summary", "vision", "headline"],
-      narrative: ["narrative", "metrics", "problem", "progress"],
-      pitch: ["pitch", "risks", "competitive", "challenges", "solution"],
-      deck: ["deck", "boardDeck", "roadmap", "next", "ask"],
-    };
-    const keys = keyMap[section];
-    return tabs.find(t => keys.includes(t.key));
-  };
-
-  const currentTab = getTabForSection(activeSection);
-  const isDeckSection = activeSection === "deck";
-  const isThesisSection = activeSection === "thesis" && output.mode === "fundraising";
-  const isNarrativeSection = activeSection === "narrative" && output.mode === "fundraising";
-  const isPitchSection = activeSection === "pitch" && output.mode === "fundraising";
+  const isFirstFree = !isPro && generationCount >= 1;
 
   const handleTitleEdit = () => { setTitleValue(projectTitle); setEditingTitle(true); };
   const handleTitleSave = async () => {
@@ -163,14 +130,56 @@ export function OutputView() {
   const versionLabel = `v${currentVersion}`;
   const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
+  // Render the deliverable preview
+  const renderPreview = () => {
+    if (!deliverable) return <p className="text-sm text-muted-foreground text-center py-12">No deliverable content available.</p>;
+    switch (deliverable.type) {
+      case "deck":
+        return (
+          <DeckView
+            deliverable={deliverable}
+            excludedSlides={excludedSlides}
+            onToggleSlide={toggleSlide}
+            slideOrder={slideOrder}
+            onReorder={setSlideOrder}
+            deckTheme={deckTheme}
+            onThemeChange={setDeckTheme}
+          />
+        );
+      case "memo":
+        return <MemoView deliverable={deliverable} />;
+      case "email":
+        return <EmailView deliverable={deliverable} />;
+      case "document":
+        return <DocumentView deliverable={deliverable} />;
+      default:
+        // Old format fallback — if there's a deckFramework in data, render deck
+        const oldData = (output as any).data;
+        if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
+          const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
+          return (
+            <DeckView
+              deliverable={fallbackDeliverable}
+              excludedSlides={excludedSlides}
+              onToggleSlide={toggleSlide}
+              slideOrder={slideOrder}
+              onReorder={setSlideOrder}
+              deckTheme={deckTheme}
+              onThemeChange={setDeckTheme}
+            />
+          );
+        }
+        return <p className="text-sm text-muted-foreground text-center py-12">Unsupported deliverable type.</p>;
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col">
-      {/* ── Single merged header ────────────────────────────── */}
+      {/* Header */}
       <nav
         className="border-b border-border px-5 sticky top-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-between"
         style={{ height: `${NAV_HEIGHT}px` }}
       >
-        {/* Left: back + logo */}
         <div className="flex items-center gap-3">
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -178,7 +187,6 @@ export function OutputView() {
           <Logo variant="mark" size={22} />
         </div>
 
-        {/* Center: title + version */}
         <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
           {editingTitle ? (
             <div className="flex items-center gap-1">
@@ -218,12 +226,8 @@ export function OutputView() {
           )}
         </div>
 
-        {/* Right: audience, export, nav links */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowAudiences(!showAudiences)}
-            className="text-[11px] text-secondary-foreground hover:text-foreground flex items-center gap-1 px-2 py-1.5 border border-border rounded-sm transition-colors font-medium"
-          >
+          <button onClick={() => setShowAudiences(!showAudiences)} className="text-[11px] text-secondary-foreground hover:text-foreground flex items-center gap-1 px-2 py-1.5 border border-border rounded-sm transition-colors font-medium">
             <Users className="h-3 w-3 text-electric" />
             <span className="text-foreground capitalize">{activeAudience}</span>
             <ChevronDown className={`h-2.5 w-2.5 transition-transform ${showAudiences ? "rotate-180" : ""}`} />
@@ -233,7 +237,7 @@ export function OutputView() {
               <Loader2 className="h-3 w-3 animate-spin" />
             </span>
           )}
-          <ExportDropdown output={output} isPro={isPro} buildTabs={buildTabs} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
+          <ExportDropdown output={output} isPro={isPro} deliverable={deliverable} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
 
           <div className="w-px h-5 bg-border" />
 
@@ -246,7 +250,6 @@ export function OutputView() {
         </div>
       </nav>
 
-      {/* Audience row (conditional) */}
       {showAudiences && (
         <div className="border-b border-border px-5 py-2 bg-background/95 backdrop-blur-sm z-40 sticky" style={{ top: `${NAV_HEIGHT}px` }}>
           <div className="flex items-center gap-2 ml-[200px]">
@@ -271,60 +274,40 @@ export function OutputView() {
 
       {/* Main content with sidebar */}
       <div className="flex-1">
-        <ProjectSidebar activeSection={activeSection} onSectionChange={setActiveSection} mode={output.mode} />
+        <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} />
         <div style={{ marginLeft: 200 }}>
-          <div className="max-w-[900px] mx-auto px-6 py-6 w-full animate-fade-in" key={activeSection}>
-            {/* Readiness section */}
-            {activeSection === "readiness" && (
-              <>
-                {rawInput && <OriginalInputSection rawInput={rawInput} />}
-                <ReadinessIndexCard output={output} isPro={isPro} />
-              </>
+          <div className="max-w-[900px] mx-auto px-6 py-6 w-full animate-fade-in" key={activeTab}>
+            {/* Show raw input on preview tab */}
+            {activeTab === "preview" && rawInput && <OriginalInputSection rawInput={rawInput} />}
+
+            {/* CREATE: Preview */}
+            {activeTab === "preview" && renderPreview()}
+
+            {/* CREATE: Score */}
+            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} />}
+            {activeTab === "score" && !score && (
+              <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
 
-            {/* Thesis section (fundraising mode) */}
-            {isThesisSection && currentTab && (
-              <ThesisTab sections={currentTab.sections} />
+            {/* Coaching */}
+            {activeTab === "coaching" && score && <CoachingTab score={score} />}
+            {activeTab === "coaching" && !score && (
+              <p className="text-sm text-muted-foreground text-center py-12">No coaching data available.</p>
             )}
 
-            {/* Narrative Arc section (fundraising mode) */}
-            {isNarrativeSection && currentTab && (
-              <NarrativeArcTab sections={currentTab.sections} />
+            {/* EVALUATE: Analysis */}
+            {activeTab === "analysis" && analysis && score && (
+              <AnalysisTab analysis={analysis} score={score} mode={output.mode} />
+            )}
+            {activeTab === "analysis" && (!analysis || !score) && score && (
+              <ScoreTab score={score} mode={output.mode} />
+            )}
+            {activeTab === "analysis" && !score && (
+              <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
             )}
 
-            {/* Pitch Prep section (fundraising mode) */}
-            {isPitchSection && currentTab && (
-              <PitchPrepTab sections={currentTab.sections} outputData={output.data} />
-            )}
-
-            {/* Deck Framework section */}
-            {isDeckSection && slidePreviewData.length > 0 && (
-              <SlidePreview
-                slides={slidePreviewData}
-                excludedSlides={excludedSlides}
-                onToggleSlide={toggleSlide}
-                slideOrder={slideOrder}
-                onReorder={setSlideOrder}
-                theme={deckTheme}
-                onThemeChange={setDeckTheme}
-              />
-            )}
-
-            {/* Generic tab content for non-fundraising modes */}
-            {!["readiness"].includes(activeSection) && !isThesisSection && !isNarrativeSection && !isPitchSection && !isDeckSection && currentTab && (
-              <div className="space-y-0">
-                {currentTab.sections.map((section) => (
-                  <OutputCard key={section.key} label={section.label} content={section.content} path={section.path} sectionKey={section.key} locked={false} />
-                ))}
-              </div>
-            )}
-
-            {/* Fallback when no tab matches */}
-            {!["readiness"].includes(activeSection) && !currentTab && (
-              <div className="text-center py-12">
-                <p className="text-sm text-muted-foreground">This section is not available for the current output mode.</p>
-              </div>
-            )}
+            {/* EVALUATE: Rebuilt */}
+            {activeTab === "rebuilt" && renderPreview()}
           </div>
         </div>
       </div>
@@ -348,8 +331,9 @@ export function OutputView() {
   );
 }
 
-export function buildTabs(output: any): TabConfig[] {
-  const d = output.data as any;
+// Keep buildTabs export for backward compat (used by old export)
+export function buildTabs(output: any): { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[] }[] {
+  const d = output.data || output.deliverable || {};
   const mode = output.mode;
   if (mode === "fundraising") {
     return [
@@ -363,34 +347,7 @@ export function buildTabs(output: any): TabConfig[] {
     return [
       { key: "summary", label: "Executive Summary", sections: [{ key: "exec-summary", path: "executiveSummary", label: "Executive Summary", content: d.executiveSummary || "" }] },
       { key: "metrics", label: "Metrics Narrative", sections: [{ key: "metrics-narr", path: "metricsNarrative", label: "Metrics Narrative", content: d.metricsNarrative || "" }] },
-      { key: "risks", label: "Risks & Focus", sections: [{ key: "risks-focus", path: "risksFocus", label: "Risks & Focus", content: d.risksFocus || "" }] },
-      { key: "boardDeck", label: "Board Deck Outline", sections: [] },
-    ];
-  }
-  if (mode === "strategy") {
-    return [
-      { key: "thesis", label: "Thesis", sections: [{ key: "strat-thesis", path: "thesis", label: "Strategic Thesis", content: d.thesis || "" }] },
-      { key: "positioning", label: "Positioning", sections: [{ key: "strat-pos", path: "positioning", label: "Positioning", content: d.positioning || "" }] },
-      { key: "market", label: "Market Analysis", sections: [{ key: "strat-market", path: "marketAnalysis", label: "Market Analysis", content: d.marketAnalysis || "" }] },
-      { key: "competitive", label: "Competitive Framework", sections: [{ key: "strat-comp", path: "competitiveFramework", label: "Competitive Framework", content: d.competitiveFramework || "" }] },
-    ];
-  }
-  if (mode === "product_vision") {
-    return [
-      { key: "vision", label: "Vision", sections: [{ key: "pv-vision", path: "vision", label: "Product Vision", content: d.vision || "" }] },
-      { key: "problem", label: "User Problem", sections: [{ key: "pv-problem", path: "userProblem", label: "User Problem", content: d.userProblem || "" }] },
-      { key: "solution", label: "Solution", sections: [{ key: "pv-solution", path: "solutionFramework", label: "Solution Framework", content: d.solutionFramework || "" }] },
-      { key: "roadmap", label: "Roadmap", sections: [{ key: "pv-roadmap", path: "roadmapNarrative", label: "Roadmap Narrative", content: d.roadmapNarrative || "" }] },
-    ];
-  }
-  if (mode === "investor_update") {
-    return [
-      { key: "headline", label: "Headline", sections: [{ key: "iu-headline", path: "headline", label: "Headline", content: d.headline || "" }] },
-      { key: "progress", label: "Progress", sections: [{ key: "iu-progress", path: "progress", label: "Progress", content: d.progress || "" }] },
-      { key: "metrics", label: "Metrics", sections: [{ key: "iu-metrics", path: "metrics", label: "Metrics", content: d.metrics || "" }] },
-      { key: "challenges", label: "Challenges", sections: [{ key: "iu-challenges", path: "challenges", label: "Challenges", content: d.challenges || "" }] },
-      { key: "next", label: "Next Milestones", sections: [{ key: "iu-next", path: "nextMilestones", label: "Next Milestones", content: d.nextMilestones || "" }] },
-      { key: "ask", label: "The Ask", sections: [{ key: "iu-ask", path: "askUpdate", label: "Ask Update", content: d.askUpdate || "" }] },
+      { key: "deck", label: "Board Deck Outline", sections: [] },
     ];
   }
   return [];
