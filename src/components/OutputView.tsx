@@ -340,7 +340,7 @@ export function OutputView() {
 
 // Keep buildTabs export for backward compat (used by old export)
 export function buildTabs(output: any): { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[] }[] {
-  const d = output.data || output.deliverable || {};
+  const d = (output.data || output.supporting || output.deliverable || {}) as any;
   const mode = output.mode;
   if (mode === "fundraising") {
     return [

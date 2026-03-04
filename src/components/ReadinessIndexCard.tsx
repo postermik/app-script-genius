@@ -44,7 +44,8 @@ function getScoreLabel(key: string, _mode: string): string {
 
 function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
   const score = output.score;
-  const d = output.data as any;
+  const d = (output.data || output.supporting || {}) as any;
+  const del = (output as any).deliverable || {};
   const mode = output.mode;
   const checklist: ReadinessIndex["checklist"] = [];
   const missing: string[] = [];
@@ -54,7 +55,7 @@ function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
     checklist.push({ label: "Thesis", status: d.thesis?.content ? "done" : "missing" });
     checklist.push({ label: "Differentiation", status: d.narrativeStructure?.whyThisWins ? "done" : "missing" });
     checklist.push({ label: "Risks", status: d.risks && d.risks.length > 20 ? "done" : "warning" });
-    checklist.push({ label: "Deck", status: d.deckFramework?.length >= 6 ? "done" : "warning" });
+    checklist.push({ label: "Deck", status: (d.deckFramework || del.deckFramework)?.length >= 6 ? "done" : "warning" });
     checklist.push({ label: "Pitch Script", status: d.pitchScript ? "done" : "missing" });
     checklist.push({ label: "Market Logic", status: d.marketLogic?.length >= 2 ? "done" : "missing" });
     if (!d.thesis?.content) missing.push("Investment thesis needs development");
@@ -221,7 +222,7 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
 
   const handleRebuild = () => {
     // Extract thesis and key points from the evaluation
-    const d = output.data as any;
+    const d = (output.data || output.supporting || {}) as any;
     const thesis = d.thesis?.content || d.thesis || d.executiveSummary || d.vision || d.headline || "";
     const coreInsight = d.thesis?.coreInsight || "";
     const whyNow = d.whyNow || "";
