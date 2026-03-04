@@ -43,6 +43,12 @@ export interface SlideMetadata {
 
 export interface DeckSlide {
   headline: string;
+  subheadline?: string;
+  bodyContent?: string[];
+  speakerNotes?: string;
+  categoryLabel?: string;
+  closingStatement?: string;
+  layoutRecommendation?: string;
   metadata?: SlideMetadata;
 }
 
