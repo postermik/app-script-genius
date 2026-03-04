@@ -6,6 +6,9 @@ export interface SlideData {
   content: string;
   slideType?: string;
   visualDirection?: string;
+  categoryLabel?: string;
+  closingStatement?: string;
+  layoutRecommendation?: string;
 }
 
 export interface DeckTheme {
@@ -40,6 +43,18 @@ function getLayoutLabel(type?: string) {
     roadmap: "Roadmap", financial: "Financial", split: "Split Layout",
   };
   return type ? labels[type] || type : "Content";
+}
+
+function formatLayoutRecommendation(layout?: string): string {
+  if (!layout) return "";
+  const map: Record<string, string> = {
+    "3-column-with-icons": "3-Column", "data-cards": "Data Cards", "split-layout": "Split",
+    "concentric-circles": "TAM/SAM/SOM", "flywheel": "Flywheel", "competitive-matrix": "Matrix",
+    "timeline": "Timeline", "staircase-chart": "Staircase", "table": "Table",
+    "full-bleed-statement": "Statement", "team-grid": "Team Grid",
+  };
+  if (map[layout]) return map[layout];
+  return layout.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 function getSlideReason(headline: string, idx: number, total: number): string {
@@ -208,10 +223,17 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               onDragStart={() => handleDragStart(i)}
               onDragOver={e => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
-              className={`flex gap-4 p-5 rounded-sm border transition-all min-h-[160px] ${
+              className={`relative flex gap-4 p-5 rounded-sm border transition-all min-h-[160px] ${
                 isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient accent-left-border"
               } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
             >
+              {/* Layout recommendation badge — top-right */}
+              {slide.layoutRecommendation && (
+                <span className="absolute top-2 right-2 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
+                  {formatLayoutRecommendation(slide.layoutRecommendation)}
+                </span>
+              )}
+
               {/* Drag handle + slide number */}
               <div className="flex flex-col items-center justify-center gap-2 shrink-0">
                 <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors">
@@ -220,12 +242,17 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 <span className="text-lg font-bold text-secondary-foreground">{i + 1}</span>
               </div>
 
-              {/* Slide preview thumbnail — 140x100, shows headline + subheader */}
+              {/* Slide preview thumbnail */}
               <div
                 className="w-[140px] h-[100px] rounded-sm border border-border shrink-0 flex flex-col justify-between overflow-hidden p-2.5 self-center"
                 style={{ backgroundColor: isExcluded ? undefined : themeColors.bg }}
               >
                 <div>
+                  {slide.categoryLabel && (
+                    <p className="font-semibold uppercase leading-tight" style={{ fontSize: "5px", color: themeColors.accent, letterSpacing: "0.5px" }}>
+                      {slide.categoryLabel}
+                    </p>
+                  )}
                   <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.fg }}>
                     {slide.headline}
                   </p>
@@ -248,8 +275,13 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 </div>
               </div>
 
-              {/* Content section — headline, subheader, body points, narrative purpose */}
+              {/* Content section */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                {slide.categoryLabel && (
+                  <span className="text-xs uppercase tracking-[0.1em] font-semibold text-electric">
+                    {slide.categoryLabel}
+                  </span>
+                )}
                 <h5 className={`text-base font-bold leading-tight ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
                   {slide.headline}
                 </h5>
@@ -265,6 +297,11 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                       </li>
                     ))}
                   </ul>
+                )}
+                {slide.closingStatement && (
+                  <p className="text-[13px] text-electric font-medium mt-2 leading-snug">
+                    {slide.closingStatement}
+                  </p>
                 )}
                 <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-electric/60" />
