@@ -33,7 +33,7 @@ const AUDIENCES: { value: AudienceType; label: string; desc: string }[] = [
 const NAV_HEIGHT = 56;
 
 export function OutputView() {
-  const { output, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput, isEvaluation } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting, rawInput, isEvaluation } = useDecksmith();
   const navigate = useNavigate();
   const location = useLocation();
   const { subscribed, productId } = useSubscription();
@@ -130,6 +130,12 @@ export function OutputView() {
   const versionLabel = `v${currentVersion}`;
   const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
+  // Update deliverable in output state (for inline edits / suggestions)
+  const handleUpdateDeliverable = (updated: any) => {
+    if (!output) return;
+    setOutput({ ...output, deliverable: updated } as any);
+  };
+
   // Render the deliverable preview
   const renderPreview = () => {
     if (!deliverable) return <p className="text-sm text-muted-foreground text-center py-12">No deliverable content available.</p>;
@@ -144,16 +150,17 @@ export function OutputView() {
             onReorder={setSlideOrder}
             deckTheme={deckTheme}
             onThemeChange={setDeckTheme}
+            onUpdateDeliverable={handleUpdateDeliverable}
           />
         );
       case "memo":
-        return <MemoView deliverable={deliverable} />;
+        return <MemoView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
       case "email":
-        return <EmailView deliverable={deliverable} />;
+        return <EmailView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
       case "document":
-        return <DocumentView deliverable={deliverable} />;
+        return <DocumentView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
       default:
-        // Old format fallback — if there's a deckFramework in data, render deck
+        // Old format fallback
         const oldData = (output as any).data;
         if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
           const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };

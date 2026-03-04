@@ -1,19 +1,31 @@
+import { useState } from "react";
 import { toast } from "sonner";
 import type { Deliverable } from "@/types/rhetoric";
+import { SectionEditor } from "./SectionEditor";
+import { useSuggestionApply } from "@/hooks/useSuggestionApply";
 
 interface Props {
   deliverable: Deliverable;
+  onUpdateDeliverable?: (d: Deliverable) => void;
 }
 
-export function EmailView({ deliverable }: Props) {
+export function EmailView({ deliverable, onUpdateDeliverable }: Props) {
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<number[]>([]);
+  const { applyingIndex, applySuggestion } = useSuggestionApply(deliverable, onUpdateDeliverable);
+
+  const handleDismiss = (i: number) => setDismissedSuggestions(prev => [...prev, i]);
+
+  const handleSaveEdit = (index: number, newContent: string) => {
+    if (!onUpdateDeliverable || !deliverable.sections) return;
+    const updated = [...deliverable.sections];
+    updated[index] = { ...updated[index], content: newContent };
+    onUpdateDeliverable({ ...deliverable, sections: updated });
+  };
+
   const handleCopy = () => {
     const parts: string[] = [];
     if (deliverable.subject) parts.push(`Subject: ${deliverable.subject}`, "");
-    deliverable.sections?.forEach(s => {
-      parts.push(s.heading);
-      parts.push(s.content);
-      parts.push("");
-    });
+    deliverable.sections?.forEach(s => { parts.push(s.heading); parts.push(s.content); parts.push(""); });
     navigator.clipboard.writeText(parts.join("\n"));
     toast.success("Email copied to clipboard.");
   };
@@ -26,14 +38,18 @@ export function EmailView({ deliverable }: Props) {
       </div>
 
       {deliverable.sections?.map((section, i) => (
-        <div key={i} className="mb-4">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-            {section.heading}
-          </div>
-          <div className="text-sm text-secondary-foreground leading-relaxed whitespace-pre-wrap">
-            {section.content}
-          </div>
-        </div>
+        <SectionEditor
+          key={i}
+          section={section}
+          index={i}
+          headingClassName="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1"
+          contentClassName="text-sm text-secondary-foreground leading-relaxed whitespace-pre-wrap"
+          dismissed={dismissedSuggestions.includes(i)}
+          applyingIndex={applyingIndex}
+          onApplySuggestion={applySuggestion}
+          onDismissSuggestion={handleDismiss}
+          onSaveEdit={handleSaveEdit}
+        />
       ))}
 
       <button

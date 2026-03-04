@@ -3,12 +3,14 @@ import type { DeckSlide, NarrativeScore } from "./narrative";
 export interface DeliverableSection {
   heading: string;
   content: string;
+  suggestion?: string | null;
 }
 
 export interface Deliverable {
   type: "deck" | "memo" | "document" | "email";
   // deck
   deckFramework?: DeckSlide[];
+  suggestions?: string[];
   // memo / email / document
   to?: string;
   from?: string;

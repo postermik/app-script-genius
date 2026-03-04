@@ -50,6 +50,7 @@ export interface DeckSlide {
   closingStatement?: string;
   layoutRecommendation?: string;
   metadata?: SlideMetadata;
+  suggestion?: string | null;
 }
 
 export interface DeckControls {

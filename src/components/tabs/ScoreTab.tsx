@@ -129,6 +129,13 @@ export function ScoreTab({ score, mode }: Props) {
           </div>
         )}
       </div>
+
+      {/* Re-score placeholder */}
+      <div className="flex justify-end">
+        <button className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-sm px-3 py-1.5 transition-colors">
+          Re-score with changes
+        </button>
+      </div>
     </div>
   );
 }
