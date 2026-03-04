@@ -21,8 +21,10 @@ interface DecksmithContextType {
   refiningSection: string | null;
   generationCount: number;
   generate: () => Promise<void>;
+  evaluateDeck: (extractedText: string) => Promise<void>;
   refineSection: (sectionKey: string, path: string, tone: RefinementTone) => Promise<void>;
   reset: () => void;
+  isEvaluation: boolean;
   session: Session | null;
   isPro: boolean;
   projects: Project[];
@@ -68,6 +70,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [currentVersion, setCurrentVersion] = useState(1);
   const [outreachTracker, setOutreachTracker] = useState<OutreachEntry[]>([]);
   const [devSimPro, setDevSimPro] = useState(false);
+  const [isEvaluation, setIsEvaluation] = useState(false);
   const [activeAudience, setActiveAudience] = useState<AudienceType>("general");
   const [audienceVariants, setAudienceVariants] = useState<Record<string, NarrativeOutputData>>({});
   const [isAdapting, setIsAdapting] = useState(false);
@@ -168,6 +171,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
+    setIsEvaluation(false);
     startLoadingPhases();
 
     let currentThesis: string | undefined;
@@ -206,6 +210,53 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     stopLoadingPhases();
     setIsGenerating(false);
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects]);
+
+  const evaluateDeck = useCallback(async (extractedText: string) => {
+    if (!extractedText.trim() || isGenerating) return;
+    setIsGenerating(true);
+    setIsEvaluation(true);
+    setRawInput(extractedText);
+    startLoadingPhases();
+
+    const attempt = async (retry: boolean): Promise<void> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+          body: { mode: "evaluate", input: extractedText },
+        });
+        if (error) throw error;
+        if (!data?.content) throw new Error("Empty response from AI");
+
+        const cleaned = data.content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        const parsed = JSON.parse(cleaned);
+        setDetectedMode(parsed.mode);
+        setOutput(parsed);
+
+        // Save as evaluation project
+        if (session) {
+          const title = (parsed as any).title || "Deck Evaluation";
+          const thesis = extractThesis(parsed);
+          const { data: projData } = await supabase.from("projects").insert({
+            user_id: session.user.id, title, mode: parsed.mode, raw_input: extractedText,
+            output_data: parsed as any, detected_intent: "evaluate", current_thesis: thesis,
+          }).select("id").single();
+          if (projData) setCurrentProjectId(projData.id);
+          loadProjects();
+        }
+      } catch (e: any) {
+        if (retry) {
+          console.warn("Evaluation first attempt failed, retrying...", e);
+          return attempt(false);
+        }
+        console.error("Evaluation error:", e);
+        toast.error(e.message || "Evaluation failed. Please try again.");
+        setIsEvaluation(false);
+      }
+    };
+
+    await attempt(true);
+    stopLoadingPhases();
+    setIsGenerating(false);
+  }, [isGenerating, session, startLoadingPhases, stopLoadingPhases, loadProjects]);
 
   const refineSection = useCallback(async (sectionKey: string, path: string, tone: RefinementTone) => {
     if (!output) return;
@@ -252,6 +303,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setOutreachTracker([]);
     setActiveAudience("general");
     setAudienceVariants({});
+    setIsEvaluation(false);
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -301,6 +353,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setDetectedMode(project.mode as OutputMode);
     setCurrentProjectId(project.id);
     setOutreachTracker(project.outreach_tracker || []);
+    setIsEvaluation(project.detected_intent === "evaluate");
     loadVersions(project.id);
   }, [loadVersions]);
 
@@ -381,7 +434,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         rawInput, setRawInput, selectedMode, setSelectedMode,
         voiceProfile, setVoiceProfile,
         detectedMode, output, isGenerating, loadingPhase, refiningSection,
-        generationCount, generate, refineSection, reset,
+        generationCount, generate, evaluateDeck, refineSection, reset, isEvaluation,
         session, isPro, projects, loadProjects,
         currentProjectId, openProject, deleteProject, duplicateProject,
         versions, currentVersion, saveVersion, loadVersion,

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDecksmith } from "@/context/DecksmithContext";
 import type { ReadinessIndex, NarrativeOutputData, NarrativeScore } from "@/types/narrative";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Target, TrendingUp, Shield, Lightbulb, ArrowRight, MessageCircleQuestion, Link2 } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Target, TrendingUp, Shield, Lightbulb, ArrowRight, MessageCircleQuestion, Link2, Info, Sparkles } from "lucide-react";
 
 interface Props { output: NarrativeOutputData; isPro: boolean; }
 
@@ -215,6 +216,7 @@ function generateCoachingItems(output: NarrativeOutputData): CoachingItem[] {
 
 export function ReadinessIndexCard({ output, isPro }: Props) {
   const navigate = useNavigate();
+  const { isEvaluation, reset, setRawInput } = useDecksmith();
   const readiness = computeReadiness(output);
   const score = output.score;
   const overall = score?.overall || 50;
@@ -229,8 +231,42 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
     return () => clearTimeout(t);
   }, []);
 
+  const handleRebuild = () => {
+    // Extract thesis and key points from the evaluation
+    const d = output.data as any;
+    const thesis = d.thesis?.content || d.thesis || d.executiveSummary || d.vision || d.headline || "";
+    const coreInsight = d.thesis?.coreInsight || "";
+    const whyNow = d.whyNow || "";
+    const keyPoints = [thesis, coreInsight, whyNow].filter(Boolean).join("\n\n");
+    
+    reset();
+    // Pre-fill the prompt with extracted content
+    setTimeout(() => {
+      setRawInput(`Rebuild and strengthen this narrative:\n\n${keyPoints}`);
+      navigate("/dashboard");
+    }, 50);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Evaluation banner */}
+      {isEvaluation && (
+        <div className="rounded-sm border border-electric/30 bg-electric/5 p-4 flex items-start gap-3">
+          <Info className="h-4 w-4 text-electric mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground mb-1">This is an evaluation of your uploaded deck.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">Rhetoric can rebuild it with a stronger narrative. Click below to generate a new version.</p>
+            <button
+              onClick={handleRebuild}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-electric text-primary-foreground rounded-sm font-semibold text-xs hover:opacity-90 transition-opacity"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Rebuild This Deck
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top row: gauge + badges + CTA */}
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center gap-6 flex-wrap">
