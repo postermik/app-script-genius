@@ -6,28 +6,40 @@ import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Target, TrendingUp, Sh
 
 interface Props { output: NarrativeOutputData; isPro: boolean; }
 
+const READINESS_TITLES: Record<string, string> = {
+  fundraising: "CAPITAL READINESS",
+  board_update: "UPDATE READINESS",
+  strategy: "STRATEGY READINESS",
+  product_vision: "VISION READINESS",
+  investor_update: "UPDATE READINESS",
+};
+
 function getReadinessLabel(mode: string): string {
-  switch (mode) {
-    case "fundraising": return "Fundraise Readiness";
-    case "board_update": return "Board Readiness";
-    case "strategy": return "Strategy Readiness";
-    case "product_vision": return "Narrative Readiness";
-    case "investor_update": return "Investor Readiness";
-    default: return "Narrative Readiness";
-  }
+  return READINESS_TITLES[mode] || "NARRATIVE READINESS";
 }
 
-function getScoreLabel(key: string, mode: string): string {
-  if (mode === "board_update") {
-    const labels: Record<string, string> = { clarity: "Clarity", marketFraming: "Metrics Coverage", differentiation: "Action Items", riskTransparency: "Risk Transparency", persuasiveStructure: "Decision Framing" };
-    return labels[key] || key;
-  }
-  if (mode === "strategy") {
-    const labels: Record<string, string> = { clarity: "Clarity", marketFraming: "Market Framing", differentiation: "Differentiation", riskTransparency: "Risk Assessment", persuasiveStructure: "Strategic Logic" };
-    return labels[key] || key;
-  }
-  const labels: Record<string, string> = { clarity: "Clarity", marketFraming: "Market Framing", differentiation: "Differentiation", riskTransparency: "Risk Transparency", persuasiveStructure: "Persuasive Structure" };
-  return labels[key] || key;
+const SCORE_COMPONENT_LABELS: Record<string, string> = {
+  clarity: "Clarity",
+  marketFraming: "Market Framing",
+  differentiation: "Differentiation",
+  riskTransparency: "Risk Transparency",
+  persuasiveStructure: "Persuasive Structure",
+  metricCompleteness: "Metric Completeness",
+  strategicAlignment: "Strategic Alignment",
+  actionability: "Actionability",
+  marketInsight: "Market Insight",
+  competitivePositioning: "Competitive Positioning",
+  feasibility: "Feasibility",
+  userInsight: "User Insight",
+  solutionFit: "Solution Fit",
+  narrativeCoherence: "Narrative Coherence",
+  transparency: "Transparency",
+  momentumSignal: "Momentum Signal",
+  brevity: "Brevity",
+};
+
+function getScoreLabel(key: string, _mode: string): string {
+  return SCORE_COMPONENT_LABELS[key] || key;
 }
 
 function computeReadiness(output: NarrativeOutputData): ReadinessIndex {
@@ -147,61 +159,37 @@ function generateCoachingItems(output: NarrativeOutputData): CoachingItem[] {
   const components = score?.components;
   const improvements = score?.improvements || [];
   const missing = computeReadiness(output).missing;
+  const mode = output.mode;
+  const isFundraising = mode === "fundraising";
 
   if (components) {
     const entries = Object.entries(components) as [string, number][];
     const weak = entries.filter(([, v]) => v < 80).sort((a, b) => a[1] - b[1]);
 
     for (const [key, value] of weak) {
-      const label = getScoreLabel(key, output.mode);
-      if (key === "riskTransparency") {
-        items.push({
-          type: "weakness", title: `${label} scores ${value}/100`,
-          detail: "Investors evaluate risk awareness as a signal of founder maturity. A low score here suggests you haven't proactively addressed what could go wrong.",
-          fix: `Add a dedicated risks section that names your top 3 risks and explains your mitigation strategy for each.`,
-          linkSection: "Risks", linkTab: "thesis", linkPitchPrep: true,
-        });
-      } else if (key === "differentiation") {
-        items.push({
-          type: "weakness", title: `${label} scores ${value}/100`,
-          detail: "Without clear differentiation, investors worry about defensibility against incumbents and well-funded competitors.",
-          fix: `Strengthen the "Why This Wins" section of your Narrative Arc with specific competitive advantages.`,
-          linkSection: "Why This Wins", linkTab: "narrative", linkPitchPrep: true,
-        });
-      } else if (key === "marketFraming") {
-        items.push({
-          type: "weakness", title: `${label} scores ${value}/100`,
-          detail: "Market framing establishes whether the opportunity is large enough to justify investment.",
-          fix: `Quantify your TAM/SAM/SOM in the Market Logic section. Include growth rate data and cite credible sources.`,
-          linkSection: "Market Logic", linkTab: "thesis",
-        });
-      } else if (key === "clarity") {
-        items.push({
-          type: "weakness", title: `${label} scores ${value}/100`,
-          detail: "If an investor can't explain your business to their partners in one sentence, you won't get a second meeting.",
-          fix: `Simplify your Investment Thesis to a single clear sentence. Use the Core Insight as your one-liner test.`,
-          linkSection: "Investment Thesis", linkTab: "thesis",
-        });
-      } else if (key === "persuasiveStructure") {
-        items.push({
-          type: "weakness", title: `${label} scores ${value}/100`,
-          detail: "Your narrative doesn't build momentum effectively. Each section should escalate conviction.",
-          fix: `Review your Narrative Arc flow. Ensure "The Breaking Point" creates urgency and "Why This Wins" directly answers it.`,
-          linkSection: "Narrative Arc", linkTab: "narrative",
-        });
-      }
+      const label = getScoreLabel(key, mode);
+      items.push({
+        type: "weakness",
+        title: `${label} scores ${value}/100`,
+        detail: score?.gaps?.find(g => g.toLowerCase().includes(key.toLowerCase())) || `This area needs improvement to strengthen your overall narrative.`,
+        fix: score?.improvements?.find(i => i.toLowerCase().includes(key.toLowerCase())) || `Review and strengthen the ${label} section of your output.`,
+        linkSection: isFundraising ? label : undefined,
+        linkTab: isFundraising ? (key === "riskTransparency" ? "thesis" : key === "differentiation" || key === "persuasiveStructure" ? "narrative" : "thesis") : undefined,
+        linkPitchPrep: isFundraising && (key === "riskTransparency" || key === "differentiation"),
+      });
     }
   }
 
   const threats = missing.filter(m => m.length > 0);
   if (threats.length > 0) {
     for (const threat of threats.slice(0, 3)) {
-      const t = threat.toLowerCase();
-      let response = "Acknowledge the concern directly, then pivot to your mitigation plan with specific evidence.";
-      if (t.includes("risk")) response = "\"We've mapped our top risks and have concrete mitigation strategies for each.\"";
-      else if (t.includes("thesis")) response = "\"Our thesis is grounded in [specific market data]. Here's the evidence...\"";
-      else if (t.includes("traction") || t.includes("metric")) response = "\"While early, our leading indicators show [specific trend].\"";
-      items.push({ type: "objection", title: threat, detail: "Investors will likely probe this area. Being prepared turns a weakness into a signal of maturity.", fix: response, linkPitchPrep: true });
+      items.push({
+        type: "objection",
+        title: threat,
+        detail: "This gap may be probed by your audience. Being prepared turns a weakness into a signal of maturity.",
+        fix: "Acknowledge the concern directly, then pivot to your mitigation plan with specific evidence.",
+        linkPitchPrep: isFundraising,
+      });
     }
   }
 
@@ -337,7 +325,7 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
             {coachingItems.filter(i => i.type === "objection").length > 0 && (
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5 font-medium">
-                  <MessageCircleQuestion className="h-3 w-3 text-destructive" /> Objections Investors Will Raise
+                  <MessageCircleQuestion className="h-3 w-3 text-destructive" /> Potential Objections
                 </p>
                 <div className="space-y-2">
                   {coachingItems.filter(i => i.type === "objection").map((item, idx) => (
@@ -348,7 +336,7 @@ export function ReadinessIndexCard({ output, isPro }: Props) {
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">Suggested Response</p>
                         <p className="text-xs text-foreground/80 leading-relaxed italic">{item.fix}</p>
                       </div>
-                      {item.linkPitchPrep && (
+                      {item.linkPitchPrep && output.mode === "fundraising" && (
                         <p className="text-[11px] text-electric mt-1.5 flex items-center gap-1">
                           <Link2 className="h-2.5 w-2.5" /> See Common Investor Questions in Pitch Prep
                         </p>
