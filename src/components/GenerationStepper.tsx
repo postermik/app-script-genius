@@ -213,17 +213,17 @@ export function GenerationStepper() {
                   </div>
                 )}
               </div>
-              {isActive && !isDoneStep && isStreaming && (
-                <button
-                  onClick={stopGenerating}
-                  className="text-sm text-muted-foreground/50 hover:text-foreground transition-colors ml-10 mt-1.5"
-                >
-                  Stop generating
-                </button>
-              )}
             </div>
           );
         })}
+        {isStreaming && !generationDone && (
+          <button
+            onClick={stopGenerating}
+            className="mt-4 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md px-3 py-1.5 hover:border-muted-foreground transition-colors ml-10"
+          >
+            Stop generating
+          </button>
+        )}
       </div>
     </div>
   );
