@@ -162,7 +162,7 @@ export function GenerationStepper() {
         {isStreaming && currentStepIndex < steps.length - 1 && (
           <button
             onClick={stopGenerating}
-            className="text-sm text-muted-foreground/70 hover:text-foreground transition-colors ml-10 mt-1"
+            className="text-sm text-muted-foreground/70 hover:text-foreground border border-border rounded-md px-3 py-1.5 hover:border-muted-foreground transition-colors ml-10 mt-4"
           >
             Stop generating
           </button>
