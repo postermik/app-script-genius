@@ -66,6 +66,23 @@ export async function extractTextFromPPTX(file: File): Promise<string> {
 }
 
 /**
+ * Extract text from a DOCX file by parsing the XML document inside the zip
+ */
+export async function extractTextFromDOCX(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const docXml = zip.files["word/document.xml"];
+  if (!docXml) throw new Error("Invalid DOCX file.");
+  const xmlContent = await docXml.async("text");
+  const textMatches = xmlContent.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+  if (!textMatches) return "";
+  return textMatches
+    .map((match) => match.replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
  * Parse an uploaded deck file and return extracted text
  */
 export async function parseDeckFile(file: File): Promise<string> {
@@ -75,7 +92,9 @@ export async function parseDeckFile(file: File): Promise<string> {
     return extractTextFromPDF(file);
   } else if (ext === "pptx") {
     return extractTextFromPPTX(file);
+  } else if (ext === "docx") {
+    return extractTextFromDOCX(file);
   }
   
-  throw new Error("Unsupported file type. Please upload a PDF or PPTX file.");
+  throw new Error("Unsupported file type. Please upload a PDF, PPTX, or DOCX file.");
 }

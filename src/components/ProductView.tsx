@@ -74,8 +74,8 @@ export function ProductView() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext !== "pdf" && ext !== "pptx") {
-      toast.error("Please upload a PDF or PPTX file.");
+    if (ext !== "pdf" && ext !== "pptx" && ext !== "docx") {
+      toast.error("Please upload a PDF, PPTX, or DOCX file.");
       return;
     }
     if (file.size > 20 * 1024 * 1024) {
@@ -90,7 +90,7 @@ export function ProductView() {
         return;
       }
       setUploadingFile(null);
-      setRawInput(`Evaluate this deck:\n\n${extractedText}`);
+      setRawInput(`Evaluate this document:\n\n${extractedText}`);
       toast.success(`Extracted text from ${file.name}. Review and hit Generate.`);
     } catch (e: any) {
       console.error("File parsing error:", e);
@@ -113,7 +113,7 @@ export function ProductView() {
 
           <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">We'll detect your intent and generate the right output structure.</p>
           <div className="space-y-5">
-            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or tell us what you need to create..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
+            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {!isFreeAndLocked && !isGenerating && (
               <div className="space-y-3">
                 {/* Mode selector */}
@@ -178,7 +178,7 @@ export function ProductView() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.pptx"
+                    accept=".pdf,.pptx,.docx"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -191,7 +191,7 @@ export function ProductView() {
                     {uploadingFile ? "Extracting…" : "Upload"}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground text-center mb-4">Press Cmd+Enter to generate · Upload a PDF or PPTX to evaluate</p>
+                
               </>
             )}
           </div>
