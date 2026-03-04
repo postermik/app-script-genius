@@ -114,60 +114,58 @@ export function GenerationStepper() {
   }, [isStreaming, isGenerating, streamingText, steps.length]);
 
   return (
-    <div className="border border-border rounded-sm p-4 card-gradient animate-fade-in">
-      <div className="w-full py-2">
-        <div className="space-y-2">
-          {steps.map((step, index) => {
-            const isComplete = currentStepIndex > index;
-            const isActive = currentStepIndex === index;
-            const isPending = currentStepIndex < index;
-            const StepIcon = iconMap[step.icon] || Search;
+    <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
+      <div className="space-y-2">
+        {steps.map((step, index) => {
+          const isComplete = currentStepIndex > index;
+          const isActive = currentStepIndex === index;
+          const isPending = currentStepIndex < index;
+          const StepIcon = iconMap[step.icon] || Search;
 
-            return (
-              <div
-                key={step.key}
-                className={`flex items-center gap-3 transition-all duration-500 ease-out ${isPending ? "opacity-30" : "opacity-100"}`}
-              >
-                <div className={`
-                  flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
-                  ${isComplete ? "bg-emerald-500/20 text-emerald-400" : ""}
-                  ${isActive ? "bg-primary/20 text-primary" : ""}
-                  ${isPending ? "bg-muted/50 text-muted-foreground" : ""}
-                `}>
-                  {isComplete ? (
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  ) : (
-                    <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
-                  )}
-                </div>
-                <span className={`
-                  text-sm transition-all duration-500
-                  ${isComplete ? "text-emerald-400/80" : ""}
-                  ${isActive ? "text-primary font-medium" : ""}
-                  ${isPending ? "text-muted-foreground" : ""}
-                `}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bouncing dots activity indicator + stop button */}
-        {isStreaming && currentStepIndex < steps.length - 1 && (
-          <div className="flex flex-col items-start gap-2 mt-3">
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <div className="w-1 h-1 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-            <button
-              onClick={stopGenerating}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          return (
+            <div
+              key={step.key}
+              className={`flex items-center gap-3 transition-all duration-500 ease-out ${isPending ? "opacity-30" : "opacity-100"}`}
             >
-              Stop generating
-            </button>
-          </div>
+              <div className={`
+                flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
+                ${isComplete ? "bg-emerald-500/20 text-emerald-400" : ""}
+                ${isActive ? "bg-primary/20 text-primary" : ""}
+                ${isPending ? "bg-muted/50 text-muted-foreground" : ""}
+              `}>
+                {isComplete ? (
+                  <CheckCircle className="w-3.5 h-3.5" />
+                ) : (
+                  <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
+                )}
+              </div>
+              <span className={`
+                text-sm transition-all duration-500
+                ${isComplete ? "text-emerald-400/80" : ""}
+                ${isActive ? "text-primary font-medium" : ""}
+                ${isPending ? "text-muted-foreground" : ""}
+              `}>
+                {step.label}
+              </span>
+              {/* Inline bouncing dots next to active step */}
+              {isActive && isStreaming && (
+                <div className="flex items-center gap-1 ml-1">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {/* Stop button below last step */}
+        {isStreaming && currentStepIndex < steps.length - 1 && (
+          <button
+            onClick={stopGenerating}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-10 mt-1"
+          >
+            Stop generating
+          </button>
         )}
       </div>
     </div>
