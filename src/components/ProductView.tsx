@@ -37,7 +37,7 @@ const GENERATION_STEPS = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, loadingPhase, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, voiceProfile, setVoiceProfile, isStreaming, streamingText } = useDecksmith();
   const { subscribed } = useSubscription();
   const [localVoice, setLocalVoice] = useState<VoiceProfile>(voiceProfile || "auto");
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
@@ -157,6 +157,12 @@ export function ProductView() {
                     </p>
                   </div>
                 </div>
+                {isStreaming && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="animate-pulse w-2 h-2 bg-electric rounded-full" />
+                    <span>Generating narrative... ({streamingText.length.toLocaleString()} chars)</span>
+                  </div>
+                )}
                 <Progress value={progressPercent} className="h-1.5 bg-muted" />
                 <div className="grid grid-cols-2 gap-3">
                   {[0, 1, 2, 3].map(i => (

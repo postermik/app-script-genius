@@ -5,6 +5,9 @@ import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
+const SUPABASE_URL = "https://jilopuugwyrqogoxlxjo.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz";
+
 type LoadingPhase = "idle" | "structuring" | "sharpening" | "designing" | "scoring";
 
 interface DecksmithContextType {
@@ -46,6 +49,8 @@ interface DecksmithContextType {
   audienceVariants: Record<string, NarrativeOutputData>;
   adaptForAudience: (audience: AudienceType) => Promise<void>;
   isAdapting: boolean;
+  isStreaming: boolean;
+  streamingText: string;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -74,9 +79,12 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [activeAudience, setActiveAudience] = useState<AudienceType>("general");
   const [audienceVariants, setAudienceVariants] = useState<Record<string, NarrativeOutputData>>({});
   const [isAdapting, setIsAdapting] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     supabase.auth.onAuthStateChange((_event, session) => {
@@ -168,11 +176,96 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setLoadingPhase("idle");
   }, []);
 
+  const streamFromEdgeFunction = useCallback(async (
+    body: Record<string, any>,
+    signal: AbortSignal
+  ): Promise<any> => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession) throw new Error("Not authenticated");
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/decksmith-ai`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${currentSession.access_token}`,
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Generation failed (${response.status})`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("text/event-stream")) {
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Failed to read stream");
+
+      const decoder = new TextDecoder();
+      let fullText = "";
+      setIsStreaming(true);
+      setStreamingText("");
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === "data: [DONE]") continue;
+            if (trimmed.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(trimmed.slice(6));
+                if (parsed.text) {
+                  fullText += parsed.text;
+                  setStreamingText(fullText);
+                }
+              } catch {
+                // skip unparseable chunks
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      setIsStreaming(false);
+      setStreamingText("");
+
+      try {
+        const cleaned = fullText.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        return JSON.parse(cleaned);
+      } catch (parseError) {
+        console.error("Failed to parse streamed response:", parseError);
+        console.error("Raw text (first 500 chars):", fullText.slice(0, 500));
+        throw new Error("Generation failed — the AI response was incomplete. Please try again.");
+      }
+    } else {
+      // Non-streaming fallback
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      return JSON.parse(cleaned);
+    }
+  }, []);
+
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
     setIsEvaluation(false);
     startLoadingPhases();
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     let currentThesis: string | undefined;
     if (currentProjectId) {
@@ -182,14 +275,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
     const attempt = async (retry: boolean): Promise<void> => {
       try {
-        const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-          body: { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile },
-        });
-        if (error) throw error;
-        if (!data?.content) throw new Error("Empty response from AI");
-
-        const cleaned = data.content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-        const parsed = JSON.parse(cleaned);
+        const parsed = await streamFromEdgeFunction(
+          { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile },
+          abortController.signal
+        );
         setDetectedMode(parsed.mode);
         setOutput(parsed);
         const newCount = generationCount + 1;
@@ -197,6 +286,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("rhetoric_gen_count", String(newCount));
         await saveProject(parsed);
       } catch (e: any) {
+        if (e.name === "AbortError") return;
         if (retry) {
           console.warn("First attempt failed, retrying...", e);
           return attempt(false);
@@ -207,9 +297,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     };
 
     await attempt(true);
+    abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects]);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects, streamFromEdgeFunction]);
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;
@@ -218,16 +309,15 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setRawInput(extractedText);
     startLoadingPhases();
 
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     const attempt = async (retry: boolean): Promise<void> => {
       try {
-        const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-          body: { mode: "evaluate", input: extractedText },
-        });
-        if (error) throw error;
-        if (!data?.content) throw new Error("Empty response from AI");
-
-        const cleaned = data.content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-        const parsed = JSON.parse(cleaned);
+        const parsed = await streamFromEdgeFunction(
+          { mode: "evaluate", input: extractedText },
+          abortController.signal
+        );
         setDetectedMode(parsed.mode);
         setOutput(parsed);
 
@@ -243,6 +333,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           loadProjects();
         }
       } catch (e: any) {
+        if (e.name === "AbortError") return;
         if (retry) {
           console.warn("Evaluation first attempt failed, retrying...", e);
           return attempt(false);
@@ -254,9 +345,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     };
 
     await attempt(true);
+    abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [isGenerating, session, startLoadingPhases, stopLoadingPhases, loadProjects]);
+  }, [isGenerating, session, startLoadingPhases, stopLoadingPhases, loadProjects, streamFromEdgeFunction]);
 
   const refineSection = useCallback(async (sectionKey: string, path: string, tone: RefinementTone) => {
     if (!output) return;
@@ -294,6 +386,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   }, [output, rawInput, saveProject, currentProjectId, session, projects]);
 
   const reset = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setRawInput("");
     setOutput(null);
     setDetectedMode(null);
@@ -304,6 +400,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setActiveAudience("general");
     setAudienceVariants({});
     setIsEvaluation(false);
+    setIsStreaming(false);
+    setStreamingText("");
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -440,6 +538,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         versions, currentVersion, saveVersion, loadVersion,
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
+        isStreaming, streamingText,
       }}
     >
       {children}
