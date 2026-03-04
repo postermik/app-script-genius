@@ -76,9 +76,11 @@ export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
+  const [stepsJustExpanded, setStepsJustExpanded] = useState(false);
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevStepsRef = useRef<StepDef[]>(steps);
 
   useEffect(() => {
     setStepStartTime(Date.now());
@@ -120,6 +122,10 @@ export function GenerationStepper() {
         setSteps(prev => {
           if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) {
             detectedNewSteps = true;
+            if (prev === INITIAL_STEPS) {
+              setStepsJustExpanded(true);
+              setTimeout(() => setStepsJustExpanded(false), 600);
+            }
             return STEP_SETS[mode];
           }
           return prev;
@@ -164,6 +170,11 @@ export function GenerationStepper() {
             <div
               key={step.key}
               className={`flex items-center gap-3 transition-all duration-500 ease-out ${isPending ? "opacity-30" : "opacity-100"}`}
+              style={
+                stepsJustExpanded && index > 0
+                  ? { opacity: 0, animation: `fade-in 0.3s ease-out ${index * 75}ms forwards` }
+                  : undefined
+              }
             >
               <div className={`
                 flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
