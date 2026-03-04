@@ -1,22 +1,34 @@
+import { useState } from "react";
 import { toast } from "sonner";
 import type { Deliverable } from "@/types/rhetoric";
+import { SectionEditor } from "./SectionEditor";
+import { useSuggestionApply } from "@/hooks/useSuggestionApply";
 
 interface Props {
   deliverable: Deliverable;
+  onUpdateDeliverable?: (d: Deliverable) => void;
 }
 
-export function MemoView({ deliverable }: Props) {
+export function MemoView({ deliverable, onUpdateDeliverable }: Props) {
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<number[]>([]);
+  const { applyingIndex, applySuggestion } = useSuggestionApply(deliverable, onUpdateDeliverable);
+
+  const handleDismiss = (i: number) => setDismissedSuggestions(prev => [...prev, i]);
+
+  const handleSaveEdit = (index: number, newContent: string) => {
+    if (!onUpdateDeliverable || !deliverable.sections) return;
+    const updated = [...deliverable.sections];
+    updated[index] = { ...updated[index], content: newContent };
+    onUpdateDeliverable({ ...deliverable, sections: updated });
+  };
+
   const handleCopy = () => {
     const parts: string[] = [];
     if (deliverable.to) parts.push(`To: ${deliverable.to}`);
     if (deliverable.from) parts.push(`From: ${deliverable.from}`);
     if (deliverable.subject) parts.push(`Subject: ${deliverable.subject}`);
     if (parts.length) parts.push("");
-    deliverable.sections?.forEach(s => {
-      parts.push(s.heading);
-      parts.push(s.content);
-      parts.push("");
-    });
+    deliverable.sections?.forEach(s => { parts.push(s.heading); parts.push(s.content); parts.push(""); });
     navigator.clipboard.writeText(parts.join("\n"));
     toast.success("Memo copied to clipboard.");
   };
@@ -40,12 +52,16 @@ export function MemoView({ deliverable }: Props) {
       </div>
 
       {deliverable.sections?.map((section, i) => (
-        <div key={i} className="mb-6">
-          <h3 className="text-base font-semibold text-electric mb-2">{section.heading}</h3>
-          <div className="text-sm text-secondary-foreground leading-relaxed whitespace-pre-wrap">
-            {section.content}
-          </div>
-        </div>
+        <SectionEditor
+          key={i}
+          section={section}
+          index={i}
+          dismissed={dismissedSuggestions.includes(i)}
+          applyingIndex={applyingIndex}
+          onApplySuggestion={applySuggestion}
+          onDismissSuggestion={handleDismiss}
+          onSaveEdit={handleSaveEdit}
+        />
       ))}
 
       <button

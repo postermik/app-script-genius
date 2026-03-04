@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info } from "lucide-react";
+import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2 } from "lucide-react";
 
 export interface SlideData {
   headline: string;
@@ -9,6 +9,7 @@ export interface SlideData {
   categoryLabel?: string;
   closingStatement?: string;
   layoutRecommendation?: string;
+  suggestion?: string | null;
 }
 
 export interface DeckTheme {
@@ -144,6 +145,8 @@ function getLightness(hex: string): number {
 export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
+  const [dismissedSlideSuggestions, setDismissedSlideSuggestions] = useState<number[]>([]);
+  const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
 
   if (slides.length === 0) return null;
 
@@ -307,6 +310,22 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-electric/60" />
                   <span className="italic">{getSlideReason(slide.headline, i, orderedSlides.length)}</span>
                 </p>
+
+                {/* Slide-level suggestion */}
+                {slide.suggestion && !dismissedSlideSuggestions.includes(slide.originalIdx) && (
+                  <div className="mt-3 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
+                    <Lightbulb className="w-4 h-4 text-electric mt-0.5 shrink-0" />
+                    <p className="text-sm text-foreground/80 flex-1">{slide.suggestion}</p>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => setDismissedSlideSuggestions(prev => [...prev, slide.originalIdx])}
+                        className="text-xs px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

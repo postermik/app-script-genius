@@ -19,6 +19,7 @@ interface DecksmithContextType {
   setVoiceProfile: (v: VoiceProfile) => void;
   detectedMode: OutputMode | null;
   output: NarrativeOutputData | null;
+  setOutput: (o: NarrativeOutputData | null) => void;
   isGenerating: boolean;
   loadingPhase: LoadingPhase;
   refiningSection: string | null;
@@ -543,7 +544,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       value={{
         rawInput, setRawInput, selectedMode, setSelectedMode,
         voiceProfile, setVoiceProfile,
-        detectedMode, output, isGenerating, loadingPhase, refiningSection,
+        detectedMode, output, setOutput, isGenerating, loadingPhase, refiningSection,
         generationCount, generate, evaluateDeck, refineSection, reset, isEvaluation,
         session, isPro, projects, loadProjects,
         currentProjectId, openProject, deleteProject, duplicateProject,
