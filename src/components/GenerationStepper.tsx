@@ -184,9 +184,9 @@ export function GenerationStepper() {
                 ${isPending ? "text-muted-foreground" : ""}
               `}>
                 {step.label}
-                {isActive && isStreaming && secondsOnStep >= 8 && (
+                {isActive && !isComplete && isStreaming && secondsOnStep >= 15 && (
                   <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
-                    {secondsOnStep >= 20 ? "— almost there" : "— this is the longest step"}
+                    {secondsOnStep >= 35 ? "— almost done" : "— still working"}
                   </span>
                 )}
               </span>
