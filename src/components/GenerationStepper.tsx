@@ -66,18 +66,20 @@ const STEP_SETS: Record<string, StepDef[]> = {
   ],
 };
 
-const DEFAULT_STEPS = STEP_SETS.fundraising;
-
 const iconMap: Record<string, LucideIcon> = {
   Search, Lightbulb, FileText, Mic, Layout, Target, CheckCircle,
   BarChart3, AlertTriangle, TrendingUp, Crosshair, Grid3X3,
   Eye, AlertCircle, PuzzleIcon, Map, Type, HelpCircle,
 };
 
+const INITIAL_STEPS: StepDef[] = [
+  { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
+];
+
 function getStepsForContext(selectedMode: string, isEvaluation: boolean): StepDef[] {
   if (isEvaluation) return STEP_SETS.evaluate;
   if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) return STEP_SETS[selectedMode];
-  return DEFAULT_STEPS;
+  return INITIAL_STEPS;
 }
 
 export function GenerationStepper() {
@@ -117,25 +119,38 @@ export function GenerationStepper() {
   useEffect(() => {
     if (!isStreaming || !streamingText) return;
 
-    // Auto-detect mode from streaming text
+    // Auto-detect mode from streaming text (only when still on initial single step)
     const modeMatches = [
+      { mode: "fundraising", patterns: ['"mode": "fundraising"', '"mode":"fundraising"'] },
       { mode: "board_update", patterns: ['"mode": "board_update"', '"mode":"board_update"'] },
       { mode: "strategy", patterns: ['"mode": "strategy"', '"mode":"strategy"'] },
       { mode: "product_vision", patterns: ['"mode": "product_vision"', '"mode":"product_vision"'] },
       { mode: "investor_update", patterns: ['"mode": "investor_update"', '"mode":"investor_update"'] },
     ];
 
+    let detectedNewSteps = false;
     for (const { mode, patterns } of modeMatches) {
       if (patterns.some(p => streamingText.includes(p)) && STEP_SETS[mode]) {
         setSteps(prev => {
-          if (prev !== STEP_SETS[mode]) return STEP_SETS[mode];
+          if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) {
+            detectedNewSteps = true;
+            return STEP_SETS[mode];
+          }
           return prev;
         });
         break;
       }
     }
 
-    // Detect step progress
+    // If we just switched from INITIAL_STEPS, start at index 1 (analyzing already done)
+    if (detectedNewSteps && steps === INITIAL_STEPS) {
+      setCurrentStepIndex(1);
+      return;
+    }
+
+    // Detect step progress (skip if still on initial steps)
+    if (steps === INITIAL_STEPS) return;
+
     let highest = 0;
     for (let i = 1; i < steps.length - 1; i++) {
       const trigger = steps[i].trigger;
@@ -143,7 +158,7 @@ export function GenerationStepper() {
         highest = i;
       }
     }
-    setCurrentStepIndex(highest);
+    if (highest > 0) setCurrentStepIndex(highest);
   }, [streamingText, isStreaming, steps]);
 
   // Mark complete when streaming finishes but still generating (parsing phase)
