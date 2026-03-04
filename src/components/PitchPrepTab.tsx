@@ -15,7 +15,7 @@ interface Props {
 
 function generateInvestorQuestions(data: any): { question: string; talkingPoint: string }[] {
   const questions: { question: string; talkingPoint: string }[] = [];
-  const d = data || {};
+  const d = (data?.supporting || data?.data || data) || {};
 
   // Based on narrative content, generate relevant questions
   if (d.marketLogic || d.narrativeStructure?.worldToday) {
@@ -62,7 +62,7 @@ function generateInvestorQuestions(data: any): { question: string; talkingPoint:
 
 function extractKeyPhrases(data: any): string[] {
   const phrases: string[] = [];
-  const d = data || {};
+  const d = (data?.supporting || data?.data || data) || {};
 
   // Extract punchy one-liners from the content
   if (d.thesis?.coreInsight) {

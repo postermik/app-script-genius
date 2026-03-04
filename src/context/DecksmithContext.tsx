@@ -132,8 +132,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const extractThesis = (parsed: NarrativeOutputData): string => {
-    const d = parsed.data as any;
-    if (parsed.mode === "fundraising") return d.thesis?.content || "";
+    const d = (parsed.data || (parsed as any).supporting || {}) as any;
+    if (parsed.mode === "fundraising") return d.thesis?.content || d.thesis || "";
     if (parsed.mode === "strategy") return d.thesis || "";
     if (parsed.mode === "board_update") return d.executiveSummary || "";
     if (parsed.mode === "product_vision") return d.vision || "";
@@ -356,7 +356,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!output) return;
     setRefiningSection(sectionKey);
     try {
-      const currentContent = getNestedValue(output.data, path);
+      const currentContent = getNestedValue(output.data || (output as any).supporting || {}, path);
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent },
       });
