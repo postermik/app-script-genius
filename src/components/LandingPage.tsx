@@ -94,7 +94,7 @@ export function LandingPage() {
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
-            Pitch decks, strategy memos, board updates, investor emails: AI coaching that makes every draft better.
+            Pitch decks, strategy memos, board updates, and investor emails, all refined by AI coaching.
           </p>
           <button
             onClick={() => navigate("/auth?signup=true&next=/dashboard")}
