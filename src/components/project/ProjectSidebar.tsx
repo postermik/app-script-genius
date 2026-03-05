@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Target, MessageSquare, Search, RefreshCw, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarItem {
   key: OutputTabKey;
@@ -29,8 +30,44 @@ interface Props {
 
 export function ProjectSidebar({ activeTab, onTabChange, intent }: Props) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
 
+  /* ── Mobile: horizontal tab bar ── */
+  if (isMobile) {
+    return (
+      <div className="border-b border-border bg-background sticky top-14 z-40 overflow-x-auto">
+        <div className="flex items-center gap-1 px-3 py-2 min-w-max">
+          {items.map((item) => {
+            const active = activeTab === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => onTabChange(item.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors whitespace-nowrap ${
+                  active
+                    ? "bg-electric/10 text-electric border border-electric/30"
+                    : "text-secondary-foreground hover:text-foreground border border-transparent"
+                }`}
+              >
+                <item.Icon className="h-3 w-3 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => navigate("/settings")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium text-secondary-foreground hover:text-foreground transition-colors whitespace-nowrap ml-auto"
+          >
+            <Settings className="h-3 w-3 shrink-0" />
+            Settings
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Desktop: fixed sidebar ── */
   return (
     <aside
       className="bg-[hsl(222_24%_4%)] border-r border-border overflow-y-auto flex flex-col"

@@ -228,7 +228,7 @@ function DiagonalConnector({ direction }: { direction: "left-to-right" | "right-
 /* ── Main Showcase ── */
 export function ProductShowcase() {
   return (
-    <section className="px-6 py-24 overflow-hidden">
+    <section className="px-4 sm:px-6 py-16 sm:py-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
         {/* Panel 1: Left */}
         <div className="md:w-[52%] md:ml-[5%]">

@@ -111,7 +111,7 @@ export default function Pricing() {
 
   return (
     <>
-      <div className="px-6 pt-24 pb-8">
+      <div className="px-4 sm:px-6 pt-20 sm:pt-24 pb-8">
         <div className="max-w-[1100px] mx-auto text-center">
           <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight mb-4">
@@ -136,7 +136,7 @@ export default function Pricing() {
         </div>
       </div>
 
-      <div className="px-6 pb-24">
+      <div className="px-4 sm:px-6 pb-16 sm:pb-24">
         <div className="max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
             const current = isCurrentPlan(plan);
