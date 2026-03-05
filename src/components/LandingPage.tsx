@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Check, Zap, BarChart3, Users, Lightbulb } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
-import { ProductShowcase } from "@/components/landing/ProductShowcase";
+import { ProductShowcase, PresentationSlides } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 
@@ -102,6 +102,12 @@ export function LandingPage() {
                 <button className="text-xs px-2.5 py-1 bg-electric hover:bg-electric/80 text-primary-foreground rounded-sm transition-colors font-medium shrink-0">
                   Apply
                 </button>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border mt-6 pt-5">
+                <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Presentation-Ready Slides</p>
+                <PresentationSlides />
               </div>
             </div>
           </div>
