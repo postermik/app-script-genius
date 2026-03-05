@@ -165,28 +165,27 @@ function RevenueSparkline() {
 
 /* ── Format Tabs + Chart ── */
 function FormatChartCard() {
-  const [activeTab, setActiveTab] = useState("Pitch Deck");
   const TABS = ["Memo", "Pitch Deck", "Board Update", "Investor Email"];
+  const ACTIVE = "Pitch Deck";
 
   return (
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
-      {/* Tab bar */}
-      <div className="flex w-full border-b border-[hsl(217_33%_15%)] overflow-x-auto">
+      {/* Tab bar — static, non-interactive */}
+      <div className="flex w-full border-b border-[hsl(217_33%_15%)] sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
-          <button
+          <span
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`font-mono text-[11px] sm:text-[11px] text-[10px] font-medium tracking-[0.08em] uppercase px-[22px] py-[14px] sm:px-[22px] sm:py-[14px] px-[16px] py-[12px] whitespace-nowrap transition-colors relative ${
-              activeTab === tab
+            className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${
+              tab === ACTIVE
                 ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]"
-                : "text-[hsl(215_20%_44%)] hover:text-[hsl(215_20%_60%)] hover:bg-[hsla(0,0%,100%,0.02)]"
+                : "text-[hsl(215_20%_44%)]"
             }`}
           >
             {tab}
-            {activeTab === tab && (
+            {tab === ACTIVE && (
               <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />
             )}
-          </button>
+          </span>
         ))}
       </div>
       {/* Chart content */}
