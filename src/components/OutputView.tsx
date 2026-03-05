@@ -1,6 +1,5 @@
 import { useDecksmith } from "@/context/DecksmithContext";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ExportDropdown } from "@/components/ExportDropdown";
 import { ProjectSidebar } from "@/components/project/ProjectSidebar";
 import { OriginalInputSection } from "@/components/project/OriginalInputSection";
 import { DeckView } from "@/components/deliverable/DeckView";
@@ -13,24 +12,19 @@ import { AnalysisTab } from "@/components/tabs/AnalysisTab";
 import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
-import { ArrowLeft, ChevronDown, Save, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation } from "react-router-dom";
-import { format } from "date-fns";
-import { useSubscription, TIERS } from "@/hooks/useSubscription";
+import { useNavigate } from "react-router-dom";
+import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Logo } from "@/components/Logo";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const NAV_HEIGHT = 56;
+
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, versions, currentVersion, saveVersion, loadVersion, currentProjectId, rawInput, isEvaluation } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation } = useDecksmith();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { subscribed, productId } = useSubscription();
-  const isProNav = subscribed && productId === TIERS.pro.product_id;
+  const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
 
   // Derived data from output
@@ -44,10 +38,6 @@ export function OutputView() {
   const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "preview";
 
   const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
-  const [showVersions, setShowVersions] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState("");
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
@@ -56,15 +46,9 @@ export function OutputView() {
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outputRef = useRef(output);
 
-  const handleSignOut = async () => { await supabase.auth.signOut(); navigate("/"); };
-  const isActive = (path: string) => location.pathname === path;
-  const navLinkClass = (path: string) =>
-    `text-xs transition-colors ${isActive(path) ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`;
-
   const triggerAutoSave = useCallback(async () => {
     if (!currentProjectId) return;
     await supabase.from("projects").update({ updated_at: new Date().toISOString() }).eq("id", currentProjectId);
-    setLastSaved(new Date());
   }, [currentProjectId]);
 
   useEffect(() => {
@@ -87,17 +71,7 @@ export function OutputView() {
 
   if (!output) return null;
 
-  const projectTitle = (output as any).title || "Untitled Project";
   const isFirstFree = !isPro && generationCount >= 1;
-
-  const handleTitleEdit = () => { setTitleValue(projectTitle); setEditingTitle(true); };
-  const handleTitleSave = async () => {
-    setEditingTitle(false);
-    if (titleValue.trim() && titleValue !== projectTitle && currentProjectId) {
-      await supabase.from("projects").update({ title: titleValue.trim() }).eq("id", currentProjectId);
-      toast.success("Title updated.");
-    }
-  };
 
   const toggleSlide = (idx: number) => {
     setExcludedSlides(prev => {
@@ -106,9 +80,6 @@ export function OutputView() {
       return next;
     });
   };
-
-  const versionLabel = `v${currentVersion}`;
-  const savedLabel = lastSaved ? `Saved ${format(lastSaved, "h:mm a")}` : null;
 
   // Update deliverable in output state (for inline edits / suggestions)
   const handleUpdateDeliverable = (updated: any) => {
@@ -162,72 +133,6 @@ export function OutputView() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Header */}
-      <nav
-        className="border-b border-border px-5 sticky top-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-between"
-        style={{ height: `${NAV_HEIGHT}px` }}
-      >
-        <div className="flex items-center gap-3">
-          <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </button>
-          <Logo size={24} />
-        </div>
-
-        <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-          {editingTitle ? (
-            <div className="flex items-center gap-1">
-              <input value={titleValue} onChange={e => setTitleValue(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTitleSave()} className="text-xs font-semibold tracking-wide uppercase text-foreground bg-transparent border-b border-electric outline-none px-1 max-w-[220px]" autoFocus />
-              <button onClick={handleTitleSave} className="text-electric hover:text-foreground transition-colors p-0.5"><Check className="h-3 w-3" /></button>
-            </div>
-          ) : (
-            <button onClick={handleTitleEdit} className="text-xs font-semibold tracking-wide uppercase text-foreground hover:text-electric transition-colors flex items-center gap-1.5 group">
-              {projectTitle}
-              <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-          )}
-          {currentProjectId && (
-            <div className="relative">
-              <button onClick={() => setShowVersions(!showVersions)} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-1.5 py-0.5 border border-border rounded-sm">
-                {versionLabel}
-                {savedLabel && <span className="text-muted-foreground/60 ml-0.5">· {savedLabel}</span>}
-                <ChevronDown className="h-2.5 w-2.5" />
-              </button>
-              {showVersions && (
-                <div className="absolute top-full mt-1 right-0 w-56 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
-                  <button onClick={() => { saveVersion(); setShowVersions(false); }} className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border font-medium">
-                    <Save className="h-3 w-3" />Save as New Version
-                  </button>
-                  {versions.length > 0 ? (
-                    <div className="max-h-48 overflow-y-auto">
-                      {versions.map((v) => (
-                        <button key={v.id} onClick={() => { loadVersion(v.version_number); setShowVersions(false); }} className={`w-full text-left text-xs px-3 py-2.5 hover:bg-accent transition-colors ${v.version_number === currentVersion ? "text-foreground bg-accent/50" : "text-secondary-foreground"}`}>
-                          <span className="font-medium">v{v.version_number}</span><span className="ml-2 text-muted-foreground">{v.summary}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (<p className="text-xs text-muted-foreground px-3 py-2.5">No saved versions yet</p>)}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-3">
-          <ExportDropdown output={output} isPro={isPro} deliverable={deliverable} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
-
-          <div className="hidden md:block w-px h-5 bg-border" />
-
-          <button onClick={() => { reset(); navigate("/dashboard"); }} className={`hidden md:inline ${navLinkClass("/dashboard")}`}>Dashboard</button>
-          <button onClick={() => navigate("/raise")} className={`hidden md:inline text-xs transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
-          {!isProNav && (
-            <button onClick={() => setUpgradeOpen(true)} className="text-[10px] font-medium px-2 py-1 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
-          )}
-          <button onClick={handleSignOut} className="hidden md:inline text-xs text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
-        </div>
-      </nav>
-
-
       {/* Main content with sidebar */}
       <div className="flex-1 flex flex-col">
         <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} />

@@ -8,14 +8,18 @@ export function RootLayout() {
   const location = useLocation();
   const isRaise = location.pathname.startsWith("/raise");
   const isProjectView = !!output && !isRaise;
+  const isDashboard = location.pathname === "/dashboard";
+
+  // Show footer only on marketing/public pages
+  const showFooter = !isProjectView && !isRaise && !isDashboard;
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!isProjectView && <MarketingNav />}
+      <MarketingNav />
       <main className="flex-1 flex flex-col">
         <Outlet />
       </main>
-      {!isProjectView && <Footer />}
+      {showFooter && <Footer />}
     </div>
   );
 }
