@@ -27,7 +27,7 @@ function generateInvestorQuestions(data: any): { question: string; talkingPoint:
   if (d.narrativeStructure?.whyThisWins || d.thesis?.content) {
     questions.push({
       question: "What's your defensibility against incumbents and well-funded competitors?",
-      talkingPoint: "Lead with your moat — whether it's data, network effects, proprietary tech, or speed of execution."
+      talkingPoint: "Lead with your moat: whether it's data, network effects, proprietary tech, or speed of execution."
     });
   }
   if (d.narrativeStructure?.newModel) {

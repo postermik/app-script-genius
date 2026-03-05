@@ -5,7 +5,7 @@ const FEATURES = [
     icon: Search,
     title: "Investor Discovery",
     description:
-      "AI-matched investors based on your narrative. Stage, sector, check size — filtered automatically.",
+      "AI-matched investors based on your narrative. Stage, sector, check size: filtered automatically.",
   },
   {
     icon: KanbanSquare,
@@ -33,7 +33,7 @@ export function BeyondTheDeck() {
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-[560px] mb-14">
           Rhetoric doesn't stop at the deck. Find investors, track your raise,
-          and share materials — all from one platform.
+          and share materials, all from one platform.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {FEATURES.map((f) => (

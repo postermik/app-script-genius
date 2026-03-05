@@ -83,7 +83,7 @@ function formatCheckSize(min: number | null, max: number | null): string {
   if (min && max) return `${fmt(min)} – ${fmt(max)}`;
   if (min) return `${fmt(min)}+`;
   if (max) return `Up to ${fmt(max)}`;
-  return "—";
+  return "-";
 }
 
 // ── Narrative signal extraction ────────────────────────

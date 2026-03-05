@@ -39,7 +39,7 @@ export function RaiseUpgradeLanding() {
           Your fundraising command center
         </h1>
         <p className="text-base text-secondary-foreground max-w-[540px] mx-auto mb-12 leading-relaxed">
-          Everything you need to run a structured raise — from finding the right investors to closing the round. All in one place.
+          Everything you need to run a structured raise: from finding the right investors to closing the round. All in one place.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-12 text-left">

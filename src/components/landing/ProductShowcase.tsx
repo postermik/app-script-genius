@@ -231,7 +231,7 @@ function PresentationSlides() {
             <div>
               <div className="w-8 h-[2px] bg-electric mb-2" />
               <p className="text-[11px] text-[hsl(215_20%_44%)]">Autoflow · Q4 2026</p>
-              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential — Board Distribution Only</p>
+              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential: Board Distribution Only</p>
             </div>
           </div>
         </div>

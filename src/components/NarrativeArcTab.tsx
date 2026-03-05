@@ -14,11 +14,11 @@ interface Props {
 }
 
 const ARC_META: Record<string, { step: number; purpose: string; emoji: string }> = {
-  "world-today": { step: 1, purpose: "Set the stage — what's broken?", emoji: "🌍" },
-  "breaking-point": { step: 2, purpose: "Create urgency — why now?", emoji: "⚡" },
-  "new-model": { step: 3, purpose: "Present the answer — your solution", emoji: "💡" },
-  "why-wins": { step: 4, purpose: "Prove it works — your edge", emoji: "🏆" },
-  "the-future": { step: 5, purpose: "Paint the vision — where this goes", emoji: "🚀" },
+  "world-today": { step: 1, purpose: "Set the stage: what's broken?", emoji: "🌍" },
+  "breaking-point": { step: 2, purpose: "Create urgency: why now?", emoji: "⚡" },
+  "new-model": { step: 3, purpose: "Present the answer: your solution", emoji: "💡" },
+  "why-wins": { step: 4, purpose: "Prove it works: your edge", emoji: "🏆" },
+  "the-future": { step: 5, purpose: "Paint the vision: where this goes", emoji: "🚀" },
 };
 
 const MAX_COLLAPSED_LENGTH = 400;

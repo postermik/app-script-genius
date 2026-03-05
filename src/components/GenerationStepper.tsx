@@ -201,7 +201,7 @@ export function GenerationStepper() {
                   {step.label}
                   {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
                     <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
-                      {secondsOnStep >= 35 ? "— almost done" : "— still working"}
+                      {secondsOnStep >= 35 ? "... almost done" : "... still working"}
                     </span>
                   )}
                 </span>
