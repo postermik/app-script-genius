@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check } from "lucide-react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,6 +25,8 @@ interface Investor {
   solo_founder_friendly: boolean;
   fund_size: number | null;
   is_active: boolean;
+  contact_email?: string | null;
+  linkedin_url?: string | null;
 }
 
 interface NarrativeSignals {
@@ -69,8 +71,8 @@ const STAGE_LABELS: Record<string, string> = Object.fromEntries(STAGE_OPTIONS.ma
 
 const CHECK_SIZE_RANGES = [
   { label: "< $250K", min: 0, max: 250000 },
-  { label: "$250K–$1M", min: 250000, max: 1000000 },
-  { label: "$1M–$5M", min: 1000000, max: 5000000 },
+  { label: "$250K-$1M", min: 250000, max: 1000000 },
+  { label: "$1M-$5M", min: 1000000, max: 5000000 },
   { label: "$5M+", min: 5000000, max: null },
 ];
 
@@ -80,7 +82,7 @@ function formatCheckSize(min: number | null, max: number | null): string {
     if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
     return `$${n}`;
   };
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+  if (min && max) return `${fmt(min)} - ${fmt(max)}`;
   if (min) return `${fmt(min)}+`;
   if (max) return `Up to ${fmt(max)}`;
   return "-";
@@ -156,8 +158,10 @@ export default function Investors() {
   const [search, setSearch] = useState("");
   const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
+  const [removingFromPipeline, setRemovingFromPipeline] = useState<string | null>(null);
   const [narrativeSignals, setNarrativeSignals] = useState<NarrativeSignals | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
@@ -170,6 +174,12 @@ export default function Investors() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserId(session.user.id);
+
+      // Load dismissed investors from localStorage
+      const stored = localStorage.getItem(`dismissed_investors_${session.user.id}`);
+      if (stored) {
+        try { setDismissedIds(new Set(JSON.parse(stored))); } catch {}
+      }
 
       const { data: project } = await supabase
         .from("projects")
@@ -234,6 +244,49 @@ export default function Investors() {
     setAddingToPipeline(null);
   }, [userId]);
 
+  const removeFromPipeline = useCallback(async (inv: Investor) => {
+    if (!userId) return;
+    setRemovingFromPipeline(inv.id);
+    const { error } = await supabase
+      .from("pipeline_entries")
+      .delete()
+      .eq("user_id", userId)
+      .eq("investor_id", inv.id);
+    if (error) {
+      toast.error("Failed to remove from pipeline");
+    } else {
+      setPipelineIds(prev => {
+        const next = new Set(prev);
+        next.delete(inv.id);
+        return next;
+      });
+      toast.success(`${inv.firm_name} removed from pipeline`);
+    }
+    setRemovingFromPipeline(null);
+  }, [userId]);
+
+  const dismissInvestor = useCallback((inv: Investor) => {
+    setDismissedIds(prev => {
+      const next = new Set(prev);
+      next.add(inv.id);
+      if (userId) localStorage.setItem(`dismissed_investors_${userId}`, JSON.stringify([...next]));
+      return next;
+    });
+    toast("Investor hidden", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setDismissedIds(prev => {
+            const next = new Set(prev);
+            next.delete(inv.id);
+            if (userId) localStorage.setItem(`dismissed_investors_${userId}`, JSON.stringify([...next]));
+            return next;
+          });
+        },
+      },
+    });
+  }, [userId]);
+
   const toggleFilter = (arr: string[], val: string, setter: (v: string[]) => void) => {
     setter(arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]);
   };
@@ -252,6 +305,7 @@ export default function Investors() {
       : investors.map(inv => ({ ...inv, matchScore: 0, matchReasons: [] }));
 
     const applyFilters = (list: ScoredInvestor[]) => list.filter(inv => {
+      // Always filter out dismissed from recommendations, but show in search
       if (search) {
         const q = search.toLowerCase();
         const haystack = `${inv.firm_name} ${inv.description || ""} ${inv.sectors.join(" ")} ${inv.thesis_keywords.join(" ")}`.toLowerCase();
@@ -272,54 +326,34 @@ export default function Investors() {
     const filteredScored = applyFilters(scored);
 
     const rec = filteredScored
-      .filter(i => i.matchScore >= 30)
+      .filter(i => i.matchScore >= 30 && !dismissedIds.has(i.id))
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, 6);
 
     const recIds = new Set(rec.map(i => i.id));
-    const rest = filteredScored.filter(i => !recIds.has(i.id));
+    const rest = filteredScored.filter(i => !recIds.has(i.id) && !dismissedIds.has(i.id));
 
     return { recommended: rec, allFiltered: rest };
-  }, [investors, narrativeSignals, search, selectedStages, selectedSectors, selectedCheckSize]);
+  }, [investors, narrativeSignals, search, selectedStages, selectedSectors, selectedCheckSize, dismissedIds]);
 
   const totalCount = recommended.length + allFiltered.length;
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-sm bg-electric/10">
-          <Search className="h-4 w-4 text-electric" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
-          <p className="text-sm text-secondary-foreground">Find investors matched to your stage, sector, and thesis.</p>
-        </div>
+      {/* Row 1: Header */}
+      <div className="mb-5">
+        <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
+        <p className="text-sm text-secondary-foreground">Find investors matched to your stage, sector, and thesis.</p>
       </div>
 
-      {/* Narrative match banner */}
-      {narrativeSignals && (narrativeSignals.stages.length > 0 || narrativeSignals.sectors.length > 0) && (
-        <div className="flex items-center gap-2 mb-5 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
-          <Sparkles className="h-4 w-4 text-electric shrink-0" />
-          <p className="text-sm text-foreground/80 flex-1">
-            Matched to your latest narrative
-            {narrativeSignals.stages.length > 0 && (
-              <span className="text-muted-foreground"> · {narrativeSignals.stages.map(s => STAGE_LABELS[s] || s).join(", ")}</span>
-            )}
-            {narrativeSignals.sectors.length > 0 && (
-              <span className="text-muted-foreground"> · {narrativeSignals.sectors.map(s => SECTOR_LABELS[s] || s).join(", ")}</span>
-            )}
-          </p>
-        </div>
-      )}
-
-      {/* Search + filter toggle */}
-      <div className="flex items-center gap-3 mb-4">
+      {/* Row 2: Search + filters + count */}
+      <div className="flex items-center gap-3 mb-1">
         <div className="flex-1 relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input type="text" placeholder="Search firms, sectors, keywords..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-background border border-border rounded-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-electric/40 transition-colors" />
         </div>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{totalCount} found</span>
         <button onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-sm border transition-colors ${
             hasFilters ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
@@ -330,6 +364,7 @@ export default function Investors() {
           </span>}
         </button>
       </div>
+      <p className="text-[10px] text-muted-foreground/60 mb-4">Contact information is sourced from public data and may not be current.</p>
 
       {/* Filter panel */}
       {showFilters && (
@@ -377,8 +412,6 @@ export default function Investors() {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mb-4">{totalCount} investor{totalCount !== 1 ? "s" : ""} found</p>
-
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="h-6 w-6 border-2 border-electric border-t-transparent rounded-full animate-spin" />
@@ -393,7 +426,7 @@ export default function Investors() {
         </div>
       )}
 
-      {/* Recommended section */}
+      {/* Row 3: Recommended section */}
       {!loading && recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
@@ -404,8 +437,13 @@ export default function Investors() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommended.map(inv => (
               <InvestorCard key={inv.id} inv={inv}
-                inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}
-                isAdding={addingToPipeline === inv.id} isRecommended />
+                inPipeline={pipelineIds.has(inv.id)}
+                onAddToPipeline={() => addToPipeline(inv)}
+                onRemoveFromPipeline={() => removeFromPipeline(inv)}
+                onDismiss={() => dismissInvestor(inv)}
+                isAdding={addingToPipeline === inv.id}
+                isRemoving={removingFromPipeline === inv.id}
+                isRecommended />
             ))}
           </div>
         </div>
@@ -423,8 +461,12 @@ export default function Investors() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {allFiltered.map(inv => (
               <InvestorCard key={inv.id} inv={inv}
-                inPipeline={pipelineIds.has(inv.id)} onAddToPipeline={() => addToPipeline(inv)}
-                isAdding={addingToPipeline === inv.id} />
+                inPipeline={pipelineIds.has(inv.id)}
+                onAddToPipeline={() => addToPipeline(inv)}
+                onRemoveFromPipeline={() => removeFromPipeline(inv)}
+                onDismiss={() => dismissInvestor(inv)}
+                isAdding={addingToPipeline === inv.id}
+                isRemoving={removingFromPipeline === inv.id} />
             ))}
           </div>
         </div>
@@ -435,23 +477,60 @@ export default function Investors() {
 
 // ── Investor Card ──────────────────────────────────────
 
-function InvestorCard({ inv, inPipeline, onAddToPipeline, isAdding, isRecommended }: {
+function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, onDismiss, isAdding, isRemoving, isRecommended }: {
   inv: Investor;
   inPipeline: boolean;
   onAddToPipeline: () => void;
+  onRemoveFromPipeline: () => void;
+  onDismiss: () => void;
   isAdding: boolean;
+  isRemoving: boolean;
   isRecommended?: boolean;
 }) {
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [fading, setFading] = useState(false);
   const MAX_SECTORS = 3;
   const visibleSectors = inv.sectors.slice(0, MAX_SECTORS);
   const overflowCount = inv.sectors.length - MAX_SECTORS;
 
+  const hasContact = inv.contact_email || inv.linkedin_url || inv.website_url;
+
+  const handleDismiss = () => {
+    setFading(true);
+    setTimeout(() => onDismiss(), 300);
+  };
+
+  const handlePipelineClick = () => {
+    if (inPipeline) {
+      if (confirmRemove) {
+        onRemoveFromPipeline();
+        setConfirmRemove(false);
+      } else {
+        setConfirmRemove(true);
+        setTimeout(() => setConfirmRemove(false), 3000);
+      }
+    } else {
+      onAddToPipeline();
+    }
+  };
+
   return (
-    <div className={`p-5 rounded-sm border transition-colors group ${
+    <div className={`relative p-5 rounded-sm border transition-all group ${
+      fading ? "opacity-0 scale-95" : "opacity-100"
+    } ${
       isRecommended ? "border-electric/20 bg-electric/[0.03] hover:border-electric/30" : "border-border card-gradient hover:border-muted-foreground/20"
-    }`}>
+    }`} style={{ transitionDuration: "300ms" }}>
+      {/* Dismiss button */}
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 p-1 rounded-sm text-muted-foreground/40 hover:text-foreground hover:bg-muted/30 transition-colors opacity-0 group-hover:opacity-100"
+        title="Hide this investor"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+
       {/* Top row: name + type badge */}
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3 mb-3 pr-5">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-foreground leading-tight">{inv.firm_name}</h3>
           {inv.location_city && (
@@ -494,14 +573,42 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, isAdding, isRecommende
         </div>
       )}
 
+      {/* Contact info row */}
+      {hasContact ? (
+        <div className="flex items-center gap-2 mb-3">
+          {inv.contact_email && (
+            <div className="flex items-center gap-1">
+              <a href={`mailto:${inv.contact_email}`} className="text-[10px] text-muted-foreground hover:text-electric transition-colors truncate max-w-[120px]" title={inv.contact_email}>
+                <Mail className="h-3 w-3 inline mr-0.5" />{inv.contact_email}
+              </a>
+              <button
+                onClick={() => { navigator.clipboard.writeText(inv.contact_email!); toast.success("Email copied"); }}
+                className="p-0.5 text-muted-foreground/50 hover:text-electric transition-colors"
+                title="Copy email"
+              >
+                <Copy className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          )}
+          {inv.linkedin_url && (
+            <a href={inv.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="LinkedIn">
+              <Linkedin className="h-3.5 w-3.5" />
+            </a>
+          )}
+          {inv.website_url && (
+            <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
+              <Globe className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      ) : (
+        <p className="text-[10px] text-muted-foreground/50 mb-3">No contact info available</p>
+      )}
+
       {/* Solo founder + website on hover */}
       <div className="h-0 overflow-hidden group-hover:h-auto group-hover:mb-3 transition-all">
         <div className="flex items-center gap-3 text-[10px]">
           {inv.solo_founder_friendly && <span className="text-emerald font-medium">✓ Solo founder friendly</span>}
-          {inv.website_url && (
-            <a href={inv.website_url} target="_blank" rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-electric transition-colors">Website →</a>
-          )}
         </div>
       </div>
 
@@ -513,21 +620,29 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, isAdding, isRecommende
             Apply
           </a>
         )}
-        {inPipeline ? (
-          <span className="flex-1 flex items-center justify-center gap-1 text-xs text-emerald font-medium py-2 rounded-sm bg-emerald/10">
-            <Check className="h-3 w-3" /> In Pipeline
-          </span>
-        ) : (
-          <button onClick={onAddToPipeline} disabled={isAdding}
-            className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-2 rounded-sm border border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30 transition-colors disabled:opacity-50">
-            {isAdding ? (
-              <div className="h-3 w-3 border border-electric border-t-transparent rounded-full animate-spin" />
+        <button
+          onClick={handlePipelineClick}
+          disabled={isAdding || isRemoving}
+          className={`flex-1 flex items-center justify-center gap-1 text-xs font-medium py-2 rounded-sm border transition-colors disabled:opacity-50 ${
+            inPipeline
+              ? confirmRemove
+                ? "border-destructive/30 text-destructive hover:bg-destructive/10"
+                : "border-emerald/30 text-emerald bg-emerald/10 hover:border-destructive/30 hover:text-destructive hover:bg-transparent"
+              : "border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
+          }`}
+        >
+          {isAdding || isRemoving ? (
+            <div className="h-3 w-3 border border-electric border-t-transparent rounded-full animate-spin" />
+          ) : inPipeline ? (
+            confirmRemove ? (
+              <>Remove from pipeline?</>
             ) : (
-              <ArrowRight className="h-3 w-3" />
-            )}
-            Add to Pipeline
-          </button>
-        )}
+              <><Check className="h-3 w-3" /> In Pipeline</>
+            )
+          ) : (
+            <><ArrowRight className="h-3 w-3" /> Add to Pipeline</>
+          )}
+        </button>
       </div>
     </div>
   );
