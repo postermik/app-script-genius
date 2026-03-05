@@ -122,7 +122,7 @@ export function LandingPage() {
               </div>
               <h3 className="text-electric text-sm font-semibold mt-4 mb-2">Executive Summary</h3>
               <p className="text-sm text-foreground/80 leading-relaxed">
-                Autoflow replaces manual data pipeline management with AI-driven orchestration. The $4.2B data integration market is fragmented across legacy tools that require dedicated engineering teams. Our platform reduces pipeline setup time by 90% while cutting infrastructure costs by 60%.
+                Autoflow replaces manual data pipelines with AI-driven orchestration — reducing setup time by 90% and infrastructure costs by 60%.
               </p>
 
               {/* Inline suggestion card */}
