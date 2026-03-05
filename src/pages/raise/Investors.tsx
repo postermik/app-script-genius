@@ -25,6 +25,7 @@ interface Investor {
   solo_founder_friendly: boolean;
   fund_size: number | null;
   is_active: boolean;
+  contact_name?: string | null;
   contact_email?: string | null;
   linkedin_url?: string | null;
   last_enriched_at?: string | null;
@@ -245,6 +246,16 @@ export default function Investors() {
         // Mark as enriching
         setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: true } : i));
 
+        // Use contact_name if available, otherwise skip enrichment
+        const contactName = inv.contact_name;
+        if (!contactName) {
+          setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: false } : i));
+          return;
+        }
+        const nameParts = contactName.trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`${SUPABASE_URL}/functions/v1/enrich-investor`, {
           method: 'POST',
@@ -254,8 +265,8 @@ export default function Investors() {
             ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
           },
           body: JSON.stringify({
-            first_name: inv.firm_name.split(" ")[0] || inv.firm_name,
-            last_name: inv.firm_name.split(" ").slice(1).join(" ") || "Partner",
+            first_name: firstName,
+            last_name: lastName,
             organization_name: inv.firm_name,
             investor_id: inv.id,
           }),
@@ -643,6 +654,11 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
           ))}
           {overflowCount > 0 && <span className="text-[10px] text-muted-foreground">+{overflowCount}</span>}
         </div>
+      )}
+
+      {/* Contact name */}
+      {inv.contact_name && (
+        <p className="text-xs font-medium text-secondary-foreground mb-1.5">{inv.contact_name}</p>
       )}
 
       {/* Contact info row */}
