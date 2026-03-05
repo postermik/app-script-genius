@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
   FolderLock, Plus, Copy, Check, ExternalLink, Eye, Clock,
   Users, X, Lock, Unlock, Trash2, ToggleLeft, ToggleRight,
+  Share2, Mail, Link,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,7 +40,9 @@ function generateSlug(): string {
 }
 
 export default function DataRoom() {
+  const navigate = useNavigate();
   const [rooms, setRooms] = useState<DataRoomRow[]>([]);
+  const [shareMenuRoom, setShareMenuRoom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -173,7 +177,34 @@ export default function DataRoom() {
                       </div>
                       <p className="text-xs text-muted-foreground">{room.included_projects.length} project{room.included_projects.length !== 1 ? "s" : ""} included</p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 relative">
+                      <div className="relative">
+                        <button onClick={() => setShareMenuRoom(shareMenuRoom === room.id ? null : room.id)}
+                          className="p-1.5 text-muted-foreground hover:text-electric transition-colors" title="Share">
+                          <Share2 className="h-4 w-4" />
+                        </button>
+                        {shareMenuRoom === room.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in py-1">
+                            <button onClick={() => {
+                              navigator.clipboard.writeText(roomUrl(room.slug));
+                              toast.success("Link copied");
+                              setShareMenuRoom(null);
+                            }} className="w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors flex items-center gap-2 text-foreground">
+                              <Link className="h-3.5 w-3.5 text-muted-foreground" /> Copy trackable link
+                            </button>
+                            <button onClick={() => {
+                              setShareMenuRoom(null);
+                              // Dispatch event to open outreach composer with this room attached
+                              window.dispatchEvent(new CustomEvent("outreach:attach-data-room", {
+                                detail: { dataRoom: { id: room.id, title: room.title, slug: room.slug, is_active: room.is_active } }
+                              }));
+                              navigate("/raise/outreach");
+                            }} className="w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors flex items-center gap-2 text-foreground">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground" /> Send via Outreach
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <button onClick={() => toggleActive(room)} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title={room.is_active ? "Deactivate" : "Activate"}>
                         {room.is_active ? <ToggleRight className="h-4 w-4 text-emerald" /> : <ToggleLeft className="h-4 w-4" />}
                       </button>
