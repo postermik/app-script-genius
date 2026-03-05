@@ -108,7 +108,7 @@ export function LandingPage() {
               <div className="border-t border-border mt-6 pt-5">
                 <div className="flex items-center gap-2 mb-4">
                   <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric">Presentation-Ready Slides</p>
-                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Draft Ready</span>
+                  <span className="text-[10px] text-yellow-500 font-medium px-1.5 py-0.5 border border-yellow-500/30 rounded-sm">Pending Review</span>
                 </div>
                 <PresentationSlides />
               </div>
