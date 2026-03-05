@@ -245,9 +245,14 @@ export default function Investors() {
         // Mark as enriching
         setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: true } : i));
 
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`${SUPABASE_URL}/functions/v1/enrich-investor`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz',
+            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({
             first_name: inv.firm_name.split(" ")[0] || inv.firm_name,
             last_name: inv.firm_name.split(" ").slice(1).join(" ") || "Partner",
