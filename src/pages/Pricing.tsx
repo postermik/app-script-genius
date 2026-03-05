@@ -20,7 +20,7 @@ const PLANS = [
     monthlyPrice: 20,
     tierId: "hobby" as const,
     description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI coaching", "Export to PowerPoint & Word", "Memo, email & document generation"],
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI coaching", "Export to PowerPoint & Word", "Deck theme customization"],
     highlighted: false,
   },
   {
