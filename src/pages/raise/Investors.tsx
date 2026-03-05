@@ -27,6 +27,8 @@ interface Investor {
   is_active: boolean;
   contact_email?: string | null;
   linkedin_url?: string | null;
+  last_enriched_at?: string | null;
+  enriching?: boolean;
 }
 
 interface NarrativeSignals {
@@ -224,6 +226,71 @@ export default function Investors() {
       setLoading(false);
     })();
   }, []);
+
+  // Background enrichment via Apollo.io
+  useEffect(() => {
+    if (investors.length === 0) return;
+    const SUPABASE_URL = "https://jilopuugwyrqogoxlxjo.supabase.co";
+
+    const enrichInvestor = async (inv: Investor) => {
+      // Skip if already enriched within 30 days
+      if (inv.last_enriched_at) {
+        const daysSince = (Date.now() - new Date(inv.last_enriched_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSince < 30) return;
+      }
+
+      // Parse name from firm_name (best effort: use firm name as org)
+      // The edge function handles graceful fallback if Apollo key is missing
+      try {
+        // Mark as enriching
+        setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: true } : i));
+
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/enrich-investor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: inv.firm_name.split(" ")[0] || inv.firm_name,
+            last_name: inv.firm_name.split(" ").slice(1).join(" ") || "Partner",
+            organization_name: inv.firm_name,
+            investor_id: inv.id,
+          }),
+        });
+
+        if (!res.ok) {
+          setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: false } : i));
+          return;
+        }
+
+        const data = await res.json();
+        if (data.skipped) {
+          // Apollo not configured, stop enrichment
+          setInvestors(prev => prev.map(i => ({ ...i, enriching: false })));
+          return;
+        }
+
+        if (data.email || data.linkedin_url || data.cached) {
+          setInvestors(prev => prev.map(i => i.id === inv.id ? {
+            ...i,
+            contact_email: data.email || i.contact_email,
+            linkedin_url: data.linkedin_url || i.linkedin_url,
+            last_enriched_at: new Date().toISOString(),
+            enriching: false,
+          } : i));
+        } else {
+          setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: false, last_enriched_at: new Date().toISOString() } : i));
+        }
+      } catch {
+        setInvestors(prev => prev.map(i => i.id === inv.id ? { ...i, enriching: false } : i));
+      }
+    };
+
+    // Enrich up to 5 investors at a time that lack contact info
+    const toEnrich = investors.filter(i => !i.contact_email && !i.linkedin_url && !i.last_enriched_at).slice(0, 5);
+    toEnrich.forEach((inv, idx) => {
+      // Stagger requests to avoid rate limiting
+      setTimeout(() => enrichInvestor(inv), idx * 1500);
+    });
+  }, [investors.length]); // Only run when investor count changes (initial load)
 
   const addToPipeline = useCallback(async (inv: Investor) => {
     if (!userId) return;
@@ -574,7 +641,12 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
       )}
 
       {/* Contact info row */}
-      {hasContact ? (
+      {inv.enriching ? (
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-3 w-24 rounded-sm bg-muted/40 animate-pulse" />
+          <div className="h-3 w-3 rounded-full bg-muted/40 animate-pulse" />
+        </div>
+      ) : hasContact ? (
         <div className="flex items-center gap-2 mb-3">
           {inv.contact_email && (
             <div className="flex items-center gap-1">
@@ -602,7 +674,14 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
           )}
         </div>
       ) : (
-        <p className="text-[10px] text-muted-foreground/50 mb-3">No contact info available</p>
+        <div className="flex items-center gap-2 mb-3">
+          {inv.website_url && (
+            <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
+              <Globe className="h-3.5 w-3.5" />
+            </a>
+          )}
+          <p className="text-[10px] text-muted-foreground/50">No contact info available</p>
+        </div>
       )}
 
       {/* Solo founder + website on hover */}
