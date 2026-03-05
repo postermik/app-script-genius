@@ -219,11 +219,11 @@ function FormatChartCard() {
 /* ── Presentation-Ready Slides ── */
 export function PresentationSlides() {
   return (
-    <div className="flex gap-[18px] overflow-x-auto snap-x snap-mandatory pr-6 sm:pr-0 sm:grid sm:grid-cols-3 sm:overflow-visible [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
       {/* Slide 1: Cover */}
-      <AnimatedEntry delay={0} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+      <AnimatedEntry delay={0}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Cover Slide</p>
               <p className="text-sm font-semibold text-foreground mt-2">Series B Growth Strategy</p>
@@ -238,24 +238,24 @@ export function PresentationSlides() {
       </AnimatedEntry>
 
       {/* Slide 2: Key Metrics */}
-      <AnimatedEntry delay={100} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+      <AnimatedEntry delay={100}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Key Metrics</p>
               <p className="text-sm font-semibold text-foreground mt-2">Traction & Unit Economics</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="font-mono text-base font-bold text-foreground">$1.8M</p>
+            <div className="grid grid-cols-3 gap-1 text-center">
+              <div className="min-w-0">
+                <p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">$1.8M</p>
                 <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">ARR</p>
               </div>
-              <div>
-                <p className="font-mono text-base font-bold text-emerald">+34%</p>
+              <div className="min-w-0">
+                <p className="font-mono text-sm sm:text-base font-bold text-emerald truncate">+34%</p>
                 <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">QoQ</p>
               </div>
-              <div>
-                <p className="font-mono text-base font-bold text-foreground">128%</p>
+              <div className="min-w-0">
+                <p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">128%</p>
                 <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">NRR</p>
               </div>
             </div>
@@ -264,24 +264,20 @@ export function PresentationSlides() {
       </AnimatedEntry>
 
       {/* Slide 3: Competitive Landscape */}
-      <AnimatedEntry delay={200} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
+      <AnimatedEntry delay={200}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Landscape</p>
               <p className="text-sm font-semibold text-foreground mt-2">Competitive Position</p>
             </div>
-            {/* Mini dot matrix */}
             <div className="relative w-full" style={{ height: 80 }}>
               <div className="absolute inset-0 border-l border-b border-[hsl(217_33%_15%)]">
-                {/* Crosshairs */}
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-foreground/[0.03]" />
                 <div className="absolute top-1/2 left-0 right-0 h-px bg-foreground/[0.03]" />
-                {/* Gray dots */}
                 <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "20%", top: "65%" }} />
                 <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "35%", top: "45%" }} />
                 <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "50%", top: "70%" }} />
-                {/* Blue dot (hero) */}
                 <div className="absolute w-2.5 h-2.5 rounded-full bg-electric" style={{ left: "75%", top: "20%", boxShadow: "0 0 8px hsla(217, 90%, 54%, 0.4)" }} />
               </div>
             </div>
