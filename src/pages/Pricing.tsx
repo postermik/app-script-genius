@@ -20,15 +20,15 @@ const PLANS = [
     monthlyPrice: 20,
     tierId: "hobby" as const,
     description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI coaching", "Export to PowerPoint & Word", "Deck theme customization"],
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Export to PPT, DOCX & PDF", "Deck theme customization"],
     highlighted: false,
   },
   {
     name: "Pro",
     monthlyPrice: 100,
     tierId: "pro" as const,
-    description: "Full capital readiness.",
-    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Context-aware coaching"],
+    description: "Everything you need to raise.",
+    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Priority support"],
     highlighted: true,
   },
 ];
@@ -63,41 +63,25 @@ export default function Pricing() {
 
   const handleSubscribe = async (plan: typeof PLANS[0]) => {
     if (!plan.tierId) {
-      if (session) {
-        navigate("/dashboard");
-      } else {
-        navigate("/auth?signup=true&next=/dashboard");
-      }
+      if (session) { navigate("/dashboard"); } else { navigate("/auth?signup=true&next=/dashboard"); }
       return;
     }
-
-    if (!session) {
-      navigate("/auth?signup=true");
-      return;
-    }
-
+    if (!session) { navigate("/auth?signup=true"); return; }
     if (isCurrentPlan(plan)) {
       setLoadingTier(plan.tierId);
       try {
         const { data, error } = await supabase.functions.invoke("customer-portal");
         if (error) throw error;
         window.open(data.url, "_blank");
-      } catch {
-        toast.error("Unable to open billing portal. Try again.");
-      } finally {
-        setLoadingTier(null);
-      }
+      } catch { toast.error("Unable to open billing portal. Try again."); }
+      finally { setLoadingTier(null); }
       return;
     }
-
     setUpgradeOpen(true);
   };
 
   const getButtonLabel = (plan: typeof PLANS[0], current: boolean) => {
-    if (!plan.tierId) {
-      if (current) return "Current Plan";
-      return "Get Started";
-    }
+    if (!plan.tierId) { if (current) return "Current Plan"; return "Get Started"; }
     if (current) return "Manage Subscription";
     if (!session) return `Choose ${plan.name}`;
     return `Upgrade to ${plan.name}`;
@@ -153,11 +137,7 @@ export default function Pricing() {
                   </span>
                 )}
                 <div className={`bg-card/50 border rounded-sm p-10 flex flex-col h-full transition-all hover:-translate-y-0.5 ${
-                  current
-                    ? "border-emerald-400/30"
-                    : plan.highlighted
-                    ? "border-electric/30 glow-blue-subtle"
-                    : "border-border hover:border-muted-foreground/20"
+                  current ? "border-emerald-400/30" : plan.highlighted ? "border-electric/30 glow-blue-subtle" : "border-border hover:border-muted-foreground/20"
                 }`}>
                   <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
                   <div className="flex items-baseline gap-1 mb-2">

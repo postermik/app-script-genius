@@ -1,7 +1,8 @@
-import { ArrowRight, Check, Zap, BarChart3, Layers, Users } from "lucide-react";
+import { ArrowRight, Check, Zap, BarChart3, Users, Lightbulb } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const PLANS = [
   {
@@ -25,8 +26,8 @@ const PLANS = [
     features: [
       "Unlimited drafts",
       "Full coaching & readiness scoring",
-      "Inline AI coaching",
-      "Export to PowerPoint & Word",
+      "Inline AI suggestions",
+      "Export to PPT, DOCX & PDF",
       "Deck theme customization",
     ],
     cta: "Choose Hobby",
@@ -36,14 +37,14 @@ const PLANS = [
     name: "Pro",
     price: "$100",
     period: "/mo",
-    description: "Full capital readiness.",
+    description: "Everything you need to raise.",
     features: [
       "Everything in Hobby",
       "Investor discovery with AI matching",
       "Pipeline tracker",
       "Data room with view analytics",
       "All export formats incl. DOCX",
-      "Context-aware coaching",
+      "Priority support",
     ],
     cta: "Get Pro",
     highlighted: true,
@@ -53,7 +54,30 @@ const PLANS = [
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
   { icon: BarChart3, text: "500+ narratives generated" },
-  { icon: Users, text: "Decades of fundraising & design expertise" },
+  { icon: Users, text: "15+ years of capital markets expertise" },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "What makes Rhetoric different from Tome or Gamma?",
+    a: "They generate slides. We generate strategy. Rhetoric structures your thesis, coaches your narrative with inline suggestions, and produces investor-grade deliverables across formats — pitch decks, memos, emails, board updates. Not just formatted templates.",
+  },
+  {
+    q: "What can I create with Rhetoric?",
+    a: "Pitch decks, strategy memos, board updates, investor update emails, product vision docs, and pitch scripts. Each output includes inline AI suggestions to strengthen every section.",
+  },
+  {
+    q: "Do I need design skills?",
+    a: "No. Rhetoric handles structure, layout, and export. You describe what you're working on — we craft the deliverable.",
+  },
+  {
+    q: "Can I try it before paying?",
+    a: "Yes. The free tier includes one full narrative draft with readiness scoring across all output modes.",
+  },
+  {
+    q: "What AI powers Rhetoric?",
+    a: "Rhetoric uses Claude by Anthropic, enhanced with a proprietary narrative framework built from 15+ years of capital markets and investor relations experience.",
+  },
 ];
 
 export function LandingPage() {
@@ -66,7 +90,7 @@ export function LandingPage() {
         <ConstellationBackground />
         <div className="absolute inset-0 radial-glow pointer-events-none" />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
@@ -81,7 +105,7 @@ export function LandingPage() {
           </button>
         </div>
 
-        {/* Hero product preview */}
+        {/* Hero product preview — memo + inline suggestion */}
         <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="bg-card/80 border border-border rounded-sm overflow-hidden shadow-2xl backdrop-blur-sm">
             <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
@@ -90,35 +114,28 @@ export function LandingPage() {
               <div className="w-2.5 h-2.5 rounded-full bg-emerald/60" />
               <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric — Narrative Generation</span>
             </div>
-            <div className="p-4 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              {/* Readiness Score */}
-              <div className="flex flex-col items-center justify-center gap-3">
-                <div className="relative w-20 h-20">
-                  <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--border))" strokeWidth="6" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--electric))" strokeWidth="6"
-                      strokeDasharray="251.2" strokeDashoffset="50" strokeLinecap="round"
-                      className="animate-gauge" />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">80</span>
-                </div>
-                <span className="text-xs text-foreground/70 tracking-wider uppercase">Readiness Score</span>
+            <div className="p-4 sm:p-8">
+              {/* Memo preview */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Strategy Memo</span>
+                <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
               </div>
+              <h3 className="text-electric text-sm font-semibold mt-4 mb-2">Executive Summary</h3>
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                Autoflow replaces manual data pipeline management with AI-driven orchestration. The $4.2B data integration market is fragmented across legacy tools that require dedicated engineering teams. Our platform reduces pipeline setup time by 90% while cutting infrastructure costs by 60%.
+              </p>
 
-              {/* Narrative snippet */}
-              <div className="sm:col-span-2 space-y-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Strategy Memo</span>
-                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
+              {/* Inline suggestion card */}
+              <div className="mt-4 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
+                <div className="text-electric mt-0.5 shrink-0">
+                  <Lightbulb className="w-4 h-4" />
                 </div>
-                <p className="text-sm text-foreground/85 leading-relaxed">
-                  Autoflow replaces manual data pipeline management with AI-driven orchestration. The $4.2B data integration market is fragmented across legacy tools that require dedicated engineering teams.
-                </p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {["Pitch Deck", "Strategy Memo", "Board Update", "Investor Email"].map((t) => (
-                    <span key={t} className="text-[10px] text-muted-foreground border border-border px-2 py-1 rounded-sm">{t}</span>
-                  ))}
+                <div className="flex-1">
+                  <p className="text-sm text-foreground/80">Consider adding a specific customer case study to strengthen the cost reduction claim.</p>
                 </div>
+                <button className="text-xs px-2.5 py-1 bg-electric hover:bg-electric/80 text-primary-foreground rounded-sm transition-colors font-medium shrink-0">
+                  Apply
+                </button>
               </div>
             </div>
           </div>
@@ -130,11 +147,11 @@ export function LandingPage() {
 
       {/* ── Credibility Bar ── */}
       <section className="px-4 sm:px-6 py-10 sm:py-12 border-y border-border">
-        <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-16">
+        <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-12">
           {PROOF.map((p) => (
-            <div key={p.text} className="flex items-center gap-3">
-              <p.icon className="h-5 w-5 text-electric" />
-              <span className="font-medium text-white text-sm sm:text-base">{p.text}</span>
+            <div key={p.text} className="flex items-center gap-2.5 whitespace-nowrap">
+              <p.icon className="h-4 w-4 text-electric shrink-0" />
+              <span className="font-medium text-foreground text-sm">{p.text}</span>
             </div>
           ))}
         </div>
@@ -145,7 +162,7 @@ export function LandingPage() {
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-16">
             <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Start free. Scale when ready.</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Start free. Scale when ready.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-md md:max-w-none mx-auto w-full">
             {PLANS.map((plan) => (
@@ -159,7 +176,7 @@ export function LandingPage() {
               >
                 <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-bold text-white">{plan.price}</span>
+                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
                   {plan.period && <span className="text-sm text-foreground/60">{plan.period}</span>}
                 </div>
                 <p className="text-sm text-foreground/70 mb-8">{plan.description}</p>
@@ -184,6 +201,27 @@ export function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-[700px] mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Frequently Asked Questions</p>
+          </div>
+          <Accordion type="single" collapsible className="space-y-2">
+            {FAQ_ITEMS.map((item, i) => (
+              <AccordionItem key={i} value={`faq-${i}`} className="border border-border rounded-sm px-5 bg-card/30">
+                <AccordionTrigger className="text-sm text-foreground/90 hover:no-underline py-4">
+                  {item.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-foreground/70 leading-relaxed pb-4">
+                  {item.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
     </>

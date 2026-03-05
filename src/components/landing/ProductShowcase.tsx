@@ -14,15 +14,16 @@ function AnimatedEntry({ children, className = "" }: { children: React.ReactNode
   return (
     <div
       ref={ref}
-      className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[30px]"} ${className}`}
+      className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"} ${className}`}
     >
       {children}
     </div>
   );
 }
 
-/* ── Generation Experience ── */
+/* ── Generation Experience (animated progress bar) ── */
 function GenerationPreview() {
+  const [progress, setProgress] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -32,19 +33,22 @@ function GenerationPreview() {
     "Structuring argument",
     "Writing sections",
     "Reviewing quality",
-    "Done",
   ];
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting && !started.current) {
         started.current = true;
-        let s = 0;
+        let p = 0;
         const iv = setInterval(() => {
-          s += 1;
-          setActiveStep(s);
-          if (s >= STEPS.length - 1) clearInterval(iv);
-        }, 900);
+          p += 2;
+          setProgress(Math.min(p, 100));
+          if (p <= 25) setActiveStep(0);
+          else if (p <= 55) setActiveStep(1);
+          else if (p <= 80) setActiveStep(2);
+          else setActiveStep(3);
+          if (p >= 100) clearInterval(iv);
+        }, 60);
       }
     }, { threshold: 0.4 });
     if (ref.current) obs.observe(ref.current);
@@ -53,20 +57,31 @@ function GenerationPreview() {
 
   return (
     <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Generating…</span>
-      </div>
-      <div className="p-5 space-y-2">
-        {STEPS.map((step, i) => {
-          if (i > activeStep) return null;
-          const done = i < activeStep;
-          const active = i === activeStep && i < STEPS.length - 1;
-          return (
-            <p key={step} className={`text-xs transition-all duration-500 ${done ? "text-emerald" : active ? "text-foreground/85" : "text-emerald"}`}>
-              {done ? "✓" : active ? "→" : "✓"} {step}
-            </p>
-          );
-        })}
+      <div className="p-5 space-y-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/90">
+            Generating narrative…
+          </span>
+          <span className="text-xs font-bold text-electric tabular-nums">{progress}%</span>
+        </div>
+        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div
+            className="h-full bg-electric rounded-full transition-all duration-150"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="space-y-1.5 pt-1">
+          {STEPS.map((step, i) => {
+            const done = i < activeStep;
+            const active = i === activeStep;
+            if (i > activeStep) return null;
+            return (
+              <p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>
+                {done ? "✓" : "→"} {step}
+              </p>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -92,9 +107,6 @@ function ReadinessPreview() {
 
   return (
     <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Built-in Coaching</span>
-      </div>
       <div className="p-5 space-y-4">
         {categories.map((c, i) => (
           <div key={c.label}>
@@ -135,12 +147,12 @@ function RevenueSparkline() {
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#4ADE80" stopOpacity="0" />
+          <stop offset="0%" stopColor="hsl(155 60% 45%)" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="hsl(155 60% 45%)" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={area} fill="url(#sparkFill)" />
-      <path d={line} fill="none" stroke="#4ADE80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={line} fill="none" stroke="hsl(155 60% 45%)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -149,8 +161,7 @@ function RevenueSparkline() {
 function SlidePreviewCard() {
   return (
     <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Every Format, Ready to Use</span>
+      <div className="px-5 py-3 border-b border-border flex items-center justify-end">
         <div className="flex gap-1.5">
           {["Dark", "Light", "Minimal"].map((t) => (
             <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-sm border ${t === "Dark" ? "border-electric/40 text-electric" : "border-border text-foreground/50"}`}>{t}</span>
@@ -163,20 +174,20 @@ function SlidePreviewCard() {
           backgroundSize: "32px 32px"
         }} />
         <div className="relative z-10">
-          <p className="text-xs font-medium tracking-[0.12em] uppercase" style={{ color: "rgba(255,255,255,0.7)" }}>Annual Recurring Revenue</p>
-          <p className="text-3xl font-bold text-white tracking-tight mt-1">$1.8M</p>
+          <p className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p>
+          <p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p>
         </div>
         <div className="relative z-10 flex-1 my-4">
           <RevenueSparkline />
         </div>
         <div className="relative z-10 flex gap-8">
           <div>
-            <p className="text-[10px] tracking-[0.1em] uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>QoQ</p>
-            <p className="text-base font-bold" style={{ color: "#4ADE80" }}>+34%</p>
+            <p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">QoQ</p>
+            <p className="text-base font-bold text-emerald">+34%</p>
           </div>
           <div>
-            <p className="text-[10px] tracking-[0.1em] uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>NRR</p>
-            <p className="text-base font-bold text-white">128%</p>
+            <p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">NRR</p>
+            <p className="text-base font-bold text-foreground">128%</p>
           </div>
         </div>
       </div>
@@ -197,9 +208,6 @@ function InvestorPreview() {
 
   return (
     <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Investor Discovery</span>
-      </div>
       <div className="divide-y divide-border/50">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
@@ -211,26 +219,6 @@ function InvestorPreview() {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ── Diagonal connector line (SVG) ── */
-function DiagonalConnector({ direction }: { direction: "left-to-right" | "right-to-left" }) {
-  const isLR = direction === "left-to-right";
-  return (
-    <div className="hidden md:block relative h-5 w-full pointer-events-none" aria-hidden>
-      <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-        <line
-          x1={isLR ? "30%" : "70%"}
-          y1="0"
-          x2={isLR ? "50%" : "50%"}
-          y2="100%"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth="1"
-          strokeDasharray="6 4"
-        />
-      </svg>
     </div>
   );
 }
@@ -248,30 +236,24 @@ export function ProductShowcase() {
           </AnimatedEntry>
         </div>
 
-        <DiagonalConnector direction="left-to-right" />
-
         {/* Panel 2: Right, offset down */}
-        <div className="md:w-[52%] md:ml-[43%] md:mt-[40px] mt-8">
+        <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Built-in Coaching</p>
             <ReadinessPreview />
           </AnimatedEntry>
         </div>
 
-        <DiagonalConnector direction="right-to-left" />
-
         {/* Panel 3: Left */}
-        <div className="md:w-[52%] md:ml-[5%] md:-mt-4 mt-8">
+        <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
             <SlidePreviewCard />
           </AnimatedEntry>
         </div>
 
-        <DiagonalConnector direction="left-to-right" />
-
         {/* Panel 4: Right, offset down */}
-        <div className="md:w-[52%] md:ml-[43%] md:mt-[40px] mt-8">
+        <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Find Your Investors</p>
             <InvestorPreview />
