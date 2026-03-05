@@ -23,20 +23,28 @@ function AnimatedEntry({ children, className = "" }: { children: React.ReactNode
 
 /* ── Generation Experience ── */
 function GenerationPreview() {
-  const [progress, setProgress] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
+
+  const STEPS = [
+    "Analyzing your input",
+    "Structuring argument",
+    "Writing sections",
+    "Reviewing quality",
+    "Done",
+  ];
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting && !started.current) {
         started.current = true;
-        let p = 0;
+        let s = 0;
         const iv = setInterval(() => {
-          p += 2;
-          setProgress(Math.min(p, 100));
-          if (p >= 100) clearInterval(iv);
-        }, 40);
+          s += 1;
+          setActiveStep(s);
+          if (s >= STEPS.length - 1) clearInterval(iv);
+        }, 900);
       }
     }, { threshold: 0.4 });
     if (ref.current) obs.observe(ref.current);
@@ -45,27 +53,26 @@ function GenerationPreview() {
 
   return (
     <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Generating narrative…</span>
-        <span className="text-xs text-electric font-medium">{progress}%</span>
+      <div className="px-5 py-3 border-b border-border">
+        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Generating…</span>
       </div>
-      <div className="p-5 space-y-3">
-        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-          <div className="h-full bg-electric rounded-full transition-all duration-100" style={{ width: `${progress}%` }} />
-        </div>
-        <div className="space-y-2">
-          {["Analyzing market positioning…", "Building investment thesis…", "Structuring slide framework…", "Generating pitch script…"].map((step, i) => (
-            <p key={step} className={`text-xs transition-all duration-500 ${progress > i * 25 ? "text-foreground/85" : "text-muted-foreground/40"}`}>
-              {progress > (i + 1) * 25 ? "✓" : progress > i * 25 ? "→" : "○"} {step}
+      <div className="p-5 space-y-2">
+        {STEPS.map((step, i) => {
+          if (i > activeStep) return null;
+          const done = i < activeStep;
+          const active = i === activeStep && i < STEPS.length - 1;
+          return (
+            <p key={step} className={`text-xs transition-all duration-500 ${done ? "text-emerald" : active ? "text-foreground/85" : "text-emerald"}`}>
+              {done ? "✓" : active ? "→" : "✓"} {step}
             </p>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/* ── Readiness Score ── */
+/* ── Coaching Preview ── */
 function ReadinessPreview() {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -77,16 +84,16 @@ function ReadinessPreview() {
   }, []);
 
   const categories = [
-    { label: "Thesis Clarity", score: 92 },
-    { label: "Market Sizing", score: 78 },
-    { label: "Team Credibility", score: 85 },
-    { label: "Traction Evidence", score: 70 },
+    { label: "Clarity", score: 92 },
+    { label: "Structure", score: 85 },
+    { label: "Specificity", score: 78 },
+    { label: "Persuasion", score: 70 },
   ];
 
   return (
     <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Readiness Coaching</span>
+        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Built-in Coaching</span>
       </div>
       <div className="p-5 space-y-4">
         {categories.map((c, i) => (
@@ -143,7 +150,7 @@ function SlidePreviewCard() {
   return (
     <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Slide Preview</span>
+        <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">Every Format, Ready to Use</span>
         <div className="flex gap-1.5">
           {["Dark", "Light", "Minimal"].map((t) => (
             <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-sm border ${t === "Dark" ? "border-electric/40 text-electric" : "border-border text-foreground/50"}`}>{t}</span>
@@ -172,6 +179,9 @@ function SlidePreviewCard() {
             <p className="text-base font-bold text-white">128%</p>
           </div>
         </div>
+      </div>
+      <div className="px-5 py-3 border-t border-border">
+        <p className="text-[11px] text-muted-foreground">Also generates memos, board updates, investor emails, and strategy docs.</p>
       </div>
     </div>
   );
@@ -243,7 +253,7 @@ export function ProductShowcase() {
         {/* Panel 2: Right, offset down */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[40px] mt-8">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Coaching & Scoring</p>
+            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Built-in Coaching</p>
             <ReadinessPreview />
           </AnimatedEntry>
         </div>
@@ -253,7 +263,7 @@ export function ProductShowcase() {
         {/* Panel 3: Left */}
         <div className="md:w-[52%] md:ml-[5%] md:-mt-4 mt-8">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Design-Aware Slides</p>
+            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
             <SlidePreviewCard />
           </AnimatedEntry>
         </div>

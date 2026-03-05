@@ -23,7 +23,7 @@ export function Footer() {
         <div className="border-t border-border/40 pt-16 pb-12">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10">
             <div className="flex flex-col gap-3">
-              <Logo variant="full" size={26} to="/" />
+              <Logo size={24} to="/" />
               <p className="text-[11px] text-muted-foreground/50">
                 © {new Date().getFullYear()} Rhetoric. All rights reserved.
               </p>

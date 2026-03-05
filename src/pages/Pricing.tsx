@@ -20,7 +20,7 @@ const PLANS = [
     monthlyPrice: 20,
     tierId: "hobby" as const,
     description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Pitch prep tools", "Export to PPT & PDF", "Deck theme customization"],
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI coaching", "Export to PowerPoint & Word", "Memo, email & document generation"],
     highlighted: false,
   },
   {
@@ -28,7 +28,7 @@ const PLANS = [
     monthlyPrice: 100,
     tierId: "pro" as const,
     description: "Full capital readiness.",
-    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Audience-specific versions"],
+    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Context-aware coaching"],
     highlighted: true,
   },
 ];

@@ -1,17 +1,26 @@
 import { Link } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import fullImg from "@/assets/rhetoric-full.png";
 import markImg from "@/assets/rhetoric-mark.png";
 
 interface LogoProps {
-  variant?: "full" | "mark";
+  /** @deprecated – variant is now auto-detected by screen size */
+  variant?: "full" | "mark" | "responsive";
   size?: number;
   to?: string;
   className?: string;
 }
 
-export function Logo({ variant = "full", size, to, className = "" }: LogoProps) {
-  const h = size ?? (variant === "full" ? 22 : 28);
-  const src = variant === "full" ? fullImg : markImg;
+export function Logo({ variant = "responsive", size, to, className = "" }: LogoProps) {
+  const isMobile = useIsMobile();
+
+  // "responsive" = full wordmark on desktop, icon on mobile
+  const resolvedVariant = variant === "responsive"
+    ? (isMobile ? "mark" : "full")
+    : variant;
+
+  const h = size ?? (resolvedVariant === "full" ? 24 : 24);
+  const src = resolvedVariant === "full" ? fullImg : markImg;
 
   const content = (
     <span className={`inline-flex items-center ${className}`}>

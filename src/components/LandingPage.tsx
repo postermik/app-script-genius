@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Zap, BarChart3, Layers, Users } from "lucide-react";
+import { ArrowRight, Check, Zap, Layers, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
@@ -25,9 +25,9 @@ const PLANS = [
     features: [
       "Unlimited drafts",
       "Full coaching & readiness scoring",
-      "Pitch prep tools",
-      "Export to PPT & PDF",
-      "Deck theme customization",
+      "Inline AI coaching",
+      "Export to PowerPoint & Word",
+      "Memo, email & document generation",
     ],
     cta: "Choose Hobby",
     highlighted: false,
@@ -43,7 +43,7 @@ const PLANS = [
       "Pipeline tracker",
       "Data room with view analytics",
       "All export formats incl. DOCX",
-      "Audience-specific versions",
+      "Context-aware coaching",
     ],
     cta: "Get Pro",
     highlighted: true,
@@ -52,8 +52,8 @@ const PLANS = [
 
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
-  { icon: BarChart3, text: "500+ narratives generated" },
-  { icon: Users, text: "Decades of fundraising & design expertise" },
+  { icon: Layers, text: "Every output type, one platform" },
+  { icon: Users, text: "15+ years of capital markets experience" },
 ];
 
 export function LandingPage() {
@@ -70,7 +70,7 @@ export function LandingPage() {
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
-            Investor-grade decks, memos, and pitch scripts — generated in minutes.
+            Pitch decks, strategy memos, board updates, investor emails — with AI coaching that makes every draft better.
           </p>
           <button
             onClick={() => navigate("/auth?signup=true&next=/dashboard")}
@@ -108,14 +108,14 @@ export function LandingPage() {
               {/* Narrative snippet */}
               <div className="sm:col-span-2 space-y-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Investment Thesis</span>
-                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Investor-Ready</span>
+                  <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Strategy Memo</span>
+                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
                 </div>
                 <p className="text-sm text-foreground/85 leading-relaxed">
                   Autoflow replaces manual data pipeline management with AI-driven orchestration. The $4.2B data integration market is fragmented across legacy tools that require dedicated engineering teams.
                 </p>
-                <div className="flex gap-2 mt-2">
-                  {["Thesis", "Pitch Script", "Slide Deck", "Board Memo"].map((t) => (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {["Pitch Deck", "Strategy Memo", "Board Update", "Investor Email"].map((t) => (
                     <span key={t} className="text-[10px] text-muted-foreground border border-border px-2 py-1 rounded-sm">{t}</span>
                   ))}
                 </div>

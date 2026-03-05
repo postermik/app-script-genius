@@ -171,7 +171,7 @@ export function OutputView() {
           <button onClick={() => { reset(); navigate("/dashboard"); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
-          <Logo variant="mark" size={22} />
+          <Logo size={24} />
         </div>
 
         <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
