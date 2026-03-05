@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /* ── Scroll-triggered fade-in ── */
-function AnimatedEntry({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function AnimatedEntry({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -15,6 +15,7 @@ function AnimatedEntry({ children, className = "" }: { children: React.ReactNode
     <div
       ref={ref}
       className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
     </div>
@@ -25,6 +26,7 @@ function AnimatedEntry({ children, className = "" }: { children: React.ReactNode
 function GenerationPreview() {
   const [progress, setProgress] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
+  const [allDone, setAllDone] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
 
@@ -47,7 +49,11 @@ function GenerationPreview() {
           else if (p <= 55) setActiveStep(1);
           else if (p <= 80) setActiveStep(2);
           else setActiveStep(3);
-          if (p >= 100) clearInterval(iv);
+          if (p >= 100) {
+            clearInterval(iv);
+            // After a short delay, mark final step as done
+            setTimeout(() => setAllDone(true), 1500);
+          }
         }, 60);
       }
     }, { threshold: 0.4 });
@@ -56,7 +62,7 @@ function GenerationPreview() {
   }, []);
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/90">
@@ -72,9 +78,9 @@ function GenerationPreview() {
         </div>
         <div className="space-y-1.5 pt-1">
           {STEPS.map((step, i) => {
-            const done = i < activeStep;
-            const active = i === activeStep;
-            if (i > activeStep) return null;
+            const done = allDone ? true : i < activeStep;
+            const active = !allDone && i === activeStep;
+            if (!allDone && i > activeStep) return null;
             return (
               <p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>
                 {done ? "✓" : "→"} {step}
@@ -106,7 +112,7 @@ function ReadinessPreview() {
   ];
 
   return (
-    <div ref={ref} className="bg-card/80 border border-border rounded-sm overflow-hidden">
+    <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
         {categories.map((c, i) => (
           <div key={c.label}>
@@ -157,17 +163,33 @@ function RevenueSparkline() {
   );
 }
 
-/* ── Slide Preview ── */
-function SlidePreviewCard() {
+/* ── Format Tabs + Chart ── */
+function FormatChartCard() {
+  const [activeTab, setActiveTab] = useState("Pitch Deck");
+  const TABS = ["Memo", "Pitch Deck", "Board Update", "Investor Email"];
+
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center justify-end">
-        <div className="flex gap-1.5">
-          {["Dark", "Light", "Minimal"].map((t) => (
-            <span key={t} className={`text-[9px] px-1.5 py-0.5 rounded-sm border ${t === "Dark" ? "border-electric/40 text-electric" : "border-border text-foreground/50"}`}>{t}</span>
-          ))}
-        </div>
+    <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
+      {/* Tab bar */}
+      <div className="flex w-full border-b border-[hsl(217_33%_15%)] overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`font-mono text-[11px] sm:text-[11px] text-[10px] font-medium tracking-[0.08em] uppercase px-[22px] py-[14px] sm:px-[22px] sm:py-[14px] px-[16px] py-[12px] whitespace-nowrap transition-colors relative ${
+              activeTab === tab
+                ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]"
+                : "text-[hsl(215_20%_44%)] hover:text-[hsl(215_20%_60%)] hover:bg-[hsla(0,0%,100%,0.02)]"
+            }`}
+          >
+            {tab}
+            {activeTab === tab && (
+              <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />
+            )}
+          </button>
+        ))}
       </div>
+      {/* Chart content */}
       <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: 220 }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
@@ -191,9 +213,86 @@ function SlidePreviewCard() {
           </div>
         </div>
       </div>
-      <div className="px-5 py-3 border-t border-border">
-        <p className="text-[11px] text-muted-foreground">Also generates memos, board updates, investor emails, and strategy docs.</p>
-      </div>
+    </div>
+  );
+}
+
+/* ── Presentation-Ready Slides ── */
+function PresentationSlides() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
+      {/* Slide 1 — Cover */}
+      <AnimatedEntry delay={0}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+            <div>
+              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Cover Slide</p>
+              <p className="text-sm font-semibold text-foreground mt-2">Series B Growth Strategy</p>
+            </div>
+            <div>
+              <div className="w-8 h-[2px] bg-electric mb-2" />
+              <p className="text-[11px] text-[hsl(215_20%_44%)]">Autoflow · Q4 2026</p>
+              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential — Board Distribution Only</p>
+            </div>
+          </div>
+        </div>
+      </AnimatedEntry>
+
+      {/* Slide 2 — Key Metrics */}
+      <AnimatedEntry delay={100}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+            <div>
+              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Key Metrics</p>
+              <p className="text-sm font-semibold text-foreground mt-2">Traction & Unit Economics</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="font-mono text-base font-bold text-foreground">$1.8M</p>
+                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">ARR</p>
+              </div>
+              <div>
+                <p className="font-mono text-base font-bold text-emerald">+34%</p>
+                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">QoQ</p>
+              </div>
+              <div>
+                <p className="font-mono text-base font-bold text-foreground">128%</p>
+                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">NRR</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AnimatedEntry>
+
+      {/* Slide 3 — Competitive Landscape */}
+      <AnimatedEntry delay={200}>
+        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+            <div>
+              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Landscape</p>
+              <p className="text-sm font-semibold text-foreground mt-2">Competitive Position</p>
+            </div>
+            {/* Mini dot matrix */}
+            <div className="relative w-full" style={{ height: 80 }}>
+              <div className="absolute inset-0 border-l border-b border-[hsl(217_33%_15%)]">
+                {/* Crosshairs */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-foreground/[0.03]" />
+                <div className="absolute top-1/2 left-0 right-0 h-px bg-foreground/[0.03]" />
+                {/* Gray dots */}
+                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "20%", top: "65%" }} />
+                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "35%", top: "45%" }} />
+                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "50%", top: "70%" }} />
+                {/* Blue dot (hero) */}
+                <div className="absolute w-2.5 h-2.5 rounded-full bg-electric" style={{ left: "75%", top: "20%", boxShadow: "0 0 8px hsla(217, 90%, 54%, 0.4)" }} />
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]/70">Low automation</p>
+              <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]/70">High automation</p>
+            </div>
+          </div>
+        </div>
+      </AnimatedEntry>
     </div>
   );
 }
@@ -207,8 +306,8 @@ function InvestorPreview() {
   ];
 
   return (
-    <div className="bg-card/80 border border-border rounded-sm overflow-hidden">
-      <div className="divide-y divide-border/50">
+    <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
+      <div className="divide-y divide-[hsl(217_33%_15%)]/50">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
             <div>
@@ -228,34 +327,42 @@ export function ProductShowcase() {
   return (
     <section className="px-4 sm:px-6 py-16 sm:py-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
-        {/* Panel 1: Left */}
+        {/* Panel 0: Presentation-Ready Slides (full width) */}
+        <div className="mb-16">
+          <AnimatedEntry>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Presentation-Ready Slides</p>
+            <PresentationSlides />
+          </AnimatedEntry>
+        </div>
+
+        {/* Panel 1: Left — Prompt → Output */}
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Prompt → Output</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Prompt → Output</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
 
-        {/* Panel 2: Right, offset down */}
+        {/* Panel 2: Right — Built-in Coaching */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Built-in Coaching</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Built-in Coaching</p>
             <ReadinessPreview />
           </AnimatedEntry>
         </div>
 
-        {/* Panel 3: Left */}
+        {/* Panel 3: Left — Every Format */}
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
-            <SlidePreviewCard />
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
+            <FormatChartCard />
           </AnimatedEntry>
         </div>
 
-        {/* Panel 4: Right, offset down */}
+        {/* Panel 4: Right — Investors */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-medium tracking-[0.15em] uppercase text-electric mb-4">Find Your Investors</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
         </div>
