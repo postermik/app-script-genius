@@ -64,7 +64,7 @@ export function getOutputIntent(output: any): "create" | "evaluate" {
 // Helper to get deliverable from new or old format
 export function getDeliverable(output: any): Deliverable | null {
   if (output?.deliverable) return output.deliverable;
-  // Old format fallback — synthesize a deliverable
+  // Old format fallback: synthesize a deliverable
   if (output?.data) {
     const d = output.data;
     const mode = output.mode;

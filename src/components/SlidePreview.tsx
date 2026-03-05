@@ -230,7 +230,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient accent-left-border"
               } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
             >
-              {/* Layout recommendation badge — top-right */}
+              {/* Layout recommendation badge, top-right */}
               {slide.layoutRecommendation && (
                 <span className="absolute top-2 right-2 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
                   {formatLayoutRecommendation(slide.layoutRecommendation)}
@@ -263,19 +263,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {subheader}
                   </p>
                 </div>
-                <div className="flex items-end justify-between mt-auto">
-                  <span
-                    className="text-[5.5px] font-semibold px-1 py-0.5 rounded-sm"
-                    style={{ backgroundColor: `${themeColors.accent}30`, color: themeColors.accent }}
-                  >
-                    {getLayoutLabel(slide.slideType)}
-                  </span>
-                  {bodyPoints.length > 0 && (
-                    <span style={{ fontSize: "5px", color: themeColors.muted }}>
-                      {bodyPoints.length} points
-                    </span>
-                  )}
-                </div>
+                <div className="mt-auto" />
               </div>
 
               {/* Content section */}

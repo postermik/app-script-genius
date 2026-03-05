@@ -32,7 +32,7 @@ export default function Auth() {
     // Listen for future auth changes (sign-in, sign-out) but NOT initial session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[Auth] onAuthStateChange:", event, session ? "HAS SESSION" : "NO SESSION");
-      if (event === "INITIAL_SESSION") return; // Skip — handled by getSession above
+      if (event === "INITIAL_SESSION") return; // Skip, handled by getSession above
       if (event === "SIGNED_IN" && session) {
         console.log("[Auth] SIGNED_IN, navigating to", nextUrl);
         navigate(nextUrl, { replace: true });

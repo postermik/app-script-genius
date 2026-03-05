@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Download, ChevronDown, Copy, Presentation, FileDown, Code } from "lucide-react";
+import { Download, ChevronDown, Copy, Presentation, FileDown, Code, FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { Deliverable } from "@/types/rhetoric";
 import type { DeckTheme } from "@/components/SlidePreview";
 import { exportPptx } from "@/lib/exportPptx";
+import { exportPdf } from "@/lib/exportPdf";
 import { exportDocx } from "@/lib/exportDocx";
 import { buildPlainText, copyAsHtml } from "@/lib/exportClipboard";
 
@@ -18,6 +19,7 @@ interface Props {
 
 const ICONS: Record<string, typeof Copy> = {
   pptx: Presentation,
+  pdf: FileText,
   docx: FileDown,
   copy_text: Copy,
   copy_html: Code,
@@ -28,6 +30,7 @@ function getOptions(type: string) {
     case "deck":
       return [
         { label: "PowerPoint (.pptx)", action: "pptx", pro: true },
+        { label: "PDF (.pdf)", action: "pdf", pro: true },
         { label: "Copy slides as text", action: "copy_text" },
       ];
     case "memo":
@@ -71,6 +74,11 @@ export function ExportDropdown({ output, isPro, deliverable, excludedSlides, sli
           if (!isPro) { toast.error("Export is available on Pro."); return; }
           await exportPptx({ output, isPro, excludedSlides, slideOrder, deckTheme });
           toast.success("Downloaded as PowerPoint.");
+          break;
+        case "pdf":
+          if (!isPro) { toast.error("Export is available on Pro."); return; }
+          await exportPdf({ output, isPro, excludedSlides, slideOrder, deckTheme });
+          toast.success("Downloaded as PDF.");
           break;
         case "docx":
           if (!isPro) { toast.error("Export is available on Pro."); return; }
