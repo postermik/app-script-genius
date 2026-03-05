@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Zap, Layers, Users } from "lucide-react";
+import { ArrowRight, Check, Zap, BarChart3, Layers, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
@@ -27,7 +27,7 @@ const PLANS = [
       "Full coaching & readiness scoring",
       "Inline AI coaching",
       "Export to PowerPoint & Word",
-      "Memo, email & document generation",
+      "Deck theme customization",
     ],
     cta: "Choose Hobby",
     highlighted: false,
@@ -52,8 +52,8 @@ const PLANS = [
 
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
-  { icon: Layers, text: "Every output type, one platform" },
-  { icon: Users, text: "15+ years of capital markets experience" },
+  { icon: BarChart3, text: "500+ narratives generated" },
+  { icon: Users, text: "Decades of fundraising & design expertise" },
 ];
 
 export function LandingPage() {
