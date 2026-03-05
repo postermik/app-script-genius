@@ -217,7 +217,7 @@ function FormatChartCard() {
 }
 
 /* ── Presentation-Ready Slides ── */
-function PresentationSlides() {
+export function PresentationSlides() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
       {/* Slide 1 — Cover */}
@@ -326,14 +326,6 @@ export function ProductShowcase() {
   return (
     <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
-        {/* Panel 0: Presentation-Ready Slides (full width) */}
-        <div className="mb-16">
-          <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Presentation-Ready Slides</p>
-            <PresentationSlides />
-          </AnimatedEntry>
-        </div>
-
         {/* Panel 1: Left — Prompt → Output */}
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
