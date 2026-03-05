@@ -2,35 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Check, Loader2 } from "lucide-react";
-import { useSubscription, TIERS } from "@/hooks/useSubscription";
+import { useSubscription, TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
 
-const PLANS = [
-  {
-    name: "Free",
-    monthlyPrice: 0,
-    tierId: null,
-    description: "Try it out.",
-    features: ["1 narrative draft", "Readiness score", "All output modes"],
-    highlighted: false,
-  },
-  {
-    name: "Hobby",
-    monthlyPrice: 20,
-    tierId: "hobby" as const,
-    description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Export to PPT, DOCX & PDF", "Deck theme customization"],
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    monthlyPrice: 100,
-    tierId: "pro" as const,
-    description: "Everything you need to raise.",
-    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Priority support"],
-    highlighted: true,
-  },
+type TierKey = "hobby" | "pro";
+
+const PLANS: { name: string; tierId: TierKey | null; description: string; features: readonly string[]; highlighted: boolean }[] = [
+  { name: FREE_PLAN.name, tierId: null, description: FREE_PLAN.description, features: FREE_PLAN.features, highlighted: false },
+  { name: TIERS.hobby.name, tierId: "hobby", description: TIERS.hobby.description, features: TIERS.hobby.features, highlighted: false },
+  { name: TIERS.pro.name, tierId: "pro", description: TIERS.pro.description, features: TIERS.pro.features, highlighted: true },
 ];
 
 export default function Pricing() {
@@ -50,9 +31,9 @@ export default function Pricing() {
   }, []);
 
   const getPrice = (plan: typeof PLANS[0]) => {
-    if (plan.monthlyPrice === 0) return "$0";
-    const price = annual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
-    return `$${price}`;
+    if (!plan.tierId) return "$0";
+    const tier = TIERS[plan.tierId];
+    return `$${annual ? tier.annualMonthlyPrice : tier.monthlyPrice}`;
   };
 
   const isCurrentPlan = (plan: typeof PLANS[0]) => {
@@ -142,8 +123,13 @@ export default function Pricing() {
                   <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
                   <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-4xl font-bold text-foreground">{getPrice(plan)}</span>
-                    {plan.monthlyPrice > 0 && <span className="text-sm text-muted-foreground">/seat/mo</span>}
+                    {plan.tierId && (
+                      <span className="text-sm text-muted-foreground">/mo</span>
+                    )}
                   </div>
+                  {plan.tierId && annual && (
+                    <p className="text-[11px] text-electric mb-2">Billed ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
+                  )}
                   <p className="text-sm text-muted-foreground mb-10">{plan.description}</p>
 
                   <ul className="space-y-3 mb-10 flex-1">
@@ -174,7 +160,7 @@ export default function Pricing() {
         </div>
       </div>
 
-      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} annual={annual} />
     </>
   );
 }

@@ -18,9 +18,9 @@ function getStripePromise() {
   return stripePromise;
 }
 
-interface UpgradeModalProps { open: boolean; onOpenChange: (open: boolean) => void; }
+interface UpgradeModalProps { open: boolean; onOpenChange: (open: boolean) => void; annual?: boolean; }
 
-export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
+export function UpgradeModal({ open, onOpenChange, annual = false }: UpgradeModalProps) {
   const [selectedTier, setSelectedTier] = useState<"hobby" | "pro">("pro");
   const [checkoutStarted, setCheckoutStarted] = useState(false);
   const [checkoutComplete, setCheckoutComplete] = useState(false);
@@ -33,10 +33,11 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
   }, [checkoutComplete, checkSubscription, handleClose]);
 
   const fetchClientSecret = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke("create-checkout", { body: { priceId: TIERS[selectedTier].price_id, embedded: true } });
+    const priceId = annual ? TIERS[selectedTier].annual_price_id : TIERS[selectedTier].price_id;
+    const { data, error } = await supabase.functions.invoke("create-checkout", { body: { priceId, embedded: true } });
     if (error || !data?.clientSecret) throw new Error("Failed to create checkout session");
     return data.clientSecret;
-  }, [selectedTier]);
+  }, [selectedTier, annual]);
 
   if (checkoutComplete) {
     return (
@@ -62,10 +63,14 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
             <p className="text-sm text-muted-foreground mb-8">Choose your plan and subscribe below.</p>
             <div className="grid grid-cols-2 gap-3 mb-8">
               {(["hobby", "pro"] as const).map((tier) => (
-                <button key={tier} onClick={() => setSelectedTier(tier)} className={`border rounded-sm p-5 text-left transition-colors ${selectedTier === tier ? "border-electric/40 bg-electric/5" : "border-border hover:border-muted-foreground/20"}`}>
-                  <p className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground mb-2">{tier === "hobby" ? "Hobby" : "Pro"}</p>
-                  <p className="text-2xl font-bold text-foreground">{tier === "hobby" ? "$20" : "$100"}<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
-                </button>
+                 <button key={tier} onClick={() => setSelectedTier(tier)} className={`border rounded-sm p-5 text-left transition-colors ${selectedTier === tier ? "border-electric/40 bg-electric/5" : "border-border hover:border-muted-foreground/20"}`}>
+                   <p className="text-xs font-medium tracking-[0.12em] uppercase text-muted-foreground mb-2">{TIERS[tier].name}</p>
+                   <p className="text-2xl font-bold text-foreground">
+                     ${annual ? TIERS[tier].annualMonthlyPrice : TIERS[tier].monthlyPrice}
+                     <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                     {annual && <span className="text-[10px] text-electric ml-1">billed yearly</span>}
+                   </p>
+                 </button>
               ))}
             </div>
             <div className="mb-8">

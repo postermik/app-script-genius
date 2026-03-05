@@ -1,55 +1,10 @@
+import { useState } from "react";
 import { ArrowRight, Check, Zap, BarChart3, Users, Lightbulb } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-const PLANS = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "",
-    description: "Try it out.",
-    features: [
-      "1 narrative draft",
-      "Readiness score",
-      "All output modes",
-    ],
-    cta: "Get Started",
-    highlighted: false,
-  },
-  {
-    name: "Hobby",
-    price: "$20",
-    period: "/mo",
-    description: "For active founders.",
-    features: [
-      "Unlimited drafts",
-      "Full coaching & readiness scoring",
-      "Inline AI suggestions",
-      "Export to PPT, DOCX & PDF",
-      "Deck theme customization",
-    ],
-    cta: "Choose Hobby",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: "$100",
-    period: "/mo",
-    description: "Everything you need to raise.",
-    features: [
-      "Everything in Hobby",
-      "Investor discovery with AI matching",
-      "Pipeline tracker",
-      "Data room with view analytics",
-      "All export formats incl. DOCX",
-      "Priority support",
-    ],
-    cta: "Get Pro",
-    highlighted: true,
-  },
-];
+import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
@@ -80,8 +35,21 @@ const FAQ_ITEMS = [
   },
 ];
 
+const PLANS = [
+  { name: FREE_PLAN.name, tierId: null as "hobby" | "pro" | null, description: FREE_PLAN.description, features: FREE_PLAN.features, cta: "Get Started", highlighted: false },
+  { name: TIERS.hobby.name, tierId: "hobby" as const, description: TIERS.hobby.description, features: TIERS.hobby.features, cta: "Choose Hobby", highlighted: false },
+  { name: TIERS.pro.name, tierId: "pro" as const, description: TIERS.pro.description, features: TIERS.pro.features, cta: "Get Pro", highlighted: true },
+];
+
 export function LandingPage() {
   const navigate = useNavigate();
+  const [annual, setAnnual] = useState(false);
+
+  const getPrice = (plan: typeof PLANS[0]) => {
+    if (!plan.tierId) return "$0";
+    const tier = TIERS[plan.tierId];
+    return `$${annual ? tier.annualMonthlyPrice : tier.monthlyPrice}`;
+  };
 
   return (
     <>
@@ -105,7 +73,7 @@ export function LandingPage() {
           </button>
         </div>
 
-        {/* Hero product preview — memo + inline suggestion */}
+        {/* Hero product preview */}
         <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="bg-card/80 border border-border rounded-sm overflow-hidden shadow-2xl backdrop-blur-sm">
             <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
@@ -115,7 +83,6 @@ export function LandingPage() {
               <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric · Narrative Generation</span>
             </div>
             <div className="p-4 sm:p-8">
-              {/* Memo preview */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Strategy Memo</span>
                 <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
@@ -125,7 +92,6 @@ export function LandingPage() {
                 Autoflow replaces manual data pipelines with AI, cutting setup time by 90% and infrastructure costs by 60%.
               </p>
 
-              {/* Inline suggestion card */}
               <div className="mt-4 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
                 <div className="text-electric mt-0.5 shrink-0">
                   <Lightbulb className="w-4 h-4" />
@@ -160,10 +126,24 @@ export function LandingPage() {
       {/* ── Pricing ── */}
       <section className="px-4 sm:px-6 py-16 sm:py-24">
         <div className="max-w-[1100px] mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10">
             <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Start free. Scale when ready.</h2>
           </div>
+
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <span className={`text-sm ${!annual ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative w-11 h-6 rounded-full border transition-colors ${annual ? "bg-electric/20 border-electric/30" : "bg-card border-border"}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${annual ? "left-[22px] bg-electric" : "left-0.5 bg-foreground"}`} />
+            </button>
+            <span className={`text-sm ${annual ? "text-foreground" : "text-muted-foreground"}`}>
+              Annual <span className="text-xs text-electric ml-1">Save 20%</span>
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-md md:max-w-none mx-auto w-full">
             {PLANS.map((plan) => (
               <div
@@ -176,9 +156,12 @@ export function LandingPage() {
               >
                 <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                  {plan.period && <span className="text-sm text-foreground/60">{plan.period}</span>}
+                  <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
+                  {plan.tierId && <span className="text-sm text-foreground/60">/mo</span>}
                 </div>
+                {plan.tierId && annual && (
+                  <p className="text-[11px] text-electric mb-2">Billed ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
+                )}
                 <p className="text-sm text-foreground/70 mb-8">{plan.description}</p>
                 <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((f) => (

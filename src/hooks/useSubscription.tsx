@@ -23,12 +23,32 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 export const TIERS = {
   hobby: {
     price_id: "price_1T6JwBDqdQWdRyBVWrslYqfx",
+    annual_price_id: "price_1T7QQMDqdQWdRyBV8iodNkIj",
     product_id: "prod_U4SrUy9qxNChoO",
+    monthlyPrice: 20,
+    annualMonthlyPrice: 16,
+    annualYearlyPrice: 192,
+    name: "Hobby",
+    description: "For active founders.",
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Export to PPT, DOCX & PDF", "Deck theme customization"],
   },
   pro: {
     price_id: "price_1T6JwNDqdQWdRyBVnIXQc9Jn",
+    annual_price_id: "price_1T7QQcDqdQWdRyBVZUkYKRSE",
     product_id: "prod_U4SsYqz1XAGBR4",
+    monthlyPrice: 100,
+    annualMonthlyPrice: 80,
+    annualYearlyPrice: 960,
+    name: "Pro",
+    description: "Everything you need to raise.",
+    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Priority support"],
   },
+} as const;
+
+export const FREE_PLAN = {
+  name: "Free",
+  description: "Try it out.",
+  features: ["1 narrative draft", "Readiness score", "All output modes"],
 } as const;
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
