@@ -30,31 +30,27 @@ export function MarketingNav() {
 
   return (
     <>
-      <nav className="border-b border-border px-6 py-5 relative z-10">
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between">
+      <nav className="border-b border-border px-6 relative z-10" style={{ height: 56, display: "flex", alignItems: "center" }}>
+        <div className="max-w-[1100px] mx-auto flex items-center justify-between w-full">
           <button onClick={() => navigate(session ? "/dashboard" : "/")} className="flex items-center">
-            <Logo variant={session ? "mark" : "full"} size={session ? 26 : 32} className="sm:block hidden" />
-            <Logo variant={session ? "mark" : "full"} size={session ? 22 : 24} className="sm:hidden block" />
+            <Logo size={24} />
           </button>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-6" style={{ visibility: authReady ? "visible" : "hidden" }}>
-              {session ? (
-                <>
-                  <button onClick={() => navigate("/dashboard")} className={linkClass("/dashboard")}>Dashboard</button>
-                  <button onClick={() => navigate("/raise")} className={`text-sm transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
-                  {!isPro && (
-                    <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
-                  )}
-                  <button onClick={handleSignOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => navigate("/pricing")} className={linkClass("/pricing")}>Pricing</button>
-                  <button onClick={() => navigate("/resources")} className={linkClass("/resources")}>Resources</button>
-                  <button onClick={() => navigate("/auth")} className={linkClass("/auth")}>Sign In</button>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-6" style={{ visibility: authReady ? "visible" : "hidden" }}>
+            {session ? (
+              <>
+                <button onClick={() => navigate("/dashboard")} className={linkClass("/dashboard")}>Dashboard</button>
+                <button onClick={() => navigate("/raise")} className={`text-sm transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
+                {!isPro && (
+                  <button onClick={() => setUpgradeOpen(true)} className="text-xs font-medium px-3 py-1.5 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
+                )}
+                <button onClick={handleSignOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => navigate("/pricing")} className={linkClass("/pricing")}>Pricing</button>
+                <button onClick={() => navigate("/auth")} className={linkClass("/auth")}>Sign In</button>
+              </>
+            )}
           </div>
         </div>
       </nav>

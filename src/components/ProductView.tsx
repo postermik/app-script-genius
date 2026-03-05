@@ -141,7 +141,7 @@ export function ProductView() {
                 <div key={project.id} className="card-gradient border border-border rounded-sm p-5 group cursor-pointer hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all" onClick={() => openProject(project)}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                      <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5 line-clamp-2">
                         {project.title}
                         {project.detected_intent === "evaluate" && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0">Evaluation</span>
