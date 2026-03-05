@@ -325,7 +325,7 @@ function InvestorPreview() {
 /* ── Main Showcase ── */
 export function ProductShowcase() {
   return (
-    <section className="px-4 sm:px-6 py-16 sm:py-24 overflow-hidden">
+    <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
         {/* Panel 0: Presentation-Ready Slides (full width) */}
         <div className="mb-16">

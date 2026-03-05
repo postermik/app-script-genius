@@ -86,7 +86,7 @@ export function LandingPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-16 sm:pb-20 overflow-hidden">
+      <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-10 overflow-hidden">
         <ConstellationBackground />
         <div className="absolute inset-0 radial-glow pointer-events-none" />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
