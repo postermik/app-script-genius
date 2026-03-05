@@ -1,5 +1,5 @@
 import { ArrowRight, Check, Zap, BarChart3, Users, Lightbulb } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -59,24 +59,24 @@ const PROOF = [
 
 const FAQ_ITEMS = [
   {
-    q: "What makes Rhetoric different from Tome or Gamma?",
-    a: "They generate slides. We generate strategy. Rhetoric structures your thesis, coaches your narrative with inline suggestions, and produces investor-grade deliverables across formats — pitch decks, memos, emails, board updates. Not just formatted templates.",
+    q: "What is Rhetoric?",
+    a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking — notes, bullet points, a rough thesis — and Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics.",
   },
   {
-    q: "What can I create with Rhetoric?",
-    a: "Pitch decks, strategy memos, board updates, investor update emails, product vision docs, and pitch scripts. Each output includes inline AI suggestions to strengthen every section.",
+    q: "Who is it for?",
+    a: "Founders raising capital, preparing board decks, or aligning a team around strategy. If you need to make a case that holds up in serious rooms, Rhetoric is built for you.",
   },
   {
-    q: "Do I need design skills?",
-    a: "No. Rhetoric handles structure, layout, and export. You describe what you're working on — we craft the deliverable.",
+    q: "What do I paste in to start?",
+    a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance — even if it's messy.",
   },
   {
-    q: "Can I try it before paying?",
-    a: "Yes. The free tier includes one full narrative draft with readiness scoring across all output modes.",
+    q: "What do I get out at the end?",
+    a: "A structured narrative with a core thesis, story arc, pitch script, deck framework, market framing, and a readiness score. Depending on the mode, you'll also get board outlines, risk articulation, and competitive positioning.",
   },
   {
-    q: "What AI powers Rhetoric?",
-    a: "Rhetoric uses Claude by Anthropic, enhanced with a proprietary narrative framework built from 15+ years of capital markets and investor relations experience.",
+    q: "How is this different from ChatGPT or a generic deck template?",
+    a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, scores your readiness, and builds the story arc that investors actually follow. It's opinionated by design.",
   },
 ];
 
@@ -222,6 +222,11 @@ export function LandingPage() {
               </AccordionItem>
             ))}
           </Accordion>
+          <div className="text-center mt-8">
+            <Link to="/faq" className="text-sm text-electric hover:text-electric/80 transition-colors inline-flex items-center gap-1.5">
+              More questions <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </section>
     </>

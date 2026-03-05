@@ -16,6 +16,10 @@ const FAQS = [
     a: "A structured narrative with a core thesis, story arc, pitch script, deck framework, market framing, and a readiness score. Depending on the mode, you'll also get board outlines, risk articulation, and competitive positioning.",
   },
   {
+    q: "How is this different from ChatGPT or a generic deck template?",
+    a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, scores your readiness, and builds the story arc that investors actually follow. It's opinionated by design.",
+  },
+  {
     q: "Does it design slides or structure the story?",
     a: "It structures the story. Rhetoric is not a slide design tool — it's a thinking tool. You get the narrative logic, slide-by-slide framework, and the language. You bring that into your preferred design tool or export to PowerPoint.",
   },
@@ -26,10 +30,6 @@ const FAQS = [
   {
     q: "Can I use my brand guidelines?",
     a: "Not yet in the current version. Brand-aware exports (colors, fonts, logos) are planned for Enterprise. Today, the focus is on narrative quality — the argument, not the chrome.",
-  },
-  {
-    q: "How is this different from ChatGPT or a generic deck template?",
-    a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, scores your readiness, and builds the story arc that investors actually follow. It's opinionated by design.",
   },
   {
     q: "What about confidentiality and data?",
