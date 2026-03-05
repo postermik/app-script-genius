@@ -106,7 +106,10 @@ export function LandingPage() {
 
               {/* Divider */}
               <div className="border-t border-border mt-6 pt-5">
-                <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Presentation-Ready Slides</p>
+                <div className="flex items-center gap-2 mb-4">
+                  <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric">Presentation-Ready Slides</p>
+                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Draft Ready</span>
+                </div>
                 <PresentationSlides />
               </div>
             </div>
