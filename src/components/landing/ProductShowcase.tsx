@@ -219,11 +219,11 @@ function FormatChartCard() {
 /* ── Presentation-Ready Slides ── */
 export function PresentationSlides() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
-      {/* Slide 1 — Cover */}
-      <AnimatedEntry delay={0}>
+    <div className="flex gap-[18px] overflow-x-auto snap-x snap-mandatory pr-6 sm:pr-0 sm:grid sm:grid-cols-3 sm:overflow-visible [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+      {/* Slide 1: Cover */}
+      <AnimatedEntry delay={0} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Cover Slide</p>
               <p className="text-sm font-semibold text-foreground mt-2">Series B Growth Strategy</p>
@@ -237,10 +237,10 @@ export function PresentationSlides() {
         </div>
       </AnimatedEntry>
 
-      {/* Slide 2 — Key Metrics */}
-      <AnimatedEntry delay={100}>
+      {/* Slide 2: Key Metrics */}
+      <AnimatedEntry delay={100} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Key Metrics</p>
               <p className="text-sm font-semibold text-foreground mt-2">Traction & Unit Economics</p>
@@ -263,10 +263,10 @@ export function PresentationSlides() {
         </div>
       </AnimatedEntry>
 
-      {/* Slide 3 — Competitive Landscape */}
-      <AnimatedEntry delay={200}>
+      {/* Slide 3: Competitive Landscape */}
+      <AnimatedEntry delay={200} className="min-w-[280px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink">
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px]" style={{ aspectRatio: "16/10" }}>
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full" style={{ aspectRatio: window.innerWidth < 640 ? "16/8" : undefined }}>
+          <div className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Landscape</p>
               <p className="text-sm font-semibold text-foreground mt-2">Competitive Position</p>

@@ -81,7 +81,7 @@ export function NarrativeArcTab({ sections }: Props) {
                       <span className="text-xs font-semibold tracking-[0.1em] uppercase text-electric">
                         Step {meta.step}: {section.label}
                       </span>
-                      <span className="text-xs text-muted-foreground italic">— {meta.purpose}</span>
+                      <span className="text-xs text-muted-foreground italic">{meta.purpose}</span>
                     </div>
 
                     {/* Content */}
