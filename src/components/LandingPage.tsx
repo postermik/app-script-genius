@@ -62,11 +62,11 @@ export function LandingPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative px-6 pt-32 pb-20 overflow-hidden">
+      <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-16 sm:pb-20 overflow-hidden">
         <ConstellationBackground />
         <div className="absolute inset-0 radial-glow pointer-events-none" />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
@@ -82,7 +82,7 @@ export function LandingPage() {
         </div>
 
         {/* Hero product preview */}
-        <div className="max-w-[900px] mx-auto mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="bg-card/80 border border-border rounded-sm overflow-hidden shadow-2xl backdrop-blur-sm">
             <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
               <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
@@ -90,7 +90,7 @@ export function LandingPage() {
               <div className="w-2.5 h-2.5 rounded-full bg-emerald/60" />
               <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric — Narrative Generation</span>
             </div>
-            <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="p-4 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               {/* Readiness Score */}
               <div className="flex flex-col items-center justify-center gap-3">
                 <div className="relative w-20 h-20">
@@ -129,25 +129,25 @@ export function LandingPage() {
       <ProductShowcase />
 
       {/* ── Credibility Bar ── */}
-      <section className="px-6 py-12 border-y border-border">
-        <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16">
+      <section className="px-4 sm:px-6 py-10 sm:py-12 border-y border-border">
+        <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-16">
           {PROOF.map((p) => (
             <div key={p.text} className="flex items-center gap-3">
               <p.icon className="h-5 w-5 text-electric" />
-              <span className="font-medium text-white whitespace-nowrap" style={{ fontSize: "clamp(14px, 1.2vw, 18px)" }}>{p.text}</span>
+              <span className="font-medium text-white text-sm sm:text-base">{p.text}</span>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Pricing ── */}
-      <section className="px-6 py-24">
+      <section className="px-4 sm:px-6 py-16 sm:py-24">
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-16">
             <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Start free. Scale when ready.</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-md md:max-w-none mx-auto w-full">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}

@@ -9,7 +9,7 @@ const STEPS = [
 
 export function WorkflowSteps() {
   return (
-    <section className="px-6 py-24">
+    <section className="px-4 sm:px-6 py-16 sm:py-24">
       <div className="max-w-[1100px] mx-auto">
         <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">
           How It Works

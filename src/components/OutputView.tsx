@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Logo } from "@/components/Logo";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const NAV_HEIGHT = 56;
 
@@ -30,6 +31,7 @@ export function OutputView() {
   const location = useLocation();
   const { subscribed, productId } = useSubscription();
   const isProNav = subscribed && productId === TIERS.pro.product_id;
+  const isMobile = useIsMobile();
 
   // Derived data from output
   const intent = output ? getOutputIntent(output) : "create";
@@ -172,7 +174,7 @@ export function OutputView() {
           <Logo variant="mark" size={22} />
         </div>
 
-        <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+        <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
           {editingTitle ? (
             <div className="flex items-center gap-1">
               <input value={titleValue} onChange={e => setTitleValue(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTitleSave()} className="text-xs font-semibold tracking-wide uppercase text-foreground bg-transparent border-b border-electric outline-none px-1 max-w-[220px]" autoFocus />
@@ -211,26 +213,26 @@ export function OutputView() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <ExportDropdown output={output} isPro={isPro} deliverable={deliverable} excludedSlides={excludedSlides} slideOrder={slideOrder} deckTheme={deckTheme} />
 
-          <div className="w-px h-5 bg-border" />
+          <div className="hidden md:block w-px h-5 bg-border" />
 
-          <button onClick={() => { reset(); navigate("/dashboard"); }} className={navLinkClass("/dashboard")}>Dashboard</button>
-          <button onClick={() => navigate("/raise")} className={`text-xs transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
+          <button onClick={() => { reset(); navigate("/dashboard"); }} className={`hidden md:inline ${navLinkClass("/dashboard")}`}>Dashboard</button>
+          <button onClick={() => navigate("/raise")} className={`hidden md:inline text-xs transition-colors ${location.pathname.startsWith("/raise") ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>Raise</button>
           {!isProNav && (
             <button onClick={() => setUpgradeOpen(true)} className="text-[10px] font-medium px-2 py-1 bg-electric/10 text-electric border border-electric/20 rounded-sm hover:bg-electric/15 transition-colors">Upgrade</button>
           )}
-          <button onClick={handleSignOut} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
+          <button onClick={handleSignOut} className="hidden md:inline text-xs text-muted-foreground hover:text-foreground transition-colors">Sign Out</button>
         </div>
       </nav>
 
 
       {/* Main content with sidebar */}
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} />
-        <div style={{ marginLeft: 200 }}>
-          <div className="max-w-[900px] mx-auto px-6 py-6 w-full animate-fade-in" key={activeTab}>
+        <div style={isMobile ? undefined : { marginLeft: 200 }}>
+          <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 w-full animate-fade-in" key={activeTab}>
             {/* Show raw input on preview tab */}
             {activeTab === "preview" && rawInput && <OriginalInputSection rawInput={rawInput} />}
 
@@ -268,7 +270,7 @@ export function OutputView() {
 
       {isFirstFree && (
         <div className="border-t border-border px-6 py-5 card-gradient sticky bottom-0">
-          <div className="flex items-center justify-between" style={{ marginLeft: 200 }}>
+          <div className="flex items-center justify-between" style={isMobile ? undefined : { marginLeft: 200 }}>
             <div>
               <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
               <p className="text-xs text-muted-foreground mt-0.5">Upgrade to Pro for all sections, exports, and refinements.</p>

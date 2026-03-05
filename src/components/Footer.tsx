@@ -29,7 +29,7 @@ export function Footer() {
               </p>
             </div>
 
-            <div className="flex gap-16">
+            <div className="flex flex-wrap gap-10 sm:gap-16">
               <div>
                 <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
                   Product
