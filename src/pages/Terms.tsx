@@ -37,7 +37,7 @@ export default function Terms() {
             The Service integrates with third-party providers, including Stripe for payments and AI model providers for content generation. Your use of these integrations is subject to their respective terms.
           </Section>
           <Section title="10. Disclaimer of Warranties">
-            The Service is provided "as is" and "as available" without warranties of any kind, express or implied. We do not guarantee that outputs will be accurate, complete, or suitable for any particular purpose. Rhetoric is a narrative structuring tool — not legal, financial, or investment advice.
+            The Service is provided "as is" and "as available" without warranties of any kind, express or implied. We do not guarantee that outputs will be accurate, complete, or suitable for any particular purpose. Rhetoric is a narrative structuring tool, not legal, financial, or investment advice.
           </Section>
           <Section title="11. Limitation of Liability">
             To the maximum extent permitted by law, Rhetoric and its officers, employees, and affiliates shall not be liable for indirect, incidental, consequential, or punitive damages arising from your use of the Service. Our total liability is limited to the amount you paid us in the twelve months preceding the claim.

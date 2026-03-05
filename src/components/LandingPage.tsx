@@ -60,7 +60,7 @@ const PROOF = [
 const FAQ_ITEMS = [
   {
     q: "What is Rhetoric?",
-    a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking — notes, bullet points, a rough thesis — and Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics.",
+    a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking: notes, bullet points, a rough thesis. Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics.",
   },
   {
     q: "Who is it for?",
@@ -68,7 +68,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What do I paste in to start?",
-    a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance — even if it's messy.",
+    a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance, even if it's messy.",
   },
   {
     q: "What do I get out at the end?",
@@ -94,7 +94,7 @@ export function LandingPage() {
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
-            Pitch decks, strategy memos, board updates, investor emails — with AI coaching that makes every draft better.
+            Pitch decks, strategy memos, board updates, investor emails: AI coaching that makes every draft better.
           </p>
           <button
             onClick={() => navigate("/auth?signup=true&next=/dashboard")}
@@ -112,7 +112,7 @@ export function LandingPage() {
               <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-emerald/60" />
-              <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric — Narrative Generation</span>
+              <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric · Narrative Generation</span>
             </div>
             <div className="p-4 sm:p-8">
               {/* Memo preview */}
@@ -122,7 +122,7 @@ export function LandingPage() {
               </div>
               <h3 className="text-electric text-sm font-semibold mt-4 mb-2">Executive Summary</h3>
               <p className="text-sm text-foreground/80 leading-relaxed">
-                Autoflow replaces manual data pipelines with AI-driven orchestration — reducing setup time by 90% and infrastructure costs by 60%.
+                Autoflow replaces manual data pipelines with AI, cutting setup time by 90% and infrastructure costs by 60%.
               </p>
 
               {/* Inline suggestion card */}

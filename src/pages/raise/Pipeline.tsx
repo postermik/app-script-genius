@@ -306,7 +306,7 @@ function ListView({ entries, onDelete, onUpdateStatus }: {
                   {entry.intro_source && <p className="text-[10px] text-muted-foreground">via {entry.intro_source}</p>}
                 </td>
                 <td className="px-4 py-3">
-                  <p className="text-sm text-secondary-foreground">{entry.contact_name || "—"}</p>
+                  <p className="text-sm text-secondary-foreground">{entry.contact_name || "-"}</p>
                   {entry.contact_title && <p className="text-[10px] text-muted-foreground">{entry.contact_title}</p>}
                 </td>
                 <td className="px-4 py-3">

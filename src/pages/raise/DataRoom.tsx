@@ -313,7 +313,7 @@ function CreateDataRoomModal({ onClose, onCreate }: {
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Room Title *</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
               className="w-full px-3 py-2.5 text-sm bg-background border border-border rounded-sm text-foreground focus:outline-none focus:border-electric/40"
-              placeholder="e.g. Series A Materials — Q1 2026" />
+              placeholder="e.g. Series A Materials, Q1 2026" />
           </div>
 
           {/* Project selection */}

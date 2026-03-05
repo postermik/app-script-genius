@@ -1,7 +1,7 @@
 const FAQS = [
   {
     q: "What is Rhetoric?",
-    a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking — notes, bullet points, a rough thesis — and Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics.",
+    a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking: notes, bullet points, a rough thesis. Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics.",
   },
   {
     q: "Who is it for?",
@@ -9,7 +9,7 @@ const FAQS = [
   },
   {
     q: "What do I paste in to start?",
-    a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance — even if it's messy.",
+    a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance, even if it's messy.",
   },
   {
     q: "What do I get out at the end?",
@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: "Does it design slides or structure the story?",
-    a: "It structures the story. Rhetoric is not a slide design tool — it's a thinking tool. You get the narrative logic, slide-by-slide framework, and the language. You bring that into your preferred design tool or export to PowerPoint.",
+    a: "It structures the story. Rhetoric is not a slide design tool, it's a thinking tool. You get the narrative logic, slide-by-slide framework, and the language. You bring that into your preferred design tool or export to PowerPoint.",
   },
   {
     q: "Can it export to PowerPoint and Google Slides?",
@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "Can I use my brand guidelines?",
-    a: "Not yet in the current version. Brand-aware exports (colors, fonts, logos) are planned for Enterprise. Today, the focus is on narrative quality — the argument, not the chrome.",
+    a: "Not yet in the current version. Brand-aware exports (colors, fonts, logos) are planned for Enterprise. Today, the focus is on narrative quality: the argument, not the chrome.",
   },
   {
     q: "What about confidentiality and data?",

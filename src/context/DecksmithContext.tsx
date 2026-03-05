@@ -249,7 +249,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       } catch (parseError) {
         console.error("Failed to parse streamed response:", parseError);
         console.error("Raw text (first 500 chars):", fullText.slice(0, 500));
-        throw new Error("Generation failed — the AI response was incomplete. Please try again.");
+        throw new Error("Generation failed. The AI response was incomplete. Please try again.");
       }
     } else {
       // Non-streaming fallback

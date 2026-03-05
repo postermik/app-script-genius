@@ -129,7 +129,7 @@ function QuoteSlide() {
           &ldquo;
         </span>
         <p className={`text-[13px] font-medium text-foreground/90 leading-relaxed max-w-[85%] italic transition-all duration-700 delay-200 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
-          The bottleneck in drug development isn&apos;t science — it&apos;s patient access.
+          The bottleneck in drug development isn&apos;t science. It&apos;s patient access.
         </p>
       </div>
       <SlideLabel type="Pull Quote" subtitle="Core Insight Slide" />
