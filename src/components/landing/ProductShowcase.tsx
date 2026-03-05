@@ -170,7 +170,7 @@ function FormatChartCard() {
 
   return (
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
-      {/* Tab bar — static, non-interactive */}
+      {/* Tab bar, static, non-interactive */}
       <div className="flex w-full border-b border-[hsl(217_33%_15%)] sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
           <span
@@ -322,7 +322,7 @@ export function ProductShowcase() {
   return (
     <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
-        {/* Panel 1: Left — Prompt → Output */}
+        {/* Panel 1: Left, Prompt to Output */}
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Prompt → Output</p>
@@ -330,7 +330,7 @@ export function ProductShowcase() {
           </AnimatedEntry>
         </div>
 
-        {/* Panel 2: Right — Built-in Coaching */}
+        {/* Panel 2: Right, Built-in Coaching */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Built-in Coaching</p>
@@ -338,7 +338,7 @@ export function ProductShowcase() {
           </AnimatedEntry>
         </div>
 
-        {/* Panel 3: Left — Every Format */}
+        {/* Panel 3: Left, Every Format */}
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
@@ -346,7 +346,7 @@ export function ProductShowcase() {
           </AnimatedEntry>
         </div>
 
-        {/* Panel 4: Right — Investors */}
+        {/* Panel 4: Right, Investors */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Find Your Investors</p>
