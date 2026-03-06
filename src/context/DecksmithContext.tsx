@@ -56,6 +56,8 @@ interface DecksmithContextType {
   stopGenerating: () => void;
   intakeSelections: IntakeSelections | null;
   setIntakeSelections: (s: IntakeSelections | null) => void;
+  appliedSuggestions: Set<number>;
+  markSuggestionApplied: (index: number) => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -87,6 +89,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set());
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -420,6 +423,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setIsStreaming(false);
     setStreamingText("");
     setIntakeSelections(null);
+    setAppliedSuggestions(new Set());
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -558,6 +562,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections,
+        appliedSuggestions, markSuggestionApplied: useCallback((index: number) => {
+          setAppliedSuggestions(prev => new Set(prev).add(index));
+        }, []),
       }}
     >
       {children}

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
 import { Layout, Loader2 } from "lucide-react";
 import type { Deliverable } from "@/types/rhetoric";
+import { useDecksmith } from "@/context/DecksmithContext";
 
 interface Props {
   deliverable: Deliverable;
@@ -18,6 +19,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const framework = deliverable.deckFramework || [];
   const [dismissedDeckSuggestions, setDismissedDeckSuggestions] = useState<number[]>([]);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const [fadingOut, setFadingOut] = useState<number[]>([]);
+  const { markSuggestionApplied } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -39,7 +42,13 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
     // Simulate applying — in production this would call the refine API
     setTimeout(() => {
       setApplyingIndex(null);
-      setDismissedDeckSuggestions(prev => [...prev, index]);
+      markSuggestionApplied(index);
+      // Start fade-out animation
+      setFadingOut(prev => [...prev, index]);
+      // Remove after animation completes
+      setTimeout(() => {
+        setDismissedDeckSuggestions(prev => [...prev, index]);
+      }, 400);
     }, 1500);
   };
 
@@ -50,7 +59,12 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
         <div className="mb-3 space-y-2">
           {deckSuggestions.map((suggestion, i) =>
             dismissedDeckSuggestions.includes(i) ? null : (
-              <div key={i} className="bg-accent/30 border border-accent/40 rounded-sm p-3 flex items-center gap-3">
+              <div
+                key={i}
+                className={`bg-accent/30 border border-accent/40 rounded-sm p-3 flex items-center gap-3 transition-all duration-400 ${
+                  fadingOut.includes(i) ? "opacity-0 max-h-0 py-0 my-0 overflow-hidden" : "opacity-100 max-h-24"
+                }`}
+              >
                 <Layout className="w-4 h-4 text-accent-foreground shrink-0" />
                 <p className="text-sm text-foreground/80 flex-1">{suggestion}</p>
                 <div className="flex items-center gap-2 shrink-0">
