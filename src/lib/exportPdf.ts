@@ -11,7 +11,7 @@ interface ExportOptions {
 
 function getThemeColors(theme: DeckTheme) {
   if (theme.scheme === "light") {
-    return { bg: [255, 255, 255], fg: [26, 26, 46], muted: [107, 114, 128], accent: [59, 130, 246] };
+    return { bg: [255, 255, 255], fg: [26, 26, 46], primary: [59, 130, 246], muted: [107, 114, 128], accent: [59, 130, 246] };
   }
   if (theme.scheme === "custom") {
     const hex = (h: string) => {
@@ -23,11 +23,12 @@ function getThemeColors(theme: DeckTheme) {
     return {
       bg: bgC,
       fg: brightness > 128 ? [26, 26, 46] : [220, 224, 232],
+      primary: hex(theme.primary || "#3b82f6"),
       muted: [107, 114, 128],
-      accent: hex(theme.primary || "#3b82f6"),
+      accent: hex(theme.accent || "#1e3a5f"),
     };
   }
-  return { bg: [11, 15, 20], fg: [220, 224, 232], muted: [107, 114, 128], accent: [59, 130, 246] };
+  return { bg: [11, 15, 20], fg: [220, 224, 232], primary: [59, 130, 246], muted: [107, 114, 128], accent: [59, 130, 246] };
 }
 
 export async function exportPdf({ output, isPro, excludedSlides, slideOrder, deckTheme }: ExportOptions) {
@@ -60,11 +61,11 @@ export async function exportPdf({ output, isPro, excludedSlides, slideOrder, dec
   drawBg();
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(28);
-  setColor(colors.fg);
+  setColor(colors.primary);
   pdf.text(title, W / 2, 2.5, { align: "center" });
 
   pdf.setFontSize(12);
-  setColor(colors.accent);
+  setColor(colors.primary);
   pdf.text(output.mode.replace(/_/g, " ").toUpperCase(), W / 2, 3.2, { align: "center" });
 
   if (!isPro) {
@@ -99,7 +100,7 @@ export async function exportPdf({ output, isPro, excludedSlides, slideOrder, dec
     if (categoryLabel) {
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(9);
-      setColor(colors.accent);
+      setColor(colors.primary);
       pdf.text(categoryLabel.toUpperCase(), MARGIN, y);
       y += 0.3;
     }
@@ -107,7 +108,7 @@ export async function exportPdf({ output, isPro, excludedSlides, slideOrder, dec
     // Headline
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(headline.length > 50 ? 20 : 24);
-    setColor(colors.fg);
+    setColor(colors.primary);
     const headlineLines = pdf.splitTextToSize(headline, CONTENT_W);
     pdf.text(headlineLines, MARGIN, y);
     y += headlineLines.length * 0.35 + 0.15;

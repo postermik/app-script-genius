@@ -124,13 +124,19 @@ function getSlideBodyPoints(headline: string, content: string): string[] {
 }
 
 function getThemePreviewColors(theme: DeckTheme) {
-  if (theme.scheme === "light") return { bg: "#ffffff", fg: "#1a1a2e", accent: "#3b82f6", muted: "#6b7280" };
+  if (theme.scheme === "light") return { bg: "#ffffff", fg: "#1a1a2e", primary: "#3b82f6", accent: "#3b82f6", muted: "#6b7280" };
   if (theme.scheme === "custom") {
     const sec = theme.secondary || "#0b0f14";
     const bgLightness = getLightness(sec);
-    return { bg: sec, fg: bgLightness > 50 ? "#1a1a2e" : "#f0f0f5", accent: theme.primary || "#3b82f6", muted: bgLightness > 50 ? "#6b7280" : "#9ca3af" };
+    return {
+      bg: sec,
+      fg: bgLightness > 50 ? "#1a1a2e" : "#f0f0f5",
+      primary: theme.primary || "#3b82f6",
+      accent: theme.accent || "#1e3a5f",
+      muted: bgLightness > 50 ? "#6b7280" : "#9ca3af",
+    };
   }
-  return { bg: "#0b0f14", fg: "#dce0e8", accent: "#3b82f6", muted: "#9ca3af" };
+  return { bg: "#0b0f14", fg: "#dce0e8", primary: "#3b82f6", accent: "#3b82f6", muted: "#9ca3af" };
 }
 
 function getLightness(hex: string): number {
@@ -242,7 +248,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors">
                   <GripVertical className="h-5 w-5" />
                 </div>
-                <span className="text-lg font-bold text-secondary-foreground">{i + 1}</span>
+                <span className="text-lg font-bold" style={{ color: themeColors.accent }}>{i + 1}</span>
               </div>
 
               {/* Slide preview thumbnail */}
@@ -252,11 +258,11 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               >
                 <div>
                   {slide.categoryLabel && (
-                    <p className="font-semibold uppercase leading-tight" style={{ fontSize: "5px", color: themeColors.accent, letterSpacing: "0.5px" }}>
+                    <p className="font-semibold uppercase leading-tight" style={{ fontSize: "5px", color: themeColors.primary, letterSpacing: "0.5px" }}>
                       {slide.categoryLabel}
                     </p>
                   )}
-                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.fg }}>
+                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.primary }}>
                     {slide.headline}
                   </p>
                   <p className="leading-tight line-clamp-2 mt-1" style={{ fontSize: "6px", color: themeColors.muted }}>
@@ -269,11 +275,12 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               {/* Content section */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                 {slide.categoryLabel && (
-                  <span className="text-xs uppercase tracking-[0.1em] font-semibold text-electric">
+                  <span className="text-xs uppercase tracking-[0.1em] font-semibold" style={{ color: themeColors.primary }}>
                     {slide.categoryLabel}
                   </span>
                 )}
-                <h5 className={`text-base font-bold leading-tight ${isExcluded ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                <h5 className={`text-base font-bold leading-tight ${isExcluded ? "text-muted-foreground line-through" : ""}`}
+                  style={!isExcluded ? { color: themeColors.primary } : undefined}>
                   {slide.headline}
                 </h5>
                 <p className="text-sm text-secondary-foreground leading-snug">
@@ -283,19 +290,19 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   <ul className="mt-1 space-y-0.5">
                     {bodyPoints.map((point, pi) => (
                       <li key={pi} className="text-[13px] text-muted-foreground leading-snug flex items-start gap-1.5">
-                        <span className="text-electric mt-0.5 shrink-0">•</span>
+                        <span className="mt-0.5 shrink-0" style={{ color: themeColors.accent }}>•</span>
                         <span className="line-clamp-1">{point}</span>
                       </li>
                     ))}
                   </ul>
                 )}
                 {slide.closingStatement && (
-                  <p className="text-[13px] text-electric font-medium mt-2 leading-snug">
+                  <p className="text-[13px] font-medium mt-2 leading-snug" style={{ color: themeColors.accent }}>
                     {slide.closingStatement}
                   </p>
                 )}
                 <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
-                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-electric/60" />
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: themeColors.accent, opacity: 0.6 }} />
                   <span className="italic">{getSlideReason(slide.headline, i, orderedSlides.length)}</span>
                 </p>
 
