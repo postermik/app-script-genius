@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2 } from "lucide-react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -134,6 +133,42 @@ function extractNarrativeSignals(outputData: any, rawInput: string) {
   return { stages: [...new Set(stages)], sectors: [...new Set(sectors)] };
 }
 
+/** Apply filters to a list of investors */
+function applyFilters(
+  list: Investor[],
+  search: string,
+  stages: string[],
+  sectors: string[],
+  locations: string[],
+  dismissedIds: Set<string>,
+) {
+  return list.filter(inv => {
+    if (dismissedIds.has(inv.id)) return false;
+
+    if (search) {
+      const q = search.toLowerCase();
+      const searchable = [displayName(inv), inv.firm_name, inv.title, inv.contact_name]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+
+    if (stages.length > 0) {
+      if (!inv.stages || !stages.some(s => inv.stages!.includes(s))) return false;
+    }
+
+    if (sectors.length > 0) {
+      if (!inv.sectors || !sectors.some(s => inv.sectors!.includes(s))) return false;
+    }
+
+    if (locations.length > 0) {
+      const loc = [inv.location_city, inv.location_state, inv.location_country].filter(Boolean).join(" ").toLowerCase();
+      if (!locations.some(l => loc.includes(l.toLowerCase()))) return false;
+    }
+
+    return true;
+  });
+}
+
 // ── Component ──────────────────────────────────────────
 
 export default function Investors() {
@@ -146,6 +181,7 @@ export default function Investors() {
   const [userId, setUserId] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
+  const [userManuallyChangedFilters, setUserManuallyChangedFilters] = useState(false);
 
   // Projects / narrative
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -169,7 +205,6 @@ export default function Investors() {
         try { setDismissedIds(new Set(JSON.parse(stored))); } catch {}
       }
 
-      // Load projects for narrative dropdown
       const { data: projectsData } = await supabase
         .from("projects")
         .select("id, title, raw_input, output_data")
@@ -179,14 +214,11 @@ export default function Investors() {
       if (projectsData && projectsData.length > 0) {
         setProjects(projectsData);
         setSelectedProjectId(projectsData[0].id);
-
-        // Auto-set filters from most recent narrative
         const signals = extractNarrativeSignals(projectsData[0].output_data, projectsData[0].raw_input || "");
         if (signals.stages.length > 0) setSelectedStages(signals.stages);
         if (signals.sectors.length > 0) setSelectedSectors(signals.sectors);
       }
 
-      // Load pipeline
       const { data: pipelineData } = await supabase
         .from("pipeline_entries")
         .select("investor_id")
@@ -195,7 +227,6 @@ export default function Investors() {
         setPipelineIds(new Set(pipelineData.map((p: any) => p.investor_id).filter(Boolean)));
       }
 
-      // Load all investors from DB
       const { data: investorsData, error } = await supabase
         .from("investors")
         .select("*")
@@ -212,58 +243,83 @@ export default function Investors() {
   // ── Handle narrative change ───────────────────────
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
+    setUserManuallyChangedFilters(false);
     const project = projects.find(p => p.id === projectId);
     if (project) {
       const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
       setSelectedStages(signals.stages);
       setSelectedSectors(signals.sectors);
+      setSelectedLocations([]);
     }
   };
 
-  // ── Filter investors client-side ──────────────────
-  const filteredInvestors = useMemo(() => {
-    return investors.filter(inv => {
-      if (dismissedIds.has(inv.id)) return false;
+  // Wrap filter setters to track manual changes
+  const handleToggleStage = (val: string) => {
+    setUserManuallyChangedFilters(true);
+    setSelectedStages(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+  const handleToggleSector = (val: string) => {
+    setUserManuallyChangedFilters(true);
+    setSelectedSectors(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+  const handleToggleLocation = (val: string) => {
+    setUserManuallyChangedFilters(true);
+    setSelectedLocations(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
 
-      // Search
-      if (searchInput) {
-        const q = searchInput.toLowerCase();
-        const searchable = [
-          displayName(inv),
-          inv.firm_name,
-          inv.title,
-          inv.contact_name,
-        ].filter(Boolean).join(" ").toLowerCase();
-        if (!searchable.includes(q)) return false;
+  // ── Smart filter fallback logic ──────────────────
+  const { recommended, allInvestors, filtersLoosened, totalCount } = useMemo(() => {
+    const MIN_RESULTS = 10;
+
+    // Recommended: always use strict filters
+    const strictFiltered = applyFilters(investors, searchInput, selectedStages, selectedSectors, selectedLocations, dismissedIds);
+    const rec = strictFiltered.slice(0, 6);
+
+    // "All Investors" section: apply fallback loosening if strict results < MIN_RESULTS
+    let allResults = strictFiltered;
+    let loosened = false;
+
+    if (allResults.length < MIN_RESULTS && !userManuallyChangedFilters) {
+      // Step 1: Remove location filters
+      let loosened1 = applyFilters(investors, searchInput, selectedStages, selectedSectors, [], dismissedIds);
+      if (loosened1.length >= MIN_RESULTS) {
+        allResults = loosened1;
+        loosened = true;
+      } else {
+        // Step 2: Remove sector filters one at a time (least specific first)
+        let trySectors = [...selectedSectors];
+        let best = loosened1;
+        while (trySectors.length > 0 && best.length < MIN_RESULTS) {
+          trySectors.pop(); // remove least specific (last)
+          best = applyFilters(investors, searchInput, selectedStages, trySectors, [], dismissedIds);
+        }
+        if (best.length >= MIN_RESULTS || best.length > allResults.length) {
+          allResults = best;
+          loosened = true;
+        }
+
+        // Step 3: Remove stage filters too
+        if (allResults.length < MIN_RESULTS) {
+          const broadest = applyFilters(investors, searchInput, [], [], [], dismissedIds);
+          if (broadest.length > allResults.length) {
+            allResults = broadest;
+            loosened = true;
+          }
+        }
       }
+    }
 
-      // Stage filter
-      if (selectedStages.length > 0 && inv.stages) {
-        if (!selectedStages.some(s => inv.stages!.includes(s))) return false;
-      } else if (selectedStages.length > 0 && !inv.stages) {
-        return false;
-      }
+    // Deduplicate: remove recommended ids from allOthers
+    const recIds = new Set(rec.map(r => r.id));
+    const others = allResults.filter(inv => !recIds.has(inv.id));
 
-      // Sector filter
-      if (selectedSectors.length > 0 && inv.sectors) {
-        if (!selectedSectors.some(s => inv.sectors!.includes(s))) return false;
-      } else if (selectedSectors.length > 0 && !inv.sectors) {
-        return false;
-      }
-
-      // Location filter
-      if (selectedLocations.length > 0) {
-        const loc = [inv.location_city, inv.location_state, inv.location_country].filter(Boolean).join(" ").toLowerCase();
-        if (!selectedLocations.some(l => loc.includes(l.toLowerCase()))) return false;
-      }
-
-      return true;
-    });
-  }, [investors, dismissedIds, searchInput, selectedStages, selectedSectors, selectedLocations]);
-
-  const recommended = filteredInvestors.slice(0, 6);
-  const allOthers = filteredInvestors.slice(6);
-  const totalCount = filteredInvestors.length;
+    return {
+      recommended: rec,
+      allInvestors: others,
+      filtersLoosened: loosened,
+      totalCount: allResults.length,
+    };
+  }, [investors, dismissedIds, searchInput, selectedStages, selectedSectors, selectedLocations, userManuallyChangedFilters]);
 
   // ── Reveal contact (enrich) ───────────────────────
   const revealContact = useCallback(async (inv: Investor) => {
@@ -287,7 +343,6 @@ export default function Investors() {
 
       const data = await res.json();
 
-      // Update the investor in local state
       setInvestors(prev => prev.map(i => {
         if (i.id !== inv.id) return i;
         return {
@@ -379,11 +434,8 @@ export default function Investors() {
     });
   }, [userId]);
 
-  const toggleFilter = (arr: string[], val: string, setter: (v: string[]) => void) => {
-    setter(arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]);
-  };
-
   const clearFilters = () => {
+    setUserManuallyChangedFilters(true);
     setSelectedStages([]);
     setSelectedSectors([]);
     setSelectedLocations([]);
@@ -395,27 +447,10 @@ export default function Investors() {
     <div>
       {/* Header */}
       <div className="mb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
-            <p className="text-sm text-secondary-foreground">
-              Browse curated investors matched to your stage, sector, and thesis.
-            </p>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 cursor-help whitespace-nowrap">
-                  <Eye className="h-3 w-3 inline mr-1" />
-                  Each reveal uses 1 credit
-                </p>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Clicking "Reveal Contact" uses 1 Apollo credit to look up email and LinkedIn info.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
+        <p className="text-sm text-secondary-foreground">
+          Browse curated investors matched to your stage, sector, and thesis.
+        </p>
       </div>
 
       {/* Narrative selector */}
@@ -436,14 +471,14 @@ export default function Investors() {
       )}
 
       {/* Search + filters */}
-      <div className="flex items-center gap-3 mb-1">
+      <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search by name, firm, or title..."
             value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
+            onChange={e => { setSearchInput(e.target.value); setUserManuallyChangedFilters(true); }}
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-background border border-border rounded-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-electric/40 transition-colors"
           />
         </div>
@@ -464,7 +499,6 @@ export default function Investors() {
           )}
         </button>
       </div>
-      <p className="text-[10px] text-muted-foreground/60 mb-4">Contact info is revealed on demand via Apollo enrichment.</p>
 
       {/* Filter panel */}
       {showFilters && (
@@ -473,7 +507,7 @@ export default function Investors() {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Stage</label>
             <div className="flex flex-wrap gap-2">
               {STAGE_OPTIONS.map(s => (
-                <button key={s.value} onClick={() => toggleFilter(selectedStages, s.value, setSelectedStages)}
+                <button key={s.value} onClick={() => handleToggleStage(s.value)}
                   className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
                     selectedStages.includes(s.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
                   }`}>{s.label}</button>
@@ -484,7 +518,7 @@ export default function Investors() {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Sector / Industry</label>
             <div className="flex flex-wrap gap-2">
               {SECTOR_OPTIONS.map(s => (
-                <button key={s.value} onClick={() => toggleFilter(selectedSectors, s.value, setSelectedSectors)}
+                <button key={s.value} onClick={() => handleToggleSector(s.value)}
                   className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
                     selectedSectors.includes(s.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
                   }`}>{s.label}</button>
@@ -495,7 +529,7 @@ export default function Investors() {
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Location</label>
             <div className="flex flex-wrap gap-2">
               {LOCATION_OPTIONS.map(l => (
-                <button key={l.value} onClick={() => toggleFilter(selectedLocations, l.value, setSelectedLocations)}
+                <button key={l.value} onClick={() => handleToggleLocation(l.value)}
                   className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
                     selectedLocations.includes(l.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
                   }`}>{l.label}</button>
@@ -512,6 +546,14 @@ export default function Investors() {
         </div>
       )}
 
+      {/* Loosened filters note */}
+      {filtersLoosened && !userManuallyChangedFilters && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-sm border border-border bg-muted/20 text-xs text-muted-foreground">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          Showing broader results. Adjust filters to narrow down.
+        </div>
+      )}
+
       {/* Loading state */}
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -520,7 +562,7 @@ export default function Investors() {
       )}
 
       {/* Empty state */}
-      {!loading && totalCount === 0 && (
+      {!loading && totalCount === 0 && recommended.length === 0 && (
         <div className="text-center py-12 border border-border rounded-sm card-gradient">
           <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-1">No investors match your filters.</p>
@@ -528,7 +570,7 @@ export default function Investors() {
         </div>
       )}
 
-      {/* Recommended section (first 6) */}
+      {/* Recommended section (top 6, strict filters) */}
       {!loading && recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
@@ -536,7 +578,7 @@ export default function Investors() {
             <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Recommended for You</h3>
             <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{recommended.length}</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
             {recommended.map(inv => (
               <InvestorCard
                 key={inv.id}
@@ -556,17 +598,17 @@ export default function Investors() {
         </div>
       )}
 
-      {/* All investors */}
-      {!loading && allOthers.length > 0 && (
+      {/* All investors (loosened filters) */}
+      {!loading && allInvestors.length > 0 && (
         <div>
           {recommended.length > 0 && (
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground">All Investors</h3>
-              <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{allOthers.length}</span>
+              <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{allInvestors.length}</span>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allOthers.map(inv => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+            {allInvestors.map(inv => (
               <InvestorCard
                 key={inv.id}
                 inv={inv}
@@ -627,8 +669,10 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
     }
   };
 
+  const hasContactRow = enriched || isEnriching || !enriched;
+
   return (
-    <div className={`relative flex flex-col p-5 rounded-sm border transition-all group ${
+    <div className={`relative flex flex-col h-full p-5 rounded-sm border transition-all group ${
       fading ? "opacity-0 scale-95" : "opacity-100"
     } ${
       isRecommended ? "border-electric/20 bg-electric/[0.03] hover:border-electric/30" : "border-border card-gradient hover:border-muted-foreground/20"
@@ -642,42 +686,34 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         <X className="h-3.5 w-3.5" />
       </button>
 
-      {/* Name + title */}
-      <div className="flex items-start justify-between gap-3 mb-2 pr-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <h3 className="text-sm font-bold text-foreground leading-tight">{name}</h3>
-          </div>
-          {inv.title && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 ml-5">{inv.title}</p>
-          )}
-        </div>
-        <span className="text-[10px] font-semibold px-2 py-1 rounded-sm bg-electric/10 text-electric uppercase tracking-wide shrink-0">
+      {/* 1. Name + investor type badge */}
+      <div className="flex items-center justify-between gap-2 pr-5 mb-1">
+        <h3 className="text-sm font-bold text-foreground leading-tight truncate">{name}</h3>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-sm bg-electric/10 text-electric uppercase tracking-wide shrink-0 whitespace-nowrap">
           {TYPE_LABELS[inv.investor_type] || inv.investor_type}
         </span>
       </div>
 
-      {/* Firm */}
-      <p className="text-xs font-medium text-secondary-foreground mb-1">{inv.firm_name}</p>
+      {/* 2. Title */}
+      {inv.title && (
+        <p className="text-[11px] text-muted-foreground mb-1.5 truncate">{inv.title}</p>
+      )}
 
-      {/* Location */}
+      {/* 3. Firm + check size */}
+      <p className="text-xs font-medium text-secondary-foreground mb-1">
+        {inv.firm_name}
+        {checkSize && <span className="text-muted-foreground font-normal"> · {checkSize}</span>}
+      </p>
+
+      {/* 4. Location */}
       {(inv.location_city || inv.location_state) && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1 mb-2">
           <MapPin className="h-3 w-3 shrink-0" />
           {[inv.location_city, inv.location_state].filter(Boolean).join(", ")}
         </p>
       )}
 
-      {/* Check size */}
-      {checkSize && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-          <Banknote className="h-3 w-3 shrink-0" />
-          {checkSize}
-        </p>
-      )}
-
-      {/* Stage tags */}
+      {/* 5. Stage tags */}
       {inv.stages && inv.stages.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {inv.stages.map(s => (
@@ -688,7 +724,7 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </div>
       )}
 
-      {/* Sector tags */}
+      {/* 6. Sector tags with +N overflow */}
       {inv.sectors && inv.sectors.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {inv.sectors.slice(0, 3).map(s => (
@@ -700,7 +736,7 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </div>
       )}
 
-      {/* Solo founder friendly */}
+      {/* 7. Solo founder friendly */}
       {inv.solo_founder_friendly && (
         <p className="text-[10px] text-emerald-500 flex items-center gap-1 mb-2">
           <CheckCircle2 className="h-3 w-3" />
@@ -708,19 +744,22 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </p>
       )}
 
-      {/* Contact row */}
+      {/* Spacer pushes contact row + actions to bottom */}
       <div className="flex-1" />
+
+      {/* 8. Contact row: compact inline */}
       <div className="mb-3">
         {enriched ? (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {inv.contact_email ? (
-              <div className="flex items-center gap-1">
-                <a href={`mailto:${inv.contact_email}`} className="text-[10px] text-muted-foreground hover:text-electric transition-colors truncate max-w-[140px]" title={inv.contact_email}>
-                  <Mail className="h-3 w-3 inline mr-0.5" />{inv.contact_email}
+              <div className="flex items-center gap-1 min-w-0">
+                <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <a href={`mailto:${inv.contact_email}`} className="text-[10px] text-muted-foreground hover:text-electric transition-colors truncate max-w-[130px]" title={inv.contact_email}>
+                  {inv.contact_email}
                 </a>
                 <button
                   onClick={() => { navigator.clipboard.writeText(inv.contact_email!); toast.success("Email copied"); }}
-                  className="p-0.5 text-muted-foreground/50 hover:text-electric transition-colors"
+                  className="p-0.5 text-muted-foreground/50 hover:text-electric transition-colors shrink-0"
                   title="Copy email"
                 >
                   <Copy className="h-2.5 w-2.5" />
@@ -763,8 +802,8 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
+      {/* 9. Actions pinned to bottom */}
+      <div className="flex items-center gap-2 pt-3 border-t border-border">
         {inv.application_url && (
           <a href={inv.application_url} target="_blank" rel="noopener noreferrer"
             className="flex-1 text-center text-xs font-medium py-2 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors">
