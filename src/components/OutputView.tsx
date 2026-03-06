@@ -7,10 +7,14 @@ import { MemoView } from "@/components/deliverable/MemoView";
 import { EmailView } from "@/components/deliverable/EmailView";
 import { DocumentView } from "@/components/deliverable/DocumentView";
 import { ScoreTab } from "@/components/tabs/ScoreTab";
-import { CoachingTab } from "@/components/tabs/CoachingTab";
 import { AnalysisTab } from "@/components/tabs/AnalysisTab";
+import { OutputTabBar } from "@/components/outputs/OutputTabBar";
+import { ElevatorPitchView } from "@/components/outputs/ElevatorPitchView";
+import { InvestorQAView } from "@/components/outputs/InvestorQAView";
+import { PitchEmailView } from "@/components/outputs/PitchEmailView";
+import { InvestmentMemoView } from "@/components/outputs/InvestmentMemoView";
 import type { DeckTheme } from "@/components/SlidePreview";
-import type { OutputTabKey } from "@/types/rhetoric";
+import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,29 +23,128 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// ── Synthesize outputs from existing data ──
+
+function synthesizeElevatorPitch(output: any): ElevatorPitchData | null {
+  const d = output?.data || output?.supporting || {};
+  const pitchScript = d.pitchScript;
+  const thesis = d.thesis?.content || d.thesis || d.vision || d.headline || "";
+  if (!pitchScript && !thesis) return null;
+
+  const sixtySecond = pitchScript || thesis;
+  // Derive a 30s version: take first 3 sentences
+  const sentences = sixtySecond.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const thirtySecond = sentences.slice(0, Math.min(3, sentences.length)).join(" ");
+
+  return { thirtySecond, sixtySecond };
+}
+
+function synthesizeInvestorQA(output: any): InvestorQAItem[] | null {
+  // From analysis (evaluate mode)
+  if (output?.analysis?.commonQuestions?.length) {
+    return output.analysis.commonQuestions.map((q: any) => ({
+      question: q.question,
+      answer: q.suggestedAnswer,
+    }));
+  }
+  // From score gaps/improvements, generate implied Q&A
+  const score = output?.score;
+  if (!score) return null;
+  const items: InvestorQAItem[] = [];
+  const gaps = score.gaps || [];
+  const improvements = score.improvements || [];
+  gaps.forEach((gap: string, i: number) => {
+    items.push({
+      question: `How do you address: ${gap}?`,
+      answer: improvements[i] || "Consider strengthening this area with specific data and examples.",
+    });
+  });
+  return items.length > 0 ? items : null;
+}
+
+function synthesizePitchEmails(output: any): PitchEmailVariant[] | null {
+  const d = output?.data || output?.supporting || {};
+  const thesis = d.thesis?.content || d.thesis || d.vision || "";
+  const title = output?.title || "our company";
+  if (!thesis) return null;
+
+  const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+
+  return [
+    {
+      label: "Direct Ask",
+      subject: `{firm_name} + ${title} — Quick intro`,
+      body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]`,
+    },
+    {
+      label: "Warm Intro Request",
+      subject: `Intro request: ${title}`,
+      body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]`,
+    },
+    {
+      label: "Follow-Up",
+      subject: `Re: ${title} — following up`,
+      body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]`,
+    },
+  ];
+}
+
+function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
+  const d = output?.data || output?.supporting || {};
+  const sections: { heading: string; content: string }[] = [];
+
+  const thesis = d.thesis?.content || d.thesis || "";
+  if (thesis) sections.push({ heading: "Thesis", content: thesis });
+
+  const ns = d.narrativeStructure;
+  if (ns?.worldToday) sections.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
+  if (ns?.newModel) sections.push({ heading: "Solution", content: ns.newModel });
+
+  const market = d.marketLogic;
+  if (market) sections.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
+
+  if (ns?.whyThisWins) sections.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
+  if (d.risks) sections.push({ heading: "Risks", content: d.risks });
+  if (d.whyNow) sections.push({ heading: "Why Now", content: d.whyNow });
+  if (ns?.theFuture) sections.push({ heading: "The Ask", content: ns.theFuture });
+
+  return sections.length > 0 ? { sections } : null;
+}
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
 
-  // Derived data from output
   const intent = output ? getOutputIntent(output) : "create";
   const deliverable = output ? getDeliverable(output) : null;
   const score = output ? getScore(output) : null;
   const analysis = output ? getAnalysis(output) : null;
 
-  // If isEvaluation from context, override intent
   const effectiveIntent = isEvaluation ? "evaluate" : intent;
-  const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "preview";
+  const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "outputs";
 
   const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  // Determine which output tabs to show
+  const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
+    ? intakeSelections.outputs
+    : ["slide_framework"]; // fallback for legacy projects
+
+  const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>(selectedOutputs[0]);
+
+  // Ensure active output tab is valid
+  useEffect(() => {
+    if (!selectedOutputs.includes(activeOutputTab)) {
+      setActiveOutputTab(selectedOutputs[0]);
+    }
+  }, [selectedOutputs, activeOutputTab]);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const outputRef = useRef(output);
@@ -59,7 +162,6 @@ export function OutputView() {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [output, triggerAutoSave]);
 
-  // Initialize slide order from deliverable
   useEffect(() => {
     if (!deliverable) return;
     const framework = deliverable.deckFramework || deliverable.boardDeckOutline || [];
@@ -81,14 +183,13 @@ export function OutputView() {
     });
   };
 
-  // Update deliverable in output state (for inline edits / suggestions)
   const handleUpdateDeliverable = (updated: any) => {
     if (!output) return;
     setOutput({ ...output, deliverable: updated } as any);
   };
 
-  // Render the deliverable preview
-  const renderPreview = () => {
+  // Render deck/memo/email/document preview
+  const renderSlideFramework = () => {
     if (!deliverable) return <p className="text-sm text-muted-foreground text-center py-12">No deliverable content available.</p>;
     switch (deliverable.type) {
       case "deck":
@@ -111,7 +212,6 @@ export function OutputView() {
       case "document":
         return <DocumentView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
       default:
-        // Old format fallback
         const oldData = (output as any).data;
         if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
           const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
@@ -131,32 +231,64 @@ export function OutputView() {
     }
   };
 
+  // Render the active output deliverable tab
+  const renderOutputContent = () => {
+    switch (activeOutputTab) {
+      case "slide_framework":
+        return renderSlideFramework();
+      case "elevator_pitch": {
+        const pitchData = synthesizeElevatorPitch(output);
+        if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
+        return <ElevatorPitchView data={pitchData} />;
+      }
+      case "investor_qa": {
+        const qaItems = synthesizeInvestorQA(output);
+        if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
+        return <InvestorQAView items={qaItems} />;
+      }
+      case "pitch_email": {
+        const emails = synthesizePitchEmails(output);
+        if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available. Try generating with a thesis or narrative.</p>;
+        return <PitchEmailView variants={emails} />;
+      }
+      case "investment_memo": {
+        const memo = synthesizeInvestmentMemo(output);
+        if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
+        return <InvestmentMemoView data={memo} />;
+      }
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col">
-      {/* Main content with sidebar */}
       <div className="flex-1 flex flex-col">
         <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} />
         <div style={isMobile ? undefined : { marginLeft: 200 }}>
           <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 w-full animate-fade-in" key={activeTab}>
-            {/* Show raw input on preview tab */}
-            {activeTab === "preview" && rawInput && <OriginalInputSection rawInput={rawInput} />}
+            {/* Outputs tab */}
+            {activeTab === "outputs" && (
+              <>
+                {rawInput && <OriginalInputSection rawInput={rawInput} />}
+                {selectedOutputs.length > 1 && (
+                  <OutputTabBar
+                    tabs={selectedOutputs}
+                    activeTab={activeOutputTab}
+                    onTabChange={setActiveOutputTab}
+                  />
+                )}
+                {renderOutputContent()}
+              </>
+            )}
 
-            {/* CREATE: Preview */}
-            {activeTab === "preview" && renderPreview()}
-
-            {/* CREATE: Score */}
+            {/* Score tab (with merged coaching) */}
             {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} />}
             {activeTab === "score" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
 
-            {/* Coaching */}
-            {activeTab === "coaching" && score && <CoachingTab score={score} />}
-            {activeTab === "coaching" && !score && (
-              <p className="text-sm text-muted-foreground text-center py-12">No coaching data available.</p>
-            )}
-
-            {/* EVALUATE: Analysis */}
+            {/* Analysis tab (evaluate mode) */}
             {activeTab === "analysis" && analysis && score && (
               <AnalysisTab analysis={analysis} score={score} mode={output.mode} />
             )}
@@ -166,9 +298,6 @@ export function OutputView() {
             {activeTab === "analysis" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
             )}
-
-            {/* EVALUATE: Rebuilt */}
-            {activeTab === "rebuilt" && renderPreview()}
           </div>
         </div>
       </div>
@@ -192,7 +321,6 @@ export function OutputView() {
   );
 }
 
-// Keep buildTabs export for backward compat (used by old export)
 export function buildTabs(output: any): { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[] }[] {
   const d = (output.data || output.supporting || output.deliverable || {}) as any;
   const mode = output.mode;

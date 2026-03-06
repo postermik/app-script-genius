@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Eye, Target, MessageSquare, Search, RefreshCw, Settings } from "lucide-react";
+import { Layers, Target, Search, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,15 +11,14 @@ interface SidebarItem {
 }
 
 const CREATE_SIDEBAR: SidebarItem[] = [
-  { key: "preview", label: "Preview", Icon: Eye },
+  { key: "outputs", label: "Outputs", Icon: Layers },
   { key: "score", label: "Score", Icon: Target },
-  { key: "coaching", label: "Coaching", Icon: MessageSquare },
 ];
 
 const EVALUATE_SIDEBAR: SidebarItem[] = [
   { key: "analysis", label: "Analysis", Icon: Search },
-  { key: "rebuilt", label: "Rebuilt", Icon: RefreshCw },
-  { key: "coaching", label: "Coaching", Icon: MessageSquare },
+  { key: "outputs", label: "Outputs", Icon: Layers },
+  { key: "score", label: "Score", Icon: Target },
 ];
 
 interface Props {
@@ -33,7 +32,6 @@ export function ProjectSidebar({ activeTab, onTabChange, intent }: Props) {
   const isMobile = useIsMobile();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
 
-  /* ── Mobile: horizontal tab bar ── */
   if (isMobile) {
     return (
       <div className="border-b border-border bg-background sticky top-14 z-40 overflow-x-auto">
@@ -67,7 +65,6 @@ export function ProjectSidebar({ activeTab, onTabChange, intent }: Props) {
     );
   }
 
-  /* ── Desktop: fixed sidebar ── */
   return (
     <aside
       className="bg-[hsl(222_24%_4%)] border-r border-border overflow-y-auto flex flex-col"

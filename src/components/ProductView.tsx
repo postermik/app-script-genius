@@ -7,9 +7,11 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode } from "@/types/narrative";
+import type { IntakeSelections } from "@/types/rhetoric";
 import { formatDistanceToNow } from "date-fns";
 import { parseDeckFile } from "@/lib/parseDeck";
 import { GenerationStepper } from "@/components/GenerationStepper";
+import { IntakeCard } from "@/components/intake/IntakeCard";
 import { toast } from "sonner";
 
 const MODES: { value: OutputMode | "auto"; label: string }[] = [
@@ -21,9 +23,10 @@ const MODES: { value: OutputMode | "auto"; label: string }[] = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, setIntakeSelections } = useDecksmith();
   const { subscribed } = useSubscription();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [showIntake, setShowIntake] = useState(false);
 
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
@@ -39,8 +42,33 @@ export function ProductView() {
     setDraftsUsed(data?.drafts_used ?? 0);
   };
 
-  const handleGenerate = async () => { await generate(); await loadDraftsUsed(); };
-  const handleKeyDown = (e: React.KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (!isFreeAndLocked) handleGenerate(); } };
+  const handleShowIntake = () => {
+    if (!rawInput.trim()) return;
+    setShowIntake(true);
+  };
+
+  const handleIntakeGenerate = async (selections: IntakeSelections) => {
+    setIntakeSelections(selections);
+    setShowIntake(false);
+    // Map purpose to mode
+    const purposeToMode: Record<string, OutputMode | "auto"> = {
+      investor_pitch: "fundraising",
+      board_update: "board_update",
+      strategy_memo: "strategy",
+      team_alignment: "auto",
+      general_narrative: "auto",
+    };
+    setSelectedMode(purposeToMode[selections.purpose] || "auto");
+    await generate();
+    await loadDraftsUsed();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (!isFreeAndLocked) handleShowIntake();
+    }
+  };
 
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -78,39 +106,23 @@ export function ProductView() {
         <div className="max-w-[720px] w-full animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-4">What are you working on?</h1>
 
-          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">We'll detect your intent and generate the right output structure.</p>
+          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">Paste your narrative and we'll help you build the right outputs.</p>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
-            {!isFreeAndLocked && !isGenerating && (
-              <div className="space-y-3">
-                {/* Mode selector - centered */}
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {MODES.map((m) => (
-                    <button key={m.value} onClick={() => setSelectedMode(m.value)}
-                      className={`text-xs px-3.5 py-2 rounded-sm border transition-all font-medium ${
-                        selectedMode === m.value
-                          ? "border-electric/40 text-foreground bg-electric/10 shadow-sm shadow-electric/5"
-                          : "border-border bg-card/60 text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30 hover:bg-card"
-                      }`}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
+            {/* Intake card */}
+            {showIntake && !isGenerating && (
+              <IntakeCard
+                rawInput={rawInput}
+                onGenerate={handleIntakeGenerate}
+                onCancel={() => setShowIntake(false)}
+              />
             )}
-            {isFreeAndLocked ? (
-              <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
-                <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
-                <p className="text-sm font-medium text-foreground mb-2">You've used your free draft.</p>
-                <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
-                <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
-              </div>
-            ) : isGenerating ? (
-              <GenerationStepper />
-            ) : (
-              <>
+
+            {!showIntake && !isFreeAndLocked && !isGenerating && (
+              <div className="space-y-3">
                 <div className="flex gap-2">
-                  <button onClick={handleGenerate} disabled={!rawInput.trim()} className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                  <button onClick={handleShowIntake} disabled={!rawInput.trim()} className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
                     Generate
                   </button>
                   <input
@@ -129,11 +141,22 @@ export function ProductView() {
                     {uploadingFile ? "Extracting…" : "Upload"}
                   </button>
                 </div>
-              </>
+              </div>
             )}
+
+            {isFreeAndLocked && (
+              <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
+                <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground mb-2">You've used your free draft.</p>
+                <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
+                <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
+              </div>
+            )}
+
+            {isGenerating && <GenerationStepper />}
           </div>
         </div>
-        {!isGenerating && projects.length > 0 && (
+        {!isGenerating && !showIntake && projects.length > 0 && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

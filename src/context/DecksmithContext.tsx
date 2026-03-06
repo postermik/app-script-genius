@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
+import type { IntakeSelections } from "@/types/rhetoric";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
@@ -53,6 +54,8 @@ interface DecksmithContextType {
   isStreaming: boolean;
   streamingText: string;
   stopGenerating: () => void;
+  intakeSelections: IntakeSelections | null;
+  setIntakeSelections: (s: IntakeSelections | null) => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -83,6 +86,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [isAdapting, setIsAdapting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -415,6 +419,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setIsEvaluation(false);
     setIsStreaming(false);
     setStreamingText("");
+    setIntakeSelections(null);
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -552,6 +557,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
+        intakeSelections, setIntakeSelections,
       }}
     >
       {children}

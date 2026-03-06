@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw } from "lucide-react";
 import type { RhetoricScore } from "@/types/rhetoric";
 
 const READINESS_TITLES: Record<string, string> = {
@@ -55,10 +55,12 @@ function CircularGauge({ value, label }: { value: number; label: string }) {
 interface Props {
   score: RhetoricScore;
   mode: string;
+  showRescore?: boolean;
 }
 
-export function ScoreTab({ score, mode }: Props) {
+export function ScoreTab({ score, mode, showRescore }: Props) {
   const [animated, setAnimated] = useState(false);
+  const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
 
   const overall = score.overall;
@@ -66,8 +68,20 @@ export function ScoreTab({ score, mode }: Props) {
   const readinessTitle = READINESS_TITLES[mode] || "NARRATIVE READINESS";
   const levelLabel = overall >= 85 ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready") : overall >= 70 ? "Solid" : "Developing";
 
+  const gaps = score.gaps || [];
+  const improvements = score.improvements || [];
+
   return (
     <div className="space-y-4">
+      {/* Re-score prompt */}
+      {showRescore && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
+          <RefreshCw className="h-3.5 w-3.5 text-electric shrink-0" />
+          <p className="text-xs text-foreground/80 flex-1">Your outputs have changed.</p>
+          <button className="text-xs font-medium text-electric hover:underline whitespace-nowrap">Re-score?</button>
+        </div>
+      )}
+
       {/* Top row: gauge + badges */}
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center gap-6 flex-wrap">
@@ -102,40 +116,76 @@ export function ScoreTab({ score, mode }: Props) {
         </div>
       </div>
 
-      {/* Strengths & Gaps */}
-      <div className="grid grid-cols-2 gap-4">
-        {score.strengths.length > 0 && (
-          <div className="card-gradient rounded-sm border border-border p-5">
-            <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-3">Strengths</h3>
-            <ul className="space-y-2">
-              {score.strengths.map((s, i) => (
-                <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
-                  <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{s}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {score.gaps.length > 0 && (
-          <div className="card-gradient rounded-sm border border-border p-5">
-            <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-3">Gaps</h3>
-            <ul className="space-y-2">
-              {score.gaps.map((g, i) => (
-                <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
-                  <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />{g}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+      {/* Strengths */}
+      {score.strengths.length > 0 && (
+        <div className="card-gradient rounded-sm border border-border p-5">
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-3">Strengths</h3>
+          <ul className="space-y-2">
+            {score.strengths.map((s, i) => (
+              <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
+                <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      {/* Re-score placeholder */}
-      <div className="flex justify-end">
-        <button className="text-xs text-muted-foreground hover:text-foreground border border-border rounded-sm px-3 py-1.5 transition-colors">
-          Re-score with changes
-        </button>
-      </div>
+      {/* Areas to Improve (merged coaching) */}
+      {(gaps.length > 0 || improvements.length > 0) && (
+        <div className="card-gradient rounded-sm border border-border p-5">
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-4 flex items-center gap-1.5">
+            <Lightbulb className="h-3 w-3" />
+            Areas to Improve
+          </h3>
+          <div className="space-y-2">
+            {gaps.map((gap, i) => {
+              const howToFix = improvements[i];
+              const expanded = expandedImprovement === i;
+              return (
+                <div key={i} className="rounded-sm border border-border bg-muted/30 overflow-hidden">
+                  <button
+                    onClick={() => setExpandedImprovement(expanded ? null : i)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
+                      <span className="text-xs text-foreground/90 leading-relaxed">{gap}</span>
+                    </div>
+                    {howToFix && (
+                      expanded
+                        ? <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
+                        : <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
+                    )}
+                  </button>
+                  {expanded && howToFix && (
+                    <div className="px-4 pb-3 border-t border-border pt-3 animate-fade-in">
+                      <div className="flex items-start gap-2">
+                        <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
+                          <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors">
+                          Apply to narrative
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Show remaining improvements that don't have a matching gap */}
+            {improvements.slice(gaps.length).map((imp, i) => (
+              <div key={`extra-${i}`} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
+                <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
+                <p className="text-xs text-foreground/90 leading-relaxed">{imp}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
