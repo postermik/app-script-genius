@@ -310,7 +310,7 @@ export function OutputView() {
             )}
 
             {/* Score tab (with merged coaching) */}
-            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} />}
+            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
             {activeTab === "score" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
@@ -320,7 +320,7 @@ export function OutputView() {
               <AnalysisTab analysis={analysis} score={score} mode={output.mode} />
             )}
             {activeTab === "analysis" && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output.mode} />
+              <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />
             )}
             {activeTab === "analysis" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
