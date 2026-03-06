@@ -58,6 +58,8 @@ interface Props {
   score: RhetoricScore;
   mode: string;
   showRescore?: boolean;
+  onRescore?: () => void;
+  isRescoring?: boolean;
 }
 
 export function ScoreTab({ score, mode, showRescore }: Props) {
