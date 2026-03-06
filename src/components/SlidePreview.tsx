@@ -153,6 +153,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
   const [dismissedSlideSuggestions, setDismissedSlideSuggestions] = useState<number[]>([]);
   const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
+  const [themeExpanded, setThemeExpanded] = useState(false);
 
   if (slides.length === 0) return null;
 
@@ -172,52 +173,64 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
   const handleDragEnd = () => setDragIdx(null);
 
   const themeColors = getThemePreviewColors(theme);
+  const themeLabel = theme.scheme.charAt(0).toUpperCase() + theme.scheme.slice(1);
 
   return (
     <div className="mb-10">
-      {/* Deck Theme Panel */}
-      <div className="mb-6 p-5 rounded-sm border border-border card-gradient">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Deck Theme</h4>
+      {/* Deck Theme — collapsible row */}
+      <div className="mb-3">
+        <div
+          className="flex items-center justify-between px-4 py-2.5 rounded-sm border border-border card-gradient cursor-pointer select-none"
+          onClick={() => setThemeExpanded(!themeExpanded)}
+        >
+          <div className="flex items-center gap-2">
+            <h4 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Deck Theme</h4>
+            <span className="text-xs text-secondary-foreground">· {themeLabel}</span>
+          </div>
+          <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {(["dark", "light", "custom"] as const).map(s => (
-            <button key={s} onClick={() => onThemeChange({ ...theme, scheme: s })}
-              className={`text-xs px-4 py-2 rounded-sm border transition-colors capitalize font-medium ${
-                theme.scheme === s ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
-              }`}>
-              {s}
-            </button>
-          ))}
-          {theme.scheme === "custom" && (
-            <div className="flex items-center gap-3 ml-2">
-              <label className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Primary</span>
-                <input type="color" value={theme.primary || "#3b82f6"} onChange={e => onThemeChange({ ...theme, primary: e.target.value })}
-                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
-              </label>
-              <label className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Background</span>
-                <input type="color" value={theme.secondary || "#0b0f14"} onChange={e => onThemeChange({ ...theme, secondary: e.target.value })}
-                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
-              </label>
-              <label className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Accent</span>
-                <input type="color" value={theme.accent || "#1e3a5f"} onChange={e => onThemeChange({ ...theme, accent: e.target.value })}
-                  className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
-              </label>
+        {themeExpanded && (
+          <div className="px-4 py-3 border border-t-0 border-border rounded-b-sm card-gradient">
+            <div className="flex flex-wrap items-center gap-3">
+              {(["dark", "light", "custom"] as const).map(s => (
+                <button key={s} onClick={() => onThemeChange({ ...theme, scheme: s })}
+                  className={`text-xs px-4 py-2 rounded-sm border transition-colors capitalize font-medium ${
+                    theme.scheme === s ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
+                  }`}>
+                  {s}
+                </button>
+              ))}
+              {theme.scheme === "custom" && (
+                <div className="flex items-center gap-3 ml-2">
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Primary</span>
+                    <input type="color" value={theme.primary || "#3b82f6"} onChange={e => onThemeChange({ ...theme, primary: e.target.value })}
+                      className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Background</span>
+                    <input type="color" value={theme.secondary || "#0b0f14"} onChange={e => onThemeChange({ ...theme, secondary: e.target.value })}
+                      className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Accent</span>
+                    <input type="color" value={theme.accent || "#1e3a5f"} onChange={e => onThemeChange({ ...theme, accent: e.target.value })}
+                      className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
+                  </label>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-semibold tracking-[0.15em] uppercase text-electric">Slide Framework</h3>
         <span className="text-[13px] text-secondary-foreground">{activeCount} of {slides.length} slides in export</span>
       </div>
-
-      <p className="text-[13px] text-secondary-foreground mb-5">Drag to reorder · Thumbs down to exclude from export</p>
 
       {/* Slide cards */}
       <div className="space-y-4">
