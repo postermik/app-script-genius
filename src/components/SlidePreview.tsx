@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2, Pencil } from "lucide-react";
 
 export interface SlideData {
   headline: string;

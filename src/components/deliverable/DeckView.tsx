@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
-import { Layout } from "lucide-react";
+import { Layout, Loader2 } from "lucide-react";
 import type { Deliverable } from "@/types/rhetoric";
 
 interface Props {
@@ -17,6 +17,7 @@ interface Props {
 export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrder, onReorder, deckTheme, onThemeChange, onUpdateDeliverable }: Props) {
   const framework = deliverable.deckFramework || [];
   const [dismissedDeckSuggestions, setDismissedDeckSuggestions] = useState<number[]>([]);
+  const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
 
   if (framework.length === 0) return null;
 
@@ -33,22 +34,40 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
 
   const deckSuggestions = deliverable.suggestions || [];
 
+  const handleApplySuggestion = async (suggestion: string, index: number) => {
+    setApplyingIndex(index);
+    // Simulate applying — in production this would call the refine API
+    setTimeout(() => {
+      setApplyingIndex(null);
+      setDismissedDeckSuggestions(prev => [...prev, index]);
+    }, 1500);
+  };
+
   return (
     <div>
       {/* Deck-level structural suggestions */}
       {deckSuggestions.length > 0 && (
-        <div className="mb-6 space-y-2">
+        <div className="mb-3 space-y-2">
           {deckSuggestions.map((suggestion, i) =>
             dismissedDeckSuggestions.includes(i) ? null : (
               <div key={i} className="bg-accent/30 border border-accent/40 rounded-sm p-3 flex items-center gap-3">
                 <Layout className="w-4 h-4 text-accent-foreground shrink-0" />
                 <p className="text-sm text-foreground/80 flex-1">{suggestion}</p>
-                <button
-                  onClick={() => setDismissedDeckSuggestions(prev => [...prev, i])}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  ✕
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleApplySuggestion(suggestion, i)}
+                    disabled={applyingIndex === i}
+                    className="text-xs px-3 py-1.5 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {applyingIndex === i ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying…</> : "Apply"}
+                  </button>
+                  <button
+                    onClick={() => setDismissedDeckSuggestions(prev => [...prev, i])}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             )
           )}
