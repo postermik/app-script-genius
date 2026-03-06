@@ -84,12 +84,11 @@ export function LandingPage() {
             </div>
             <div className="p-4 sm:p-8">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Strategy Memo</span>
+                <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Elevator Pitch</span>
                 <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
               </div>
-              <h3 className="text-electric text-sm font-semibold mt-4 mb-2">Executive Summary</h3>
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                Autoflow replaces manual data pipelines with AI, cutting setup time by 90% and infrastructure costs by 60%.
+              <p className="text-sm text-foreground/80 leading-relaxed mt-4">
+                We help founders turn rough notes into investor-ready narratives. Pitch decks, board memos, strategy docs. One input, every format. Our AI doesn't just write slides. It structures the argument investors actually follow.
               </p>
 
               <div className="mt-4 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
@@ -97,7 +96,7 @@ export function LandingPage() {
                   <Lightbulb className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-foreground/80">Consider adding a specific customer case study to strengthen the cost reduction claim.</p>
+                  <p className="text-sm text-foreground/80">Consider leading with the pain point before the solution to create urgency.</p>
                 </div>
                 <button className="text-xs px-2.5 py-1 bg-electric hover:bg-electric/80 text-primary-foreground rounded-sm transition-colors font-medium shrink-0">
                   Apply
