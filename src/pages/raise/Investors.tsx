@@ -79,6 +79,14 @@ const TYPE_LABELS: Record<string, string> = {
   micro_vc: "Micro VC", vc: "VC", accelerator: "Accelerator", angel: "Angel", corporate_vc: "Corporate VC",
 };
 
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  vc: "bg-electric/10 text-electric",
+  micro_vc: "bg-purple-500/15 text-purple-400",
+  accelerator: "bg-amber-500/15 text-amber-400",
+  angel: "bg-emerald/15 text-emerald",
+  corporate_vc: "bg-electric/10 text-electric",
+};
+
 const SECTOR_LABELS: Record<string, string> = Object.fromEntries(SECTOR_OPTIONS.map(s => [s.value, s.label]));
 const STAGE_LABELS: Record<string, string> = Object.fromEntries(STAGE_OPTIONS.map(s => [s.value, s.label]));
 
