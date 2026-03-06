@@ -113,7 +113,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -131,6 +131,9 @@ export function OutputView() {
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [isRefiningPitch, setIsRefiningPitch] = useState(false);
+  const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);
+  const [isRescoring, setIsRescoring] = useState(false);
 
   // Determine which output tabs to show
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
