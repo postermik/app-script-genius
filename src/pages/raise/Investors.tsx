@@ -559,13 +559,6 @@ export default function Investors() {
         </div>
       )}
 
-      {/* Loosened filters note */}
-      {filtersLoosened && !userManuallyChangedFilters && (
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-sm border border-border bg-muted/20 text-xs text-muted-foreground">
-          <Info className="h-3.5 w-3.5 shrink-0" />
-          Showing broader results. Adjust filters to narrow down.
-        </div>
-      )}
 
       {/* Loading state */}
       {(loading || narrativeLoading) && (
