@@ -19,7 +19,7 @@ export function OriginalInputSection({ rawInput }: Props) {
   };
 
   return (
-    <div className="card-gradient rounded-sm border border-border mb-8">
+    <div className="card-gradient rounded-sm border border-border mb-3">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-muted/30 transition-colors"
