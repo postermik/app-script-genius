@@ -54,6 +54,42 @@ export interface RhetoricOutput {
   score: RhetoricScore;
 }
 
+// ── Intake types ──
+
+export type IntakePurpose = "investor_pitch" | "board_update" | "strategy_memo" | "team_alignment" | "general_narrative";
+export type OutputDeliverable = "slide_framework" | "elevator_pitch" | "investor_qa" | "pitch_email" | "investment_memo";
+export type IntakeStage = "pre_seed" | "seed" | "series_a" | "series_b" | "growth";
+
+export interface IntakeSelections {
+  purpose: IntakePurpose;
+  outputs: OutputDeliverable[];
+  stage: IntakeStage;
+}
+
+// ── Elevator pitch data ──
+export interface ElevatorPitchData {
+  thirtySecond: string;
+  sixtySecond: string;
+}
+
+// ── Investor Q&A data ──
+export interface InvestorQAItem {
+  question: string;
+  answer: string;
+}
+
+// ── Pitch email variant ──
+export interface PitchEmailVariant {
+  label: string;
+  subject: string;
+  body: string;
+}
+
+// ── Investment memo sections ──
+export interface InvestmentMemoData {
+  sections: { heading: string; content: string }[];
+}
+
 // Helper to determine intent from any output shape
 export function getOutputIntent(output: any): "create" | "evaluate" {
   if (output?.intent) return output.intent;
@@ -64,7 +100,6 @@ export function getOutputIntent(output: any): "create" | "evaluate" {
 // Helper to get deliverable from new or old format
 export function getDeliverable(output: any): Deliverable | null {
   if (output?.deliverable) return output.deliverable;
-  // Old format fallback: synthesize a deliverable
   if (output?.data) {
     const d = output.data;
     const mode = output.mode;
@@ -99,7 +134,6 @@ export function getDeliverable(output: any): Deliverable | null {
         { heading: "Roadmap", content: d.roadmapNarrative || "" },
       ].filter(s => s.content) };
     }
-    // Fallback: try deck
     if (d.deckFramework?.length) return { type: "deck", deckFramework: d.deckFramework };
   }
   return null;
@@ -116,4 +150,5 @@ export function getAnalysis(output: any): AnalysisData | null {
   return output?.analysis || null;
 }
 
-export type OutputTabKey = "preview" | "score" | "coaching" | "analysis" | "rebuilt";
+// Sidebar tab type (simplified)
+export type OutputTabKey = "outputs" | "score" | "analysis";
