@@ -756,7 +756,7 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
       {/* Spacer pushes contact row + actions to bottom */}
       <div className="flex-1" />
 
-      {/* 8. Contact row: compact inline */}
+      {/* 8. Contact row: compact inline — no globe, firm name links to website */}
       <div className="mb-3">
         {enriched ? (
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -782,11 +782,6 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
                 <Linkedin className="h-3.5 w-3.5" />
               </a>
             )}
-            {inv.website_url && (
-              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            )}
           </div>
         ) : isEnriching ? (
           <div className="flex items-center gap-2">
@@ -794,20 +789,13 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
             <Skeleton className="h-3 w-16" />
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRevealContact}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-sm border border-border text-secondary-foreground hover:text-electric hover:border-electric/30 transition-colors flex items-center gap-1.5"
-            >
-              <Eye className="h-3 w-3" />
-              Reveal Contact
-            </button>
-            {inv.website_url && (
-              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            )}
-          </div>
+          <button
+            onClick={onRevealContact}
+            className="text-[11px] font-medium px-3 py-1.5 rounded-sm border border-border text-secondary-foreground hover:text-electric hover:border-electric/30 transition-colors flex items-center gap-1.5"
+          >
+            <Eye className="h-3 w-3" />
+            Reveal Contact
+          </button>
         )}
       </div>
 
