@@ -17,11 +17,10 @@ interface Props {
 
 export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrder, onReorder, deckTheme, onThemeChange, onUpdateDeliverable }: Props) {
   const framework = deliverable.deckFramework || [];
-  const [dismissedDeckSuggestions, setDismissedDeckSuggestions] = useState<number[]>([]);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [fadingOut, setFadingOut] = useState<number[]>([]);
   const [refiningSlideIndex, setRefiningSlideIndex] = useState<number | null>(null);
-  const { markSuggestionApplied, refineSection } = useDecksmith();
+  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -41,14 +40,13 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const handleApplySuggestion = async (suggestion: string, index: number) => {
     setApplyingIndex(index);
     try {
-      await refineSection(`suggestion-${index}`, "narrativeStructure", suggestion as any);
-      markSuggestionApplied(index);
+      await applyDeckSuggestion(suggestion, index);
       setFadingOut(prev => [...prev, index]);
       setTimeout(() => {
-        setDismissedDeckSuggestions(prev => [...prev, index]);
+        // Already persisted via context dismissSuggestion
       }, 400);
     } catch {
-      // refineSection already shows toast
+      // applyDeckSuggestion already shows toast
     } finally {
       setApplyingIndex(null);
     }
@@ -57,8 +55,6 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const handleRefineSlide = async (slideIndex: number, tone: string) => {
     setRefiningSlideIndex(slideIndex);
     try {
-      const slide = framework[slideIndex];
-      const headline = typeof slide === "string" ? slide : (slide?.headline || "");
       await refineSection(`slide-${slideIndex}`, `deckFramework.${slideIndex}`, tone as any);
     } catch {
       // refineSection already shows toast
@@ -73,7 +69,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       {deckSuggestions.length > 0 && (
         <div className="mb-3 space-y-2">
           {deckSuggestions.map((suggestion, i) =>
-            dismissedDeckSuggestions.includes(i) ? null : (
+            dismissedSuggestions.has(i) || fadingOut.includes(i) ? null : (
               <div
                 key={i}
                 className={`bg-accent/30 border border-accent/40 rounded-sm p-3 flex items-center gap-3 transition-all duration-400 ${
@@ -91,7 +87,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
                     {applyingIndex === i ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying…</> : "Apply"}
                   </button>
                   <button
-                    onClick={() => setDismissedDeckSuggestions(prev => [...prev, i])}
+                    onClick={() => dismissSuggestion(i)}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
                   >
                     ✕

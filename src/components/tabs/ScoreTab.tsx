@@ -72,9 +72,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const handleApply = async (index: number, gap: string, howToFix: string) => {
     setApplyingIndex(index);
     try {
-      // Use the real refine API to apply the suggestion
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
-      markSuggestionApplied(index);
+      markSuggestionApplied(`score-${index}`);
       setExpandedImprovement(null);
     } catch {
       // refineSection already shows toast on error
@@ -177,7 +176,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             {gaps.map((gap, i) => {
               const howToFix = improvements[i];
               const expanded = expandedImprovement === i;
-              const isApplied = appliedSuggestions.has(i);
+              const isApplied = appliedSuggestions.has(`score-${i}`);
               return isApplied ? (
                 <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
                   <Check className="h-3 w-3 text-emerald shrink-0" />

@@ -113,7 +113,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection, rescoreNarrative } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -253,7 +253,7 @@ export function OutputView() {
   const handleRescore = async () => {
     setIsRescoring(true);
     try {
-      await refineSection("score", "score", "rescore" as any);
+      await rescoreNarrative();
     } catch { /* already toasted */ }
     finally { setIsRescoring(false); }
   };
