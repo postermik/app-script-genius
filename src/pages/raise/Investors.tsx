@@ -190,6 +190,7 @@ export default function Investors() {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [userManuallyChangedFilters, setUserManuallyChangedFilters] = useState(false);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
 
   // Projects / narrative
   const [projects, setProjects] = useState<ProjectOption[]>([]);
