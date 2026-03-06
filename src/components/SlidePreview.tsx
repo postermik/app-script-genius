@@ -262,7 +262,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                       {slide.categoryLabel}
                     </p>
                   )}
-                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.primary }}>
+                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.accent }}>
                     {slide.headline}
                   </p>
                   <p className="leading-tight line-clamp-2 mt-1" style={{ fontSize: "6px", color: themeColors.muted }}>
