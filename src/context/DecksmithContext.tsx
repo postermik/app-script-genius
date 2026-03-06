@@ -56,8 +56,12 @@ interface DecksmithContextType {
   stopGenerating: () => void;
   intakeSelections: IntakeSelections | null;
   setIntakeSelections: (s: IntakeSelections | null) => void;
-  appliedSuggestions: Set<number>;
-  markSuggestionApplied: (index: number) => void;
+  appliedSuggestions: Set<string>;
+  markSuggestionApplied: (key: string) => void;
+  applyDeckSuggestion: (suggestion: string, suggestionIndex: number) => Promise<void>;
+  rescoreNarrative: () => Promise<void>;
+  dismissedSuggestions: Set<number>;
+  dismissSuggestion: (index: number) => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -89,7 +93,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
-  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set());
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -363,7 +368,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!output) return;
     setRefiningSection(sectionKey);
     try {
-      const currentContent = getNestedValue(output.data || (output as any).supporting || {}, path);
+      // Read from supporting first (new format), then data (legacy)
+      const sourceObj = (output as any).supporting || output.data || {};
+      const currentContent = getNestedValue(sourceObj, path);
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent },
       });
@@ -372,10 +379,15 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
       setOutput((prev) => {
         if (!prev) return prev;
-        const sourceData = prev.data || (prev as any).supporting || (prev as any).deliverable || {};
-        const newData = JSON.parse(JSON.stringify(sourceData));
-        setNestedValue(newData, path, refined);
-        const updated = { ...prev, data: newData };
+        const updated = JSON.parse(JSON.stringify(prev));
+        // Write back to the same location we read from
+        if (updated.supporting && getNestedValue(updated.supporting, path.split(".")[0]) !== undefined) {
+          setNestedValue(updated.supporting, path, refined);
+        } else if (updated.data) {
+          setNestedValue(updated.data, path, refined);
+        } else if (updated.supporting) {
+          setNestedValue(updated.supporting, path, refined);
+        }
         saveProject(updated as NarrativeOutputData);
 
         if (currentProjectId && session) {
@@ -394,6 +406,123 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setRefiningSection(null);
     }
   }, [output, rawInput, saveProject, currentProjectId, session, projects]);
+
+  const applyDeckSuggestion = useCallback(async (suggestion: string, suggestionIndex: number) => {
+    if (!output) return;
+    setRefiningSection(`suggestion-${suggestionIndex}`);
+    try {
+      const deliverable = (output as any).deliverable;
+      const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
+
+      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+        body: {
+          mode: "refine",
+          input: rawInput,
+          section: "deckFramework",
+          path: "deckFramework",
+          tone: suggestion,
+          currentContent: JSON.stringify(deckFramework),
+        },
+      });
+      if (error) throw error;
+
+      let refined = data.content;
+      if (typeof refined === "string") {
+        const cleaned = refined.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        try { refined = JSON.parse(cleaned); } catch { /* leave as string if not JSON */ }
+      }
+
+      setOutput((prev) => {
+        if (!prev) return prev;
+        const updated = JSON.parse(JSON.stringify(prev));
+
+        if (Array.isArray(refined)) {
+          // AI returned a full updated framework
+          if (updated.deliverable) updated.deliverable.deckFramework = refined;
+          if (updated.data?.deckFramework) updated.data.deckFramework = refined;
+        } else if (refined && typeof refined === "object" && refined.headline) {
+          // AI returned a single new slide - append it
+          const fw = updated.deliverable?.deckFramework || updated.data?.deckFramework || [];
+          fw.push(refined);
+          if (updated.deliverable) updated.deliverable.deckFramework = fw;
+          if (updated.data?.deckFramework) updated.data.deckFramework = fw;
+        }
+
+        // Persist applied suggestion
+        if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
+        updated._appliedSuggestions.push(`deck-${suggestionIndex}`);
+
+        saveProject(updated as NarrativeOutputData);
+        return updated;
+      });
+
+      setAppliedSuggestions(prev => new Set(prev).add(`deck-${suggestionIndex}`));
+      setDismissedSuggestions(prev => new Set(prev).add(suggestionIndex));
+      toast.success("Suggestion applied to deck.");
+    } catch (e: any) {
+      console.error("Apply deck suggestion error:", e);
+      toast.error("Failed to apply suggestion. Please try again.");
+    } finally {
+      setRefiningSection(null);
+    }
+  }, [output, rawInput, saveProject]);
+
+  const rescoreNarrative = useCallback(async () => {
+    if (!output) return;
+    setRefiningSection("rescore");
+    try {
+      const currentScore = (output as any).score;
+      const narrativeContent = (output as any).supporting || output.data || {};
+
+      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+        body: {
+          mode: "refine",
+          input: rawInput,
+          section: "score",
+          path: "score",
+          tone: "rescore",
+          currentContent: JSON.stringify(currentScore),
+        },
+      });
+      if (error) throw error;
+
+      let scoreContent = data.content;
+      if (typeof scoreContent === "string") {
+        scoreContent = scoreContent.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        scoreContent = JSON.parse(scoreContent);
+      }
+
+      setOutput((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, score: scoreContent };
+        // Clear persisted applied suggestions since we rescored
+        (updated as any)._appliedSuggestions = [];
+        saveProject(updated as NarrativeOutputData);
+        return updated;
+      });
+
+      setAppliedSuggestions(new Set());
+      toast.success("Score updated.");
+    } catch (e: any) {
+      console.error("Rescore error:", e);
+      toast.error("Re-scoring failed. Please try again.");
+    } finally {
+      setRefiningSection(null);
+    }
+  }, [output, rawInput, saveProject]);
+
+  const dismissSuggestion = useCallback((index: number) => {
+    setDismissedSuggestions(prev => new Set(prev).add(index));
+    // Persist in output
+    setOutput((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+      if (!(updated as any)._dismissedSuggestions) (updated as any)._dismissedSuggestions = [];
+      (updated as any)._dismissedSuggestions.push(index);
+      saveProject(updated as NarrativeOutputData);
+      return updated;
+    });
+  }, [saveProject]);
 
   const stopGenerating = useCallback(() => {
     if (abortControllerRef.current) {
@@ -425,6 +554,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setStreamingText("");
     setIntakeSelections(null);
     setAppliedSuggestions(new Set());
+    setDismissedSuggestions(new Set());
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -475,6 +605,11 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setCurrentProjectId(project.id);
     setOutreachTracker(project.outreach_tracker || []);
     setIsEvaluation(project.detected_intent === "evaluate");
+    // Restore persisted suggestion state
+    const applied = (project.output_data as any)?._appliedSuggestions || [];
+    setAppliedSuggestions(new Set(applied));
+    const dismissed = (project.output_data as any)?._dismissedSuggestions || [];
+    setDismissedSuggestions(new Set(dismissed));
     loadVersions(project.id);
   }, [loadVersions]);
 
@@ -563,9 +698,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections,
-        appliedSuggestions, markSuggestionApplied: useCallback((index: number) => {
-          setAppliedSuggestions(prev => new Set(prev).add(index));
+        appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
+          setAppliedSuggestions(prev => new Set(prev).add(key));
+          // Persist in output
+          setOutput((prev: any) => {
+            if (!prev) return prev;
+            const updated = { ...prev };
+            if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
+            updated._appliedSuggestions.push(key);
+            return updated;
+          });
         }, []),
+        applyDeckSuggestion, rescoreNarrative,
+        dismissedSuggestions, dismissSuggestion,
       }}
     >
       {children}
