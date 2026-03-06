@@ -248,7 +248,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 <div className="cursor-grab text-muted-foreground hover:text-foreground transition-colors">
                   <GripVertical className="h-5 w-5" />
                 </div>
-                <span className="text-lg font-bold" style={{ color: themeColors.accent }}>{i + 1}</span>
+                <span className="text-lg font-bold text-muted-foreground">{i + 1}</span>
               </div>
 
               {/* Slide preview thumbnail */}
@@ -262,7 +262,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                       {slide.categoryLabel}
                     </p>
                   )}
-                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.accent }}>
+                  <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: "8px", color: themeColors.primary }}>
                     {slide.headline}
                   </p>
                   <p className="leading-tight line-clamp-2 mt-1" style={{ fontSize: "6px", color: themeColors.muted }}>
@@ -297,12 +297,12 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   </ul>
                 )}
                 {slide.closingStatement && (
-                  <p className="text-[13px] font-medium mt-2 leading-snug" style={{ color: themeColors.accent }}>
+                  <p className="text-[13px] font-medium mt-2 leading-snug text-secondary-foreground">
                     {slide.closingStatement}
                   </p>
                 )}
                 <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
-                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: themeColors.accent, opacity: 0.6 }} />
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
                   <span className="italic">{getSlideReason(slide.headline, i, orderedSlides.length)}</span>
                 </p>
 
