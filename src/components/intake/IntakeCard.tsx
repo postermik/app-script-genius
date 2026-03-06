@@ -103,7 +103,7 @@ export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
         <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5">
           Select your outputs
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {OUTPUTS.map(o => {
             const checked = selections.outputs.includes(o.value);
             return (
