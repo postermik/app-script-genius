@@ -27,6 +27,8 @@ interface Props {
   onReorder: (order: number[]) => void;
   theme: DeckTheme;
   onThemeChange: (theme: DeckTheme) => void;
+  onRefineSlide?: (slideIndex: number, tone: string) => void;
+  refiningSlideIndex?: number | null;
 }
 
 const REFINE_OPTIONS = [
