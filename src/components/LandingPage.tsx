@@ -8,8 +8,8 @@ import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
-  { icon: BarChart3, text: "500+ narratives generated" },
-  { icon: Users, text: "15+ years of capital markets expertise" },
+  { icon: BarChart3, text: "Trained on narratives that raised $7B+" },
+  { icon: Users, text: "Built by operators, not prompt engineers" },
 ];
 
 const FAQ_ITEMS = [
