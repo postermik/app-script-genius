@@ -190,6 +190,7 @@ export default function Investors() {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [userManuallyChangedFilters, setUserManuallyChangedFilters] = useState(false);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
 
   // Projects / narrative
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -252,13 +253,17 @@ export default function Investors() {
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
     setUserManuallyChangedFilters(false);
+    setNarrativeLoading(true);
     const project = projects.find(p => p.id === projectId);
-    if (project) {
-      const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
-      setSelectedStages(signals.stages);
-      setSelectedSectors(signals.sectors);
-      setSelectedLocations([]);
-    }
+    setTimeout(() => {
+      if (project) {
+        const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
+        setSelectedStages(signals.stages);
+        setSelectedSectors(signals.sectors);
+        setSelectedLocations([]);
+      }
+      setNarrativeLoading(false);
+    }, 1200);
   };
 
   // Wrap filter setters to track manual changes
@@ -563,14 +568,41 @@ export default function Investors() {
       )}
 
       {/* Loading state */}
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-6 w-6 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+      {(loading || narrativeLoading) && (
+        <div className="space-y-8">
+          {/* Shimmer for recommended section */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-sm border border-border bg-card p-5 space-y-3">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-16 rounded-sm" />
+                  </div>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-20" />
+                  <div className="flex gap-1.5 pt-1">
+                    <Skeleton className="h-5 w-14 rounded-sm" />
+                    <Skeleton className="h-5 w-14 rounded-sm" />
+                  </div>
+                  <div className="flex gap-2 pt-3 mt-auto">
+                    <Skeleton className="h-8 flex-1 rounded-sm" />
+                    <Skeleton className="h-8 flex-1 rounded-sm" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Empty state */}
-      {!loading && totalCount === 0 && recommended.length === 0 && (
+      {!loading && !narrativeLoading && totalCount === 0 && recommended.length === 0 && (
         <div className="text-center py-12 border border-border rounded-sm card-gradient">
           <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-1">No investors match your filters.</p>
@@ -579,7 +611,7 @@ export default function Investors() {
       )}
 
       {/* Recommended section (top 6, strict filters) */}
-      {!loading && recommended.length > 0 && (
+      {!loading && !narrativeLoading && recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-4 w-4 text-electric" />
@@ -607,7 +639,7 @@ export default function Investors() {
       )}
 
       {/* All investors (loosened filters) */}
-      {!loading && allInvestors.length > 0 && (
+      {!loading && !narrativeLoading && allInvestors.length > 0 && (
         <div>
           {recommended.length > 0 && (
             <div className="flex items-center gap-2 mb-4">
