@@ -234,6 +234,30 @@ export function OutputView() {
     }
   };
 
+  const handleRefinePitch = async () => {
+    setIsRefiningPitch(true);
+    try {
+      await refineSection("pitchScript", "pitchScript", "refine");
+    } catch { /* already toasted */ }
+    finally { setIsRefiningPitch(false); }
+  };
+
+  const handleRefineQAItem = async (index: number) => {
+    setRefiningQAIndex(index);
+    try {
+      await refineSection(`qa-${index}`, `analysis.commonQuestions.${index}.suggestedAnswer`, "refine");
+    } catch { /* already toasted */ }
+    finally { setRefiningQAIndex(null); }
+  };
+
+  const handleRescore = async () => {
+    setIsRescoring(true);
+    try {
+      await refineSection("score", "score", "rescore" as any);
+    } catch { /* already toasted */ }
+    finally { setIsRescoring(false); }
+  };
+
   // Render the active output deliverable tab
   const renderOutputContent = () => {
     switch (activeOutputTab) {
@@ -242,12 +266,12 @@ export function OutputView() {
       case "elevator_pitch": {
         const pitchData = synthesizeElevatorPitch(output);
         if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
-        return <ElevatorPitchView data={pitchData} />;
+        return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
         const qaItems = synthesizeInvestorQA(output);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
-        return <InvestorQAView items={qaItems} />;
+        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
         const emails = synthesizePitchEmails(output);
