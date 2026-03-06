@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SlidePreview, type SlideData, type DeckTheme } from "@/components/SlidePreview";
 import { Layout, Loader2 } from "lucide-react";
 import type { Deliverable } from "@/types/rhetoric";
@@ -20,7 +20,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const [dismissedDeckSuggestions, setDismissedDeckSuggestions] = useState<number[]>([]);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [fadingOut, setFadingOut] = useState<number[]>([]);
-  const { markSuggestionApplied } = useDecksmith();
+  const [refiningSlideIndex, setRefiningSlideIndex] = useState<number | null>(null);
+  const { markSuggestionApplied, refineSection } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -39,17 +40,31 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
 
   const handleApplySuggestion = async (suggestion: string, index: number) => {
     setApplyingIndex(index);
-    // Simulate applying — in production this would call the refine API
-    setTimeout(() => {
-      setApplyingIndex(null);
+    try {
+      await refineSection(`suggestion-${index}`, "narrativeStructure", suggestion as any);
       markSuggestionApplied(index);
-      // Start fade-out animation
       setFadingOut(prev => [...prev, index]);
-      // Remove after animation completes
       setTimeout(() => {
         setDismissedDeckSuggestions(prev => [...prev, index]);
       }, 400);
-    }, 1500);
+    } catch {
+      // refineSection already shows toast
+    } finally {
+      setApplyingIndex(null);
+    }
+  };
+
+  const handleRefineSlide = async (slideIndex: number, tone: string) => {
+    setRefiningSlideIndex(slideIndex);
+    try {
+      const slide = framework[slideIndex];
+      const headline = typeof slide === "string" ? slide : (slide?.headline || "");
+      await refineSection(`slide-${slideIndex}`, `deckFramework.${slideIndex}`, tone as any);
+    } catch {
+      // refineSection already shows toast
+    } finally {
+      setRefiningSlideIndex(null);
+    }
   };
 
   return (
@@ -96,6 +111,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
         onReorder={onReorder}
         theme={deckTheme}
         onThemeChange={onThemeChange}
+        onRefineSlide={handleRefineSlide}
+        refiningSlideIndex={refiningSlideIndex}
       />
     </div>
   );
