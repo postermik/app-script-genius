@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2, Info } from "lucide-react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,6 +77,14 @@ const LOCATION_OPTIONS = [
 
 const TYPE_LABELS: Record<string, string> = {
   micro_vc: "Micro VC", vc: "VC", accelerator: "Accelerator", angel: "Angel", corporate_vc: "Corporate VC",
+};
+
+const TYPE_BADGE_STYLES: Record<string, string> = {
+  vc: "bg-electric/10 text-electric",
+  micro_vc: "bg-purple-500/15 text-purple-400",
+  accelerator: "bg-amber-500/15 text-amber-400",
+  angel: "bg-emerald/15 text-emerald",
+  corporate_vc: "bg-electric/10 text-electric",
 };
 
 const SECTOR_LABELS: Record<string, string> = Object.fromEntries(SECTOR_OPTIONS.map(s => [s.value, s.label]));
@@ -686,10 +694,10 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         <X className="h-3.5 w-3.5" />
       </button>
 
-      {/* 1. Name + investor type badge */}
-      <div className="flex items-center justify-between gap-2 pr-5 mb-1">
+      {/* 1. Name + investor type badge — badge always right-aligned */}
+      <div className="flex items-start justify-between gap-2 mb-1">
         <h3 className="text-sm font-bold text-foreground leading-tight truncate">{name}</h3>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-sm bg-electric/10 text-electric uppercase tracking-wide shrink-0 whitespace-nowrap">
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wide shrink-0 whitespace-nowrap ${TYPE_BADGE_STYLES[inv.investor_type] || "bg-electric/10 text-electric"}`}>
           {TYPE_LABELS[inv.investor_type] || inv.investor_type}
         </span>
       </div>
@@ -699,9 +707,13 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         <p className="text-[11px] text-muted-foreground mb-1.5 truncate">{inv.title}</p>
       )}
 
-      {/* 3. Firm + check size */}
+      {/* 3. Firm (clickable link) + check size */}
       <p className="text-xs font-medium text-secondary-foreground mb-1">
-        {inv.firm_name}
+        {inv.website_url ? (
+          <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-electric transition-colors cursor-pointer">
+            {inv.firm_name}
+          </a>
+        ) : inv.firm_name}
         {checkSize && <span className="text-muted-foreground font-normal"> · {checkSize}</span>}
       </p>
 
@@ -724,30 +736,27 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </div>
       )}
 
-      {/* 6. Sector tags with +N overflow */}
-      {inv.sectors && inv.sectors.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {inv.sectors.slice(0, 3).map(s => (
+      {/* 6. Sector tags + solo founder friendly inline */}
+      {((inv.sectors && inv.sectors.length > 0) || inv.solo_founder_friendly) && (
+        <div className="flex flex-wrap gap-1.5 mb-2 items-center">
+          {inv.sectors?.slice(0, 3).map(s => (
             <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted/40 text-muted-foreground">
               {SECTOR_LABELS[s] || s}
             </span>
           ))}
-          {inv.sectors.length > 3 && <span className="text-[10px] text-muted-foreground">+{inv.sectors.length - 3}</span>}
+          {inv.sectors && inv.sectors.length > 3 && <span className="text-[10px] text-muted-foreground">+{inv.sectors.length - 3}</span>}
+          {inv.solo_founder_friendly && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-emerald/10 text-emerald flex items-center gap-0.5">
+              <CheckCircle2 className="h-2.5 w-2.5" /> Solo friendly
+            </span>
+          )}
         </div>
-      )}
-
-      {/* 7. Solo founder friendly */}
-      {inv.solo_founder_friendly && (
-        <p className="text-[10px] text-emerald-500 flex items-center gap-1 mb-2">
-          <CheckCircle2 className="h-3 w-3" />
-          Solo founder friendly
-        </p>
       )}
 
       {/* Spacer pushes contact row + actions to bottom */}
       <div className="flex-1" />
 
-      {/* 8. Contact row: compact inline */}
+      {/* 8. Contact row: compact inline — no globe, firm name links to website */}
       <div className="mb-3">
         {enriched ? (
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -773,11 +782,6 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
                 <Linkedin className="h-3.5 w-3.5" />
               </a>
             )}
-            {inv.website_url && (
-              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            )}
           </div>
         ) : isEnriching ? (
           <div className="flex items-center gap-2">
@@ -785,20 +789,13 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
             <Skeleton className="h-3 w-16" />
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRevealContact}
-              className="text-[11px] font-medium px-3 py-1.5 rounded-sm border border-border text-secondary-foreground hover:text-electric hover:border-electric/30 transition-colors flex items-center gap-1.5"
-            >
-              <Eye className="h-3 w-3" />
-              Reveal Contact
-            </button>
-            {inv.website_url && (
-              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            )}
-          </div>
+          <button
+            onClick={onRevealContact}
+            className="text-[11px] font-medium px-3 py-1.5 rounded-sm border border-border text-secondary-foreground hover:text-electric hover:border-electric/30 transition-colors flex items-center gap-1.5"
+          >
+            <Eye className="h-3 w-3" />
+            Reveal Contact
+          </button>
         )}
       </div>
 
