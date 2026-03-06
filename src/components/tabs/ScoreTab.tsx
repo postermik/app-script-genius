@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
@@ -63,8 +63,19 @@ interface Props {
 export function ScoreTab({ score, mode, showRescore }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
-  const { appliedSuggestions } = useDecksmith();
+  const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const { appliedSuggestions, markSuggestionApplied } = useDecksmith();
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
+
+  const handleApply = async (index: number) => {
+    setApplyingIndex(index);
+    // Simulate AI refinement — matches Outputs page behavior
+    setTimeout(() => {
+      setApplyingIndex(null);
+      markSuggestionApplied(index);
+      setExpandedImprovement(null);
+    }, 1500);
+  };
 
   const overall = score.overall;
   const components = score.components;
@@ -191,8 +202,12 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
                         </div>
                       </div>
                       <div className="mt-2 flex justify-end">
-                        <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors">
-                          Apply to narrative
+                        <button
+                          onClick={() => handleApply(i)}
+                          disabled={applyingIndex === i}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
+                        >
+                          {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</> : "Apply to narrative"}
                         </button>
                       </div>
                     </div>
