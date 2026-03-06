@@ -202,8 +202,12 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
                         </div>
                       </div>
                       <div className="mt-2 flex justify-end">
-                        <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors">
-                          Apply to narrative
+                        <button
+                          onClick={() => handleApply(i)}
+                          disabled={applyingIndex === i}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
+                        >
+                          {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</> : "Apply to narrative"}
                         </button>
                       </div>
                     </div>
