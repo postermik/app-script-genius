@@ -1,15 +1,18 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, ChevronDown, User } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Types ──────────────────────────────────────────────
 
 interface Investor {
   id: string;
-  first_name: string;
-  last_name: string;
-  contact_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  contact_name: string | null;
   contact_email: string | null;
   linkedin_url: string | null;
   title: string | null;
@@ -19,41 +22,31 @@ interface Investor {
   location_state: string | null;
   location_country: string | null;
   investor_type: string;
-  apollo_id: string | null;
-  // Fields from DB (for legacy/cached results)
-  stages?: string[];
-  sectors?: string[];
-  check_size_min?: number | null;
-  check_size_max?: number | null;
-  application_url?: string | null;
-  solo_founder_friendly?: boolean;
-  is_active?: boolean;
+  stages: string[] | null;
+  sectors: string[] | null;
+  check_min: number | null;
+  check_max: number | null;
+  application_url: string | null;
+  solo_founder_friendly: boolean | null;
+  is_enriched: boolean | null;
+  last_enriched_at: string | null;
+  is_active: boolean | null;
 }
 
-interface NarrativeSignals {
-  stages: string[];
-  sectors: string[];
-  location: string | null;
-  rawInput: string;
-}
-
-interface PaginationInfo {
-  page: number;
-  per_page: number;
-  total_entries: number;
-  total_pages: number;
+interface ProjectOption {
+  id: string;
+  title: string;
+  raw_input: string;
+  output_data: any;
 }
 
 // ── Constants ──────────────────────────────────────────
-
-const SUPABASE_URL = "https://jilopuugwyrqogoxlxjo.supabase.co";
-const ANON_KEY = "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz";
 
 const STAGE_OPTIONS = [
   { value: "pre_seed", label: "Pre-Seed" },
   { value: "seed", label: "Seed" },
   { value: "series_a", label: "Series A" },
-  { value: "series_b", label: "Series B" },
+  { value: "series_b", label: "Series B+" },
 ];
 
 const SECTOR_OPTIONS = [
@@ -66,18 +59,21 @@ const SECTOR_OPTIONS = [
   { value: "edtech", label: "EdTech" },
   { value: "marketplace", label: "Marketplace" },
   { value: "creator_tools", label: "Creator Tools" },
+  { value: "climate", label: "Climate" },
+  { value: "crypto", label: "Crypto/Web3" },
 ];
 
 const LOCATION_OPTIONS = [
-  { value: "San Francisco, California, United States", label: "San Francisco" },
-  { value: "New York, New York, United States", label: "New York" },
-  { value: "Los Angeles, California, United States", label: "Los Angeles" },
-  { value: "Boston, Massachusetts, United States", label: "Boston" },
-  { value: "Austin, Texas, United States", label: "Austin" },
-  { value: "Chicago, Illinois, United States", label: "Chicago" },
-  { value: "Seattle, Washington, United States", label: "Seattle" },
-  { value: "Miami, Florida, United States", label: "Miami" },
-  { value: "London, England, United Kingdom", label: "London" },
+  { value: "San Francisco", label: "San Francisco" },
+  { value: "New York", label: "New York" },
+  { value: "Los Angeles", label: "Los Angeles" },
+  { value: "Boston", label: "Boston" },
+  { value: "Austin", label: "Austin" },
+  { value: "Chicago", label: "Chicago" },
+  { value: "Seattle", label: "Seattle" },
+  { value: "Miami", label: "Miami" },
+  { value: "London", label: "London" },
+  { value: "Remote", label: "Remote / Any" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -87,37 +83,55 @@ const TYPE_LABELS: Record<string, string> = {
 const SECTOR_LABELS: Record<string, string> = Object.fromEntries(SECTOR_OPTIONS.map(s => [s.value, s.label]));
 const STAGE_LABELS: Record<string, string> = Object.fromEntries(STAGE_OPTIONS.map(s => [s.value, s.label]));
 
-// ── Narrative signal extraction ────────────────────────
+const SUPABASE_URL = "https://jilopuugwyrqogoxlxjo.supabase.co";
+const ANON_KEY = "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz";
 
-function extractNarrativeSignals(outputData: any, rawInput: string): NarrativeSignals {
+// ── Helpers ────────────────────────────────────────────
+
+function formatCheckSize(min: number | null, max: number | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n}`;
+  };
+  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+  if (min) return `${fmt(min)}+`;
+  return `Up to ${fmt(max!)}`;
+}
+
+function isEnrichedRecently(inv: Investor): boolean {
+  if (!inv.is_enriched || !inv.last_enriched_at) return false;
+  const daysSince = (Date.now() - new Date(inv.last_enriched_at).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSince < 30;
+}
+
+function displayName(inv: Investor): string {
+  if (inv.first_name && inv.last_name) return `${inv.first_name} ${inv.last_name}`;
+  return inv.contact_name || inv.firm_name;
+}
+
+function extractNarrativeSignals(outputData: any, rawInput: string) {
   const text = `${JSON.stringify(outputData || "")} ${rawInput}`.toLowerCase();
   const stages: string[] = [];
   const sectors: string[] = [];
-  let location: string | null = null;
 
   if (text.includes("pre-seed") || text.includes("pre_seed")) stages.push("pre_seed");
   if (/\bseed\b/.test(text) && !text.includes("pre-seed") && !text.includes("pre_seed")) stages.push("seed");
   if (text.includes("series a")) stages.push("series_a");
   if (text.includes("series b")) stages.push("series_b");
 
-  if (/\bai\b|artificial intelligence|machine learning|ai\/ml|ai model|llm|gpt|neural/.test(text)) sectors.push("ai_ml");
-  if (/\bsaas\b|software.as.a.service|subscription.software|cloud.platform/.test(text)) sectors.push("saas");
-  if (/fintech|financial.technology|payments|banking|lending|neobank/.test(text)) sectors.push("fintech");
-  if (/\benterprise\b|b2b|business.software/.test(text)) sectors.push("enterprise");
-  if (/\bconsumer\b|d2c|direct.to.consumer|b2c/.test(text)) sectors.push("consumer");
-  if (/healthtech|health.tech|healthcare|medtech|digital.health|biotech/.test(text)) sectors.push("healthtech");
-  if (/edtech|education|e-learning|learning.platform/.test(text)) sectors.push("edtech");
-  if (/\bmarketplace\b|two.sided|platform.connecting/.test(text)) sectors.push("marketplace");
-  if (/creator|content.creator|creator.economy/.test(text)) sectors.push("creator_tools");
+  if (/\bai\b|artificial intelligence|machine learning|ai\/ml|llm|gpt/.test(text)) sectors.push("ai_ml");
+  if (/\bsaas\b|software.as.a.service/.test(text)) sectors.push("saas");
+  if (/fintech|financial.technology|payments/.test(text)) sectors.push("fintech");
+  if (/\benterprise\b|b2b/.test(text)) sectors.push("enterprise");
+  if (/\bconsumer\b|d2c|b2c/.test(text)) sectors.push("consumer");
+  if (/healthtech|healthcare|medtech/.test(text)) sectors.push("healthtech");
+  if (/edtech|education/.test(text)) sectors.push("edtech");
+  if (/\bmarketplace\b/.test(text)) sectors.push("marketplace");
+  if (/creator/.test(text)) sectors.push("creator_tools");
 
-  // Try to extract location
-  if (text.includes("new york") || text.includes("nyc")) location = "New York, New York, United States";
-  else if (text.includes("san francisco") || text.includes("sf") || text.includes("bay area")) location = "San Francisco, California, United States";
-  else if (text.includes("los angeles") || text.includes("la")) location = "Los Angeles, California, United States";
-  else if (text.includes("boston")) location = "Boston, Massachusetts, United States";
-  else if (text.includes("austin")) location = "Austin, Texas, United States";
-
-  return { stages: [...new Set(stages)], sectors: [...new Set(sectors)], location, rawInput };
+  return { stages: [...new Set(stages)], sectors: [...new Set(sectors)] };
 }
 
 // ── Component ──────────────────────────────────────────
@@ -125,17 +139,17 @@ function extractNarrativeSignals(outputData: any, rawInput: string): NarrativeSi
 export default function Investors() {
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [pipelineIds, setPipelineIds] = useState<Set<string>>(new Set());
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [removingFromPipeline, setRemovingFromPipeline] = useState<string | null>(null);
-  const [narrativeSignals, setNarrativeSignals] = useState<NarrativeSignals | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [apolloAvailable, setApolloAvailable] = useState(true);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
+
+  // Projects / narrative
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // Filters
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
@@ -143,10 +157,7 @@ export default function Investors() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSearchParams = useRef<string>("");
-
-  // ── Init: load user, narrative, pipeline ───────────
+  // ── Init: load user, projects, pipeline, investors ──
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -158,22 +169,24 @@ export default function Investors() {
         try { setDismissedIds(new Set(JSON.parse(stored))); } catch {}
       }
 
-      const { data: project } = await supabase
+      // Load projects for narrative dropdown
+      const { data: projectsData } = await supabase
         .from("projects")
-        .select("output_data, raw_input")
+        .select("id, title, raw_input, output_data")
         .eq("user_id", session.user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("updated_at", { ascending: false });
 
-      if (project?.output_data) {
-        const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
-        setNarrativeSignals(signals);
-        // Auto-set filters from narrative
+      if (projectsData && projectsData.length > 0) {
+        setProjects(projectsData);
+        setSelectedProjectId(projectsData[0].id);
+
+        // Auto-set filters from most recent narrative
+        const signals = extractNarrativeSignals(projectsData[0].output_data, projectsData[0].raw_input || "");
+        if (signals.stages.length > 0) setSelectedStages(signals.stages);
         if (signals.sectors.length > 0) setSelectedSectors(signals.sectors);
-        if (signals.location) setSelectedLocations([signals.location]);
       }
 
+      // Load pipeline
       const { data: pipelineData } = await supabase
         .from("pipeline_entries")
         .select("investor_id")
@@ -181,23 +194,83 @@ export default function Investors() {
       if (pipelineData) {
         setPipelineIds(new Set(pipelineData.map((p: any) => p.investor_id).filter(Boolean)));
       }
+
+      // Load all investors from DB
+      const { data: investorsData, error } = await supabase
+        .from("investors")
+        .select("*")
+        .eq("is_active", true)
+        .order("firm_name");
+
+      if (!error && investorsData) {
+        setInvestors(investorsData as Investor[]);
+      }
+      setLoading(false);
     })();
   }, []);
 
-  // ── Search Apollo ──────────────────────────────────
-  const searchInvestors = useCallback(async (page = 1, append = false) => {
-    const params = JSON.stringify({ selectedSectors, selectedLocations, searchQuery, page });
+  // ── Handle narrative change ───────────────────────
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
+      setSelectedStages(signals.stages);
+      setSelectedSectors(signals.sectors);
+    }
+  };
 
-    // Don't re-search with same params (unless appending for pagination)
-    if (!append && params === lastSearchParams.current && investors.length > 0) return;
-    lastSearchParams.current = params;
+  // ── Filter investors client-side ──────────────────
+  const filteredInvestors = useMemo(() => {
+    return investors.filter(inv => {
+      if (dismissedIds.has(inv.id)) return false;
 
-    if (page === 1) setLoading(true);
-    else setLoadingMore(true);
+      // Search
+      if (searchInput) {
+        const q = searchInput.toLowerCase();
+        const searchable = [
+          displayName(inv),
+          inv.firm_name,
+          inv.title,
+          inv.contact_name,
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
 
+      // Stage filter
+      if (selectedStages.length > 0 && inv.stages) {
+        if (!selectedStages.some(s => inv.stages!.includes(s))) return false;
+      } else if (selectedStages.length > 0 && !inv.stages) {
+        return false;
+      }
+
+      // Sector filter
+      if (selectedSectors.length > 0 && inv.sectors) {
+        if (!selectedSectors.some(s => inv.sectors!.includes(s))) return false;
+      } else if (selectedSectors.length > 0 && !inv.sectors) {
+        return false;
+      }
+
+      // Location filter
+      if (selectedLocations.length > 0) {
+        const loc = [inv.location_city, inv.location_state, inv.location_country].filter(Boolean).join(" ").toLowerCase();
+        if (!selectedLocations.some(l => loc.includes(l.toLowerCase()))) return false;
+      }
+
+      return true;
+    });
+  }, [investors, dismissedIds, searchInput, selectedStages, selectedSectors, selectedLocations]);
+
+  const recommended = filteredInvestors.slice(0, 6);
+  const allOthers = filteredInvestors.slice(6);
+  const totalCount = filteredInvestors.length;
+
+  // ── Reveal contact (enrich) ───────────────────────
+  const revealContact = useCallback(async (inv: Investor) => {
+    setEnrichingIds(prev => new Set([...prev, inv.id]));
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/search-investors`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/enrich-investor`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,117 +278,43 @@ export default function Investors() {
           ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify({
-          sectors: selectedSectors,
-          locations: selectedLocations,
-          keywords: searchQuery || undefined,
-          page,
-          per_page: 50,
+          first_name: inv.first_name || displayName(inv).split(" ")[0],
+          last_name: inv.last_name || displayName(inv).split(" ").slice(1).join(" "),
+          organization_name: inv.firm_name,
+          investor_id: inv.id,
         }),
       });
 
-      if (!res.ok) {
-        console.error("Search failed:", res.status);
-        // Fall back to DB
-        await loadFromDB();
-        return;
-      }
-
       const data = await res.json();
 
-      if (data.skipped) {
-        setApolloAvailable(false);
-        await loadFromDB();
-        return;
-      }
+      // Update the investor in local state
+      setInvestors(prev => prev.map(i => {
+        if (i.id !== inv.id) return i;
+        return {
+          ...i,
+          contact_email: data.email || i.contact_email,
+          linkedin_url: data.linkedin_url || i.linkedin_url,
+          is_enriched: true,
+          last_enriched_at: new Date().toISOString(),
+        };
+      }));
 
-      if (data.people && data.people.length > 0) {
-        const mapped: Investor[] = data.people.map((p: any, idx: number) => ({
-          id: p.apollo_id || `apollo-${page}-${idx}`,
-          ...p,
-          stages: [],
-          sectors: [],
-          check_size_min: null,
-          check_size_max: null,
-          application_url: null,
-          solo_founder_friendly: false,
-          is_active: true,
-        }));
-
-        if (append) {
-          setInvestors(prev => [...prev, ...mapped]);
-        } else {
-          setInvestors(mapped);
-        }
-        setPagination(data.pagination || null);
-      } else if (page === 1) {
-        setInvestors([]);
-        setPagination(null);
+      if (data.email) {
+        toast.success("Contact info revealed");
+      } else {
+        toast("No email found for this contact", { description: "LinkedIn may still be available." });
       }
     } catch (err) {
-      console.error("Search error:", err);
-      await loadFromDB();
+      console.error("Enrichment error:", err);
+      toast.error("Failed to reveal contact info");
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      setEnrichingIds(prev => {
+        const next = new Set(prev);
+        next.delete(inv.id);
+        return next;
+      });
     }
-  }, [selectedSectors, selectedLocations, searchQuery]);
-
-  // ── Fallback: load from DB ─────────────────────────
-  const loadFromDB = async () => {
-    const { data, error } = await supabase
-      .from("investors")
-      .select("*")
-      .eq("is_active", true)
-      .order("firm_name");
-    if (!error && data) {
-      setInvestors(data.map((d: any) => ({
-        id: d.id,
-        first_name: d.contact_name?.split(" ")[0] || "",
-        last_name: d.contact_name?.split(" ").slice(1).join(" ") || "",
-        contact_name: d.contact_name || d.firm_name,
-        contact_email: d.contact_email || null,
-        linkedin_url: d.linkedin_url || null,
-        title: null,
-        firm_name: d.firm_name,
-        website_url: d.website_url || null,
-        location_city: d.location_city || null,
-        location_state: d.location_state || null,
-        location_country: d.location_country || null,
-        investor_type: d.investor_type || "vc",
-        apollo_id: null,
-        stages: d.stages || [],
-        sectors: d.sectors || [],
-        check_size_min: d.check_size_min || null,
-        check_size_max: d.check_size_max || null,
-        application_url: d.application_url || null,
-        solo_founder_friendly: d.solo_founder_friendly || false,
-        is_active: true,
-      })));
-    }
-    setLoading(false);
-    setLoadingMore(false);
-  };
-
-  // ── Trigger search when filters change ─────────────
-  useEffect(() => {
-    // Wait for narrative signals to load before first search
-    searchInvestors(1, false);
-  }, [selectedSectors, selectedLocations, searchQuery, searchInvestors]);
-
-  // ── Debounced search input ─────────────────────────
-  const handleSearchInput = (val: string) => {
-    setSearchInput(val);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => {
-      setSearchQuery(val);
-    }, 500);
-  };
-
-  // ── Load more ──────────────────────────────────────
-  const handleLoadMore = () => {
-    if (!pagination || pagination.page >= pagination.total_pages) return;
-    searchInvestors(pagination.page + 1, true);
-  };
+  }, []);
 
   // ── Pipeline actions ───────────────────────────────
   const addToPipeline = useCallback(async (inv: Investor) => {
@@ -323,7 +322,7 @@ export default function Investors() {
     setAddingToPipeline(inv.id);
     const { error } = await supabase.from("pipeline_entries").insert({
       user_id: userId,
-      investor_id: inv.id.startsWith("apollo-") ? null : inv.id,
+      investor_id: inv.id,
       firm_name: inv.firm_name,
       status: "researching",
       interest_level: "unknown",
@@ -392,28 +391,49 @@ export default function Investors() {
 
   const hasFilters = selectedStages.length > 0 || selectedSectors.length > 0 || selectedLocations.length > 0;
 
-  // ── Split results: recommended (first 6 not dismissed) + rest ───
-  const visibleInvestors = useMemo(() => {
-    return investors.filter(i => !dismissedIds.has(i.id));
-  }, [investors, dismissedIds]);
-
-  const recommended = visibleInvestors.slice(0, 6);
-  const allOthers = visibleInvestors.slice(6);
-  const totalCount = visibleInvestors.length;
-
-  const hasMore = pagination && pagination.page < pagination.total_pages;
-
   return (
     <div>
       {/* Header */}
       <div className="mb-5">
-        <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
-        <p className="text-sm text-secondary-foreground">
-          {apolloAvailable
-            ? "Search real investors matched to your stage, sector, and thesis."
-            : "Showing cached investors. Connect Apollo to discover more."}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Investor Discovery</h2>
+            <p className="text-sm text-secondary-foreground">
+              Browse curated investors matched to your stage, sector, and thesis.
+            </p>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[10px] text-muted-foreground border border-border rounded-sm px-2 py-1 cursor-help whitespace-nowrap">
+                  <Eye className="h-3 w-3 inline mr-1" />
+                  Each reveal uses 1 credit
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Clicking "Reveal Contact" uses 1 Apollo credit to look up email and LinkedIn info.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
+
+      {/* Narrative selector */}
+      {projects.length > 1 && (
+        <div className="mb-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Match investors to narrative</label>
+          <Select value={selectedProjectId || undefined} onValueChange={handleProjectChange}>
+            <SelectTrigger className="w-full max-w-xs h-9 text-sm">
+              <SelectValue placeholder="Select a narrative..." />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.title || "Untitled narrative"}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Search + filters */}
       <div className="flex items-center gap-3 mb-1">
@@ -421,15 +441,14 @@ export default function Investors() {
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by name, firm, sector, keywords..."
+            placeholder="Search by name, firm, or title..."
             value={searchInput}
-            onChange={e => handleSearchInput(e.target.value)}
+            onChange={e => setSearchInput(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-background border border-border rounded-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-electric/40 transition-colors"
           />
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {loading ? "Searching..." : `${totalCount} found`}
-          {pagination && pagination.total_entries > 0 && ` of ${pagination.total_entries.toLocaleString()}`}
+          {loading ? "Loading..." : `${totalCount} investors`}
         </span>
         <button
           onClick={() => setShowFilters(!showFilters)}
@@ -445,11 +464,22 @@ export default function Investors() {
           )}
         </button>
       </div>
-      <p className="text-[10px] text-muted-foreground/60 mb-4">Contact information is sourced from public data and may not be current.</p>
+      <p className="text-[10px] text-muted-foreground/60 mb-4">Contact info is revealed on demand via Apollo enrichment.</p>
 
       {/* Filter panel */}
       {showFilters && (
         <div className="mb-5 p-4 rounded-sm border border-border card-gradient space-y-4 animate-fade-in">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Stage</label>
+            <div className="flex flex-wrap gap-2">
+              {STAGE_OPTIONS.map(s => (
+                <button key={s.value} onClick={() => toggleFilter(selectedStages, s.value, setSelectedStages)}
+                  className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
+                    selectedStages.includes(s.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
+                  }`}>{s.label}</button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Sector / Industry</label>
             <div className="flex flex-wrap gap-2">
@@ -493,8 +523,8 @@ export default function Investors() {
       {!loading && totalCount === 0 && (
         <div className="text-center py-12 border border-border rounded-sm card-gradient">
           <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">No investors match your search.</p>
-          <p className="text-xs text-muted-foreground">Try broadening your keywords or clearing filters.</p>
+          <p className="text-sm text-muted-foreground mb-1">No investors match your filters.</p>
+          <p className="text-xs text-muted-foreground">Try broadening your search or clearing filters.</p>
         </div>
       )}
 
@@ -515,8 +545,10 @@ export default function Investors() {
                 onAddToPipeline={() => addToPipeline(inv)}
                 onRemoveFromPipeline={() => removeFromPipeline(inv)}
                 onDismiss={() => dismissInvestor(inv)}
+                onRevealContact={() => revealContact(inv)}
                 isAdding={addingToPipeline === inv.id}
                 isRemoving={removingFromPipeline === inv.id}
+                isEnriching={enrichingIds.has(inv.id)}
                 isRecommended
               />
             ))}
@@ -542,39 +574,13 @@ export default function Investors() {
                 onAddToPipeline={() => addToPipeline(inv)}
                 onRemoveFromPipeline={() => removeFromPipeline(inv)}
                 onDismiss={() => dismissInvestor(inv)}
+                onRevealContact={() => revealContact(inv)}
                 isAdding={addingToPipeline === inv.id}
                 isRemoving={removingFromPipeline === inv.id}
+                isEnriching={enrichingIds.has(inv.id)}
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Load more button */}
-      {!loading && hasMore && (
-        <div className="flex justify-center mt-8 mb-4">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-sm border border-border text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30 transition-colors disabled:opacity-50"
-          >
-            {loadingMore ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            {loadingMore ? "Loading..." : `Load more investors (${pagination?.total_entries ? (pagination.total_entries - investors.length).toLocaleString() : ""} remaining)`}
-          </button>
-        </div>
-      )}
-
-      {/* Apollo fallback notice */}
-      {!apolloAvailable && !loading && (
-        <div className="mt-6 p-4 rounded-sm border border-border bg-muted/20 text-center">
-          <p className="text-sm text-muted-foreground">
-            🔌 <strong>Connect Apollo</strong> to discover 200+ real investors with verified contact info.
-          </p>
-          <p className="text-xs text-muted-foreground/70 mt-1">Add your Apollo API key to unlock live investor search.</p>
         </div>
       )}
     </div>
@@ -583,20 +589,24 @@ export default function Investors() {
 
 // ── Investor Card ──────────────────────────────────────
 
-function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, onDismiss, isAdding, isRemoving, isRecommended }: {
+function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, onDismiss, onRevealContact, isAdding, isRemoving, isEnriching, isRecommended }: {
   inv: Investor;
   inPipeline: boolean;
   onAddToPipeline: () => void;
   onRemoveFromPipeline: () => void;
   onDismiss: () => void;
+  onRevealContact: () => void;
   isAdding: boolean;
   isRemoving: boolean;
+  isEnriching: boolean;
   isRecommended?: boolean;
 }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [fading, setFading] = useState(false);
 
-  const hasContact = inv.contact_email || inv.linkedin_url || inv.website_url;
+  const enriched = isEnrichedRecently(inv);
+  const name = displayName(inv);
+  const checkSize = formatCheckSize(inv.check_min, inv.check_max);
 
   const handleDismiss = () => {
     setFading(true);
@@ -618,7 +628,7 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
   };
 
   return (
-    <div className={`relative p-5 rounded-sm border transition-all group ${
+    <div className={`relative flex flex-col p-5 rounded-sm border transition-all group ${
       fading ? "opacity-0 scale-95" : "opacity-100"
     } ${
       isRecommended ? "border-electric/20 bg-electric/[0.03] hover:border-electric/30" : "border-border card-gradient hover:border-muted-foreground/20"
@@ -632,12 +642,12 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         <X className="h-3.5 w-3.5" />
       </button>
 
-      {/* Person name + title */}
+      {/* Name + title */}
       <div className="flex items-start justify-between gap-3 mb-2 pr-5">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <h3 className="text-sm font-bold text-foreground leading-tight">{inv.contact_name}</h3>
+            <h3 className="text-sm font-bold text-foreground leading-tight">{name}</h3>
           </div>
           {inv.title && (
             <p className="text-[11px] text-muted-foreground mt-0.5 ml-5">{inv.title}</p>
@@ -648,7 +658,7 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </span>
       </div>
 
-      {/* Firm name */}
+      {/* Firm */}
       <p className="text-xs font-medium text-secondary-foreground mb-1">{inv.firm_name}</p>
 
       {/* Location */}
@@ -659,7 +669,15 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </p>
       )}
 
-      {/* Stage tags (if available from DB) */}
+      {/* Check size */}
+      {checkSize && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+          <Banknote className="h-3 w-3 shrink-0" />
+          {checkSize}
+        </p>
+      )}
+
+      {/* Stage tags */}
       {inv.stages && inv.stages.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {inv.stages.map(s => (
@@ -670,9 +688,9 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </div>
       )}
 
-      {/* Sector tags (if available from DB) */}
+      {/* Sector tags */}
       {inv.sectors && inv.sectors.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1.5 mb-2">
           {inv.sectors.slice(0, 3).map(s => (
             <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted/40 text-muted-foreground">
               {SECTOR_LABELS[s] || s}
@@ -682,47 +700,71 @@ function InvestorCard({ inv, inPipeline, onAddToPipeline, onRemoveFromPipeline, 
         </div>
       )}
 
-      {/* Contact info row */}
-      {hasContact ? (
-        <div className="flex items-center gap-2 mb-3">
-          {inv.contact_email && (
-            <div className="flex items-center gap-1">
-              <a href={`mailto:${inv.contact_email}`} className="text-[10px] text-muted-foreground hover:text-electric transition-colors truncate max-w-[140px]" title={inv.contact_email}>
-                <Mail className="h-3 w-3 inline mr-0.5" />{inv.contact_email}
-              </a>
-              <button
-                onClick={() => { navigator.clipboard.writeText(inv.contact_email!); toast.success("Email copied"); }}
-                className="p-0.5 text-muted-foreground/50 hover:text-electric transition-colors"
-                title="Copy email"
-              >
-                <Copy className="h-2.5 w-2.5" />
-              </button>
-            </div>
-          )}
-          {inv.linkedin_url && (
-            <a href={inv.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="LinkedIn">
-              <Linkedin className="h-3.5 w-3.5" />
-            </a>
-          )}
-          {inv.website_url && (
-            <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-              <Globe className="h-3.5 w-3.5" />
-            </a>
-          )}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 mb-3">
-          {inv.website_url && (
-            <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
-              <Globe className="h-3.5 w-3.5" />
-            </a>
-          )}
-          <p className="text-[10px] text-muted-foreground/50">No contact info available</p>
-        </div>
+      {/* Solo founder friendly */}
+      {inv.solo_founder_friendly && (
+        <p className="text-[10px] text-emerald-500 flex items-center gap-1 mb-2">
+          <CheckCircle2 className="h-3 w-3" />
+          Solo founder friendly
+        </p>
       )}
 
+      {/* Contact row */}
+      <div className="flex-1" />
+      <div className="mb-3">
+        {enriched ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            {inv.contact_email ? (
+              <div className="flex items-center gap-1">
+                <a href={`mailto:${inv.contact_email}`} className="text-[10px] text-muted-foreground hover:text-electric transition-colors truncate max-w-[140px]" title={inv.contact_email}>
+                  <Mail className="h-3 w-3 inline mr-0.5" />{inv.contact_email}
+                </a>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(inv.contact_email!); toast.success("Email copied"); }}
+                  className="p-0.5 text-muted-foreground/50 hover:text-electric transition-colors"
+                  title="Copy email"
+                >
+                  <Copy className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/50">No email found</span>
+            )}
+            {inv.linkedin_url && (
+              <a href={inv.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="LinkedIn">
+                <Linkedin className="h-3.5 w-3.5" />
+              </a>
+            )}
+            {inv.website_url && (
+              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
+                <Globe className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        ) : isEnriching ? (
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onRevealContact}
+              className="text-[11px] font-medium px-3 py-1.5 rounded-sm border border-border text-secondary-foreground hover:text-electric hover:border-electric/30 transition-colors flex items-center gap-1.5"
+            >
+              <Eye className="h-3 w-3" />
+              Reveal Contact
+            </button>
+            {inv.website_url && (
+              <a href={inv.website_url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-electric transition-colors" title="Website">
+                <Globe className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-3 border-t border-border">
+      <div className="flex items-center gap-2 pt-3 border-t border-border mt-auto">
         {inv.application_url && (
           <a href={inv.application_url} target="_blank" rel="noopener noreferrer"
             className="flex-1 text-center text-xs font-medium py-2 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors">
