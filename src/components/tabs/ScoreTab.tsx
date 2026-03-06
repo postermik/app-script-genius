@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
