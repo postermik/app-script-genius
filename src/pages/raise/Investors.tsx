@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Globe, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2, Info } from "lucide-react";
+import { Search, MapPin, Filter, X, Sparkles, ArrowRight, Check, Linkedin, Mail, Copy, Loader2, User, Banknote, Eye, CheckCircle2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
