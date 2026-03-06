@@ -372,7 +372,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
       setOutput((prev) => {
         if (!prev) return prev;
-        const newData = JSON.parse(JSON.stringify(prev.data));
+        const sourceData = prev.data || (prev as any).supporting || (prev as any).deliverable || {};
+        const newData = JSON.parse(JSON.stringify(sourceData));
         setNestedValue(newData, path, refined);
         const updated = { ...prev, data: newData };
         saveProject(updated as NarrativeOutputData);
