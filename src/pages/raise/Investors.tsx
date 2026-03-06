@@ -639,7 +639,7 @@ export default function Investors() {
       )}
 
       {/* All investors (loosened filters) */}
-      {!loading && allInvestors.length > 0 && (
+      {!loading && !narrativeLoading && allInvestors.length > 0 && (
         <div>
           {recommended.length > 0 && (
             <div className="flex items-center gap-2 mb-4">
