@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
 
 const READINESS_TITLES: Record<string, string> = {
@@ -61,6 +63,7 @@ interface Props {
 export function ScoreTab({ score, mode, showRescore }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
+  const { appliedSuggestions } = useDecksmith();
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
 
   const overall = score.overall;
@@ -70,11 +73,23 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
 
   const gaps = score.gaps || [];
   const improvements = score.improvements || [];
+  const appliedCount = appliedSuggestions.size;
 
   return (
     <div className="space-y-4">
-      {/* Re-score prompt */}
-      {showRescore && (
+      {/* Applied suggestions re-score prompt */}
+      {appliedCount > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5">
+          <RefreshCw className="h-3.5 w-3.5 text-emerald shrink-0" />
+          <p className="text-xs text-foreground/80 flex-1">
+            {appliedCount} suggestion{appliedCount > 1 ? "s" : ""} applied since last score.
+          </p>
+          <button className="text-xs font-medium text-electric hover:underline whitespace-nowrap">Re-score</button>
+        </div>
+      )}
+
+      {/* Re-score prompt (legacy) */}
+      {showRescore && appliedCount === 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
           <RefreshCw className="h-3.5 w-3.5 text-electric shrink-0" />
           <p className="text-xs text-foreground/80 flex-1">Your outputs have changed.</p>
@@ -141,15 +156,25 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
             {gaps.map((gap, i) => {
               const howToFix = improvements[i];
               const expanded = expandedImprovement === i;
+              const isApplied = appliedSuggestions.has(i);
               return (
-                <div key={i} className="rounded-sm border border-border bg-muted/30 overflow-hidden">
+                <div key={i} className={`rounded-sm border overflow-hidden ${isApplied ? "border-emerald/20 bg-emerald/5" : "border-border bg-muted/30"}`}>
                   <button
                     onClick={() => setExpandedImprovement(expanded ? null : i)}
                     className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
-                      <span className="text-xs text-foreground/90 leading-relaxed">{gap}</span>
+                      {isApplied ? (
+                        <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
+                      )}
+                      <span className={`text-xs leading-relaxed ${isApplied ? "text-foreground/60" : "text-foreground/90"}`}>{gap}</span>
+                      {isApplied && (
+                        <Badge variant="secondary" className="ml-2 bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">
+                          Applied
+                        </Badge>
+                      )}
                     </div>
                     {howToFix && (
                       expanded
@@ -159,18 +184,30 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
                   </button>
                   {expanded && howToFix && (
                     <div className="px-4 pb-3 border-t border-border pt-3 animate-fade-in">
-                      <div className="flex items-start gap-2">
-                        <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
-                          <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
+                      {isApplied ? (
+                        <div className="flex items-start gap-2">
+                          <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-[10px] text-emerald uppercase tracking-wider font-semibold mb-1">Applied</p>
+                            <p className="text-xs text-foreground/60 leading-relaxed">This suggestion has been applied to your narrative.</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2 flex justify-end">
-                        <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors">
-                          Apply to narrative
-                        </button>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2">
+                            <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
+                              <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex justify-end">
+                            <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors">
+                              Apply to narrative
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
