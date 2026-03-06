@@ -62,6 +62,14 @@ const SECTOR_OPTIONS = [
   { value: "crypto", label: "Crypto/Web3" },
 ];
 
+const TYPE_OPTIONS = [
+  { value: "vc", label: "VC" },
+  { value: "micro_vc", label: "Micro VC" },
+  { value: "accelerator", label: "Accelerator" },
+  { value: "angel", label: "Angel" },
+  { value: "corporate_vc", label: "Corporate VC" },
+];
+
 const LOCATION_OPTIONS = [
   { value: "San Francisco", label: "San Francisco" },
   { value: "New York", label: "New York" },
@@ -148,6 +156,7 @@ function applyFilters(
   stages: string[],
   sectors: string[],
   locations: string[],
+  types: string[],
   dismissedIds: Set<string>,
 ) {
   return list.filter(inv => {
@@ -171,6 +180,10 @@ function applyFilters(
     if (locations.length > 0) {
       const loc = [inv.location_city, inv.location_state, inv.location_country].filter(Boolean).join(" ").toLowerCase();
       if (!locations.some(l => loc.includes(l.toLowerCase()))) return false;
+    }
+
+    if (types.length > 0) {
+      if (!types.includes(inv.investor_type)) return false;
     }
 
     return true;
@@ -200,6 +213,7 @@ export default function Investors() {
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // ── Init: load user, projects, pipeline, investors ──
@@ -261,6 +275,7 @@ export default function Investors() {
         setSelectedStages(signals.stages);
         setSelectedSectors(signals.sectors);
         setSelectedLocations([]);
+        setSelectedTypes([]);
       }
       setNarrativeLoading(false);
     }, 1200);
@@ -279,13 +294,17 @@ export default function Investors() {
     setUserManuallyChangedFilters(true);
     setSelectedLocations(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
   };
+  const handleToggleType = (val: string) => {
+    setUserManuallyChangedFilters(true);
+    setSelectedTypes(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
 
   // ── Smart filter fallback logic ──────────────────
   const { recommended, allInvestors, filtersLoosened, totalCount } = useMemo(() => {
     const MIN_RESULTS = 10;
 
     // Recommended: always use strict filters
-    const strictFiltered = applyFilters(investors, searchInput, selectedStages, selectedSectors, selectedLocations, dismissedIds);
+    const strictFiltered = applyFilters(investors, searchInput, selectedStages, selectedSectors, selectedLocations, selectedTypes, dismissedIds);
     const rec = strictFiltered.slice(0, 6);
 
     // "All Investors" section: apply fallback loosening if strict results < MIN_RESULTS
@@ -294,7 +313,7 @@ export default function Investors() {
 
     if (allResults.length < MIN_RESULTS && !userManuallyChangedFilters) {
       // Step 1: Remove location filters
-      let loosened1 = applyFilters(investors, searchInput, selectedStages, selectedSectors, [], dismissedIds);
+      let loosened1 = applyFilters(investors, searchInput, selectedStages, selectedSectors, [], selectedTypes, dismissedIds);
       if (loosened1.length >= MIN_RESULTS) {
         allResults = loosened1;
         loosened = true;
@@ -304,7 +323,7 @@ export default function Investors() {
         let best = loosened1;
         while (trySectors.length > 0 && best.length < MIN_RESULTS) {
           trySectors.pop(); // remove least specific (last)
-          best = applyFilters(investors, searchInput, selectedStages, trySectors, [], dismissedIds);
+          best = applyFilters(investors, searchInput, selectedStages, trySectors, [], selectedTypes, dismissedIds);
         }
         if (best.length >= MIN_RESULTS || best.length > allResults.length) {
           allResults = best;
@@ -313,7 +332,7 @@ export default function Investors() {
 
         // Step 3: Remove stage filters too
         if (allResults.length < MIN_RESULTS) {
-          const broadest = applyFilters(investors, searchInput, [], [], [], dismissedIds);
+          const broadest = applyFilters(investors, searchInput, [], [], [], selectedTypes, dismissedIds);
           if (broadest.length > allResults.length) {
             allResults = broadest;
             loosened = true;
@@ -332,7 +351,7 @@ export default function Investors() {
       filtersLoosened: loosened,
       totalCount: allResults.length,
     };
-  }, [investors, dismissedIds, searchInput, selectedStages, selectedSectors, selectedLocations, userManuallyChangedFilters]);
+  }, [investors, dismissedIds, searchInput, selectedStages, selectedSectors, selectedLocations, selectedTypes, userManuallyChangedFilters]);
 
   // ── Reveal contact (enrich) ───────────────────────
   const revealContact = useCallback(async (inv: Investor) => {
@@ -452,9 +471,10 @@ export default function Investors() {
     setSelectedStages([]);
     setSelectedSectors([]);
     setSelectedLocations([]);
+    setSelectedTypes([]);
   };
 
-  const hasFilters = selectedStages.length > 0 || selectedSectors.length > 0 || selectedLocations.length > 0;
+  const hasFilters = selectedStages.length > 0 || selectedSectors.length > 0 || selectedLocations.length > 0 || selectedTypes.length > 0;
 
   return (
     <div>
@@ -507,7 +527,7 @@ export default function Investors() {
           <Filter className="h-4 w-4" /> Filters
           {hasFilters && (
             <span className="text-xs bg-electric text-primary-foreground px-1.5 py-0.5 rounded-sm font-bold">
-              {selectedStages.length + selectedSectors.length + selectedLocations.length}
+              {selectedStages.length + selectedSectors.length + selectedLocations.length + selectedTypes.length}
             </span>
           )}
         </button>
@@ -546,6 +566,17 @@ export default function Investors() {
                   className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
                     selectedLocations.includes(l.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
                   }`}>{l.label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Investor Type</label>
+            <div className="flex flex-wrap gap-2">
+              {TYPE_OPTIONS.map(t => (
+                <button key={t.value} onClick={() => handleToggleType(t.value)}
+                  className={`text-xs px-3 py-1.5 rounded-sm border transition-colors font-medium ${
+                    selectedTypes.includes(t.value) ? "border-electric/40 text-electric bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"
+                  }`}>{t.label}</button>
               ))}
             </div>
           </div>
