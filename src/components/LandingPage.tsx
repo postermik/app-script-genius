@@ -88,7 +88,7 @@ export function LandingPage() {
                 <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
               </div>
               <p className="text-sm text-foreground/80 leading-relaxed mt-4">
-                We help founders turn rough notes into investor-ready narratives. Pitch decks, board memos, strategy docs. One input, every format. Our AI doesn't just write slides. It structures the argument investors actually follow.
+                Sales teams waste 15 hours a week on meeting coordination. Relay automates the entire scheduling workflow, from availability to follow-up, so reps spend time selling instead of scheduling. We're live with 40 teams, growing 34% quarter over quarter, with 128% net revenue retention.
               </p>
 
               <div className="mt-4 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
@@ -96,7 +96,7 @@ export function LandingPage() {
                   <Lightbulb className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-foreground/80">Consider leading with the pain point before the solution to create urgency.</p>
+                  <p className="text-sm text-foreground/80">Consider adding a specific customer win to make the traction claim more concrete.</p>
                 </div>
                 <button className="text-xs px-2.5 py-1 bg-electric hover:bg-electric/80 text-primary-foreground rounded-sm transition-colors font-medium shrink-0">
                   Apply

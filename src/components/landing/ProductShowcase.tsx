@@ -226,12 +226,12 @@ export function PresentationSlides() {
           <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
             <div>
               <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Cover Slide</p>
-              <p className="text-sm font-semibold text-foreground mt-2">Series B Growth Strategy</p>
+              <p className="text-sm font-semibold text-foreground mt-2">Relay Pre-Seed Pitch</p>
             </div>
             <div>
               <div className="w-8 h-[2px] bg-electric mb-2" />
-              <p className="text-[11px] text-[hsl(215_20%_44%)]">Autoflow · Q4 2026</p>
-              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential: Board Distribution Only</p>
+              <p className="text-[11px] text-[hsl(215_20%_44%)]">Relay · 2026</p>
+              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential</p>
             </div>
           </div>
         </div>
