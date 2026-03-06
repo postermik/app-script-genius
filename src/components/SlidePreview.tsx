@@ -258,7 +258,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
               >
                 <div>
                   {slide.categoryLabel && (
-                    <p className="font-semibold uppercase leading-tight" style={{ fontSize: "5px", color: themeColors.primary, letterSpacing: "0.5px" }}>
+                    <p className="font-semibold uppercase leading-tight" style={{ fontSize: "5px", color: themeColors.accent, letterSpacing: "0.5px" }}>
                       {slide.categoryLabel}
                     </p>
                   )}
@@ -269,13 +269,13 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {subheader}
                   </p>
                 </div>
-                <div className="mt-auto" />
+                <div className="mt-auto" style={{ borderTop: `2px solid ${themeColors.accent}`, marginLeft: '-10px', marginRight: '-10px' }} />
               </div>
 
               {/* Content section */}
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                 {slide.categoryLabel && (
-                  <span className="text-xs uppercase tracking-[0.1em] font-semibold" style={{ color: themeColors.primary }}>
+                  <span className="text-xs uppercase tracking-[0.1em] font-semibold" style={{ color: themeColors.accent }}>
                     {slide.categoryLabel}
                   </span>
                 )}
