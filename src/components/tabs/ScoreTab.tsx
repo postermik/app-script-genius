@@ -62,21 +62,25 @@ interface Props {
   isRescoring?: boolean;
 }
 
-export function ScoreTab({ score, mode, showRescore }: Props) {
+export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
-  const { appliedSuggestions, markSuggestionApplied } = useDecksmith();
+  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection } = useDecksmith();
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
 
-  const handleApply = async (index: number) => {
+  const handleApply = async (index: number, gap: string, howToFix: string) => {
     setApplyingIndex(index);
-    // Simulate AI refinement — matches Outputs page behavior
-    setTimeout(() => {
-      setApplyingIndex(null);
+    try {
+      // Use the real refine API to apply the suggestion
+      await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
       markSuggestionApplied(index);
       setExpandedImprovement(null);
-    }, 1500);
+    } catch {
+      // refineSection already shows toast on error
+    } finally {
+      setApplyingIndex(null);
+    }
   };
 
   const overall = score.overall;
