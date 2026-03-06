@@ -253,13 +253,17 @@ export default function Investors() {
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
     setUserManuallyChangedFilters(false);
+    setNarrativeLoading(true);
     const project = projects.find(p => p.id === projectId);
-    if (project) {
-      const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
-      setSelectedStages(signals.stages);
-      setSelectedSectors(signals.sectors);
-      setSelectedLocations([]);
-    }
+    setTimeout(() => {
+      if (project) {
+        const signals = extractNarrativeSignals(project.output_data, project.raw_input || "");
+        setSelectedStages(signals.stages);
+        setSelectedSectors(signals.sectors);
+        setSelectedLocations([]);
+      }
+      setNarrativeLoading(false);
+    }, 1200);
   };
 
   // Wrap filter setters to track manual changes
