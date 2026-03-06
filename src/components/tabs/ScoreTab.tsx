@@ -63,8 +63,19 @@ interface Props {
 export function ScoreTab({ score, mode, showRescore }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
-  const { appliedSuggestions } = useDecksmith();
+  const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const { appliedSuggestions, markSuggestionApplied } = useDecksmith();
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
+
+  const handleApply = async (index: number) => {
+    setApplyingIndex(index);
+    // Simulate AI refinement — matches Outputs page behavior
+    setTimeout(() => {
+      setApplyingIndex(null);
+      markSuggestionApplied(index);
+      setExpandedImprovement(null);
+    }, 1500);
+  };
 
   const overall = score.overall;
   const components = score.components;
