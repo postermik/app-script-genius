@@ -602,7 +602,7 @@ export default function Investors() {
       )}
 
       {/* Empty state */}
-      {!loading && totalCount === 0 && recommended.length === 0 && (
+      {!loading && !narrativeLoading && totalCount === 0 && recommended.length === 0 && (
         <div className="text-center py-12 border border-border rounded-sm card-gradient">
           <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-1">No investors match your filters.</p>
@@ -611,7 +611,7 @@ export default function Investors() {
       )}
 
       {/* Recommended section (top 6, strict filters) */}
-      {!loading && recommended.length > 0 && (
+      {!loading && !narrativeLoading && recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="h-4 w-4 text-electric" />
