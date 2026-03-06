@@ -34,11 +34,20 @@ export function InvestmentMemoView({ data }: Props) {
             {copied ? "Copied" : "Copy All"}
           </button>
           <button
-            onClick={() => toast.info("PDF export coming soon")}
+            onClick={() => {
+              const blob = new Blob([fullText], { type: "text/plain" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "investment-memo.txt";
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Memo downloaded.");
+            }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium text-secondary-foreground hover:text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
           >
             <FileDown className="h-3 w-3" />
-            Export PDF
+            Download
           </button>
         </div>
       </div>

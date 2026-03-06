@@ -58,23 +58,29 @@ interface Props {
   score: RhetoricScore;
   mode: string;
   showRescore?: boolean;
+  onRescore?: () => void;
+  isRescoring?: boolean;
 }
 
-export function ScoreTab({ score, mode, showRescore }: Props) {
+export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
-  const { appliedSuggestions, markSuggestionApplied } = useDecksmith();
+  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection } = useDecksmith();
   useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
 
-  const handleApply = async (index: number) => {
+  const handleApply = async (index: number, gap: string, howToFix: string) => {
     setApplyingIndex(index);
-    // Simulate AI refinement — matches Outputs page behavior
-    setTimeout(() => {
-      setApplyingIndex(null);
+    try {
+      // Use the real refine API to apply the suggestion
+      await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
       markSuggestionApplied(index);
       setExpandedImprovement(null);
-    }, 1500);
+    } catch {
+      // refineSection already shows toast on error
+    } finally {
+      setApplyingIndex(null);
+    }
   };
 
   const overall = score.overall;
@@ -91,20 +97,24 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
       {/* Applied suggestions re-score prompt */}
       {appliedCount > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5">
-          <RefreshCw className="h-3.5 w-3.5 text-emerald shrink-0" />
+          <RefreshCw className={`h-3.5 w-3.5 text-emerald shrink-0 ${isRescoring ? "animate-spin" : ""}`} />
           <p className="text-xs text-foreground/80 flex-1">
             {appliedCount} suggestion{appliedCount > 1 ? "s" : ""} applied since last score.
           </p>
-          <button className="text-xs font-medium text-electric hover:underline whitespace-nowrap">Re-score</button>
+          <button onClick={onRescore} disabled={isRescoring} className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50">
+            {isRescoring ? "Re-scoring…" : "Re-score"}
+          </button>
         </div>
       )}
 
       {/* Re-score prompt (legacy) */}
       {showRescore && appliedCount === 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
-          <RefreshCw className="h-3.5 w-3.5 text-electric shrink-0" />
+          <RefreshCw className={`h-3.5 w-3.5 text-electric shrink-0 ${isRescoring ? "animate-spin" : ""}`} />
           <p className="text-xs text-foreground/80 flex-1">Your outputs have changed.</p>
-          <button className="text-xs font-medium text-electric hover:underline whitespace-nowrap">Re-score?</button>
+          <button onClick={onRescore} disabled={isRescoring} className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50">
+            {isRescoring ? "Re-scoring…" : "Re-score?"}
+          </button>
         </div>
       )}
 
@@ -203,7 +213,7 @@ export function ScoreTab({ score, mode, showRescore }: Props) {
                       </div>
                       <div className="mt-2 flex justify-end">
                         <button
-                          onClick={() => handleApply(i)}
+                          onClick={() => handleApply(i, gap, howToFix)}
                           disabled={applyingIndex === i}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                         >

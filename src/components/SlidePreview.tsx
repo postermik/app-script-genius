@@ -27,6 +27,8 @@ interface Props {
   onReorder: (order: number[]) => void;
   theme: DeckTheme;
   onThemeChange: (theme: DeckTheme) => void;
+  onRefineSlide?: (slideIndex: number, tone: string) => void;
+  refiningSlideIndex?: number | null;
 }
 
 const REFINE_OPTIONS = [
@@ -148,7 +150,7 @@ function getLightness(hex: string): number {
   return ((max + min) / 2) * 100;
 }
 
-export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange }: Props) {
+export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange, onRefineSlide, refiningSlideIndex }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
   const [dismissedSlideSuggestions, setDismissedSlideSuggestions] = useState<number[]>([]);
@@ -342,17 +344,23 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 <div className="relative">
                   <button
                     onClick={(e) => { e.stopPropagation(); setRefineOpen(refineOpen === i ? null : i); }}
-                    className="text-xs px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors font-medium flex items-center gap-1"
+                    disabled={refiningSlideIndex === slide.originalIdx}
+                    className="text-xs px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors font-medium flex items-center gap-1 disabled:opacity-50"
                   >
-                    Refine <ChevronDown className="h-3 w-3" />
+                    {refiningSlideIndex === slide.originalIdx ? <><Loader2 className="h-3 w-3 animate-spin" /> Refining…</> : <>Refine <ChevronDown className="h-3 w-3" /></>}
                   </button>
                   {refineOpen === i && (
                     <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
                       {REFINE_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
-                          onClick={(e) => { e.stopPropagation(); setRefineOpen(null); }}
-                          className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent hover:text-foreground transition-colors font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRefineOpen(null);
+                            onRefineSlide?.(slide.originalIdx, opt.value);
+                          }}
+                          disabled={refiningSlideIndex === slide.originalIdx}
+                          className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent hover:text-foreground transition-colors font-medium disabled:opacity-50"
                         >
                           {opt.label}
                         </button>

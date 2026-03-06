@@ -113,7 +113,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -131,6 +131,9 @@ export function OutputView() {
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
   const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [isRefiningPitch, setIsRefiningPitch] = useState(false);
+  const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);
+  const [isRescoring, setIsRescoring] = useState(false);
 
   // Determine which output tabs to show
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
@@ -231,6 +234,30 @@ export function OutputView() {
     }
   };
 
+  const handleRefinePitch = async () => {
+    setIsRefiningPitch(true);
+    try {
+      await refineSection("pitchScript", "pitchScript", "refine");
+    } catch { /* already toasted */ }
+    finally { setIsRefiningPitch(false); }
+  };
+
+  const handleRefineQAItem = async (index: number) => {
+    setRefiningQAIndex(index);
+    try {
+      await refineSection(`qa-${index}`, `analysis.commonQuestions.${index}.suggestedAnswer`, "refine");
+    } catch { /* already toasted */ }
+    finally { setRefiningQAIndex(null); }
+  };
+
+  const handleRescore = async () => {
+    setIsRescoring(true);
+    try {
+      await refineSection("score", "score", "rescore" as any);
+    } catch { /* already toasted */ }
+    finally { setIsRescoring(false); }
+  };
+
   // Render the active output deliverable tab
   const renderOutputContent = () => {
     switch (activeOutputTab) {
@@ -239,12 +266,12 @@ export function OutputView() {
       case "elevator_pitch": {
         const pitchData = synthesizeElevatorPitch(output);
         if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
-        return <ElevatorPitchView data={pitchData} />;
+        return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
         const qaItems = synthesizeInvestorQA(output);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
-        return <InvestorQAView items={qaItems} />;
+        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
         const emails = synthesizePitchEmails(output);
@@ -283,7 +310,7 @@ export function OutputView() {
             )}
 
             {/* Score tab (with merged coaching) */}
-            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} />}
+            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
             {activeTab === "score" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
@@ -293,7 +320,7 @@ export function OutputView() {
               <AnalysisTab analysis={analysis} score={score} mode={output.mode} />
             )}
             {activeTab === "analysis" && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output.mode} />
+              <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />
             )}
             {activeTab === "analysis" && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
