@@ -115,7 +115,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
