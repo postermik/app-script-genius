@@ -388,22 +388,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
     // Parse the full text
     console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
-    console.log(`[Generation] Stream raw (first 500):`, fullText.slice(0, 500));
+    console.log(`[Generation] Stream raw (first 500):`, fullText.substring(0, 500));
     const cleaned = stripFences(fullText);
-    try { return JSON.parse(cleaned); }
-    catch {
-      console.warn("[Generation] Strict JSON parse failed, attempting repair...");
-      try {
-        const repaired = repairJSON(fullText);
-        console.log("[Generation] JSON repair succeeded");
-        return repaired;
-      } catch (e) {
-        console.error("[Generation] JSON repair failed:", e);
-        console.error("[Generation] Full raw response:", fullText);
-        const err = new Error("AI response could not be parsed. Please retry.");
-        (err as any).rawResponse = fullText;
-        throw err;
-      }
+    try {
+      const result = JSON.parse(cleaned);
+      if (Array.isArray(result)) return { deckFramework: result };
+      return result;
+    } catch {}
+    // Try extracting JSON
+    const extracted = extractJSON(fullText);
+    try {
+      const result = JSON.parse(extracted);
+      if (Array.isArray(result)) return { deckFramework: result };
+      return result;
+    } catch {}
+    console.warn("[Generation] Strict JSON parse failed, attempting repair...");
+    try {
+      const repaired = repairJSON(fullText);
+      if (Array.isArray(repaired)) return { deckFramework: repaired };
+      console.log("[Generation] JSON repair succeeded");
+      return repaired;
+    } catch (e) {
+      console.error("[Generation] JSON repair failed:", e);
+      console.error("[Generation] Full raw response:", fullText);
+      const err = new Error("AI response could not be parsed. Please retry.");
+      (err as any).rawResponse = fullText;
+      throw err;
     }
   };
 
