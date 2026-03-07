@@ -36,11 +36,8 @@ function detectFromInput(input: string): IntakeSelections {
   else if (/strateg/.test(lower)) purpose = "strategy_memo";
   else if (/team|alignment|internal|all.hands/.test(lower)) purpose = "team_alignment";
 
-  // Output detection
-  const outputs: OutputDeliverable[] = ["slide_framework"];
-  if (purpose === "investor_pitch") {
-    outputs.push("elevator_pitch", "investor_qa");
-  }
+  // Outputs: start empty — let user choose
+  const outputs: OutputDeliverable[] = [];
 
   // Stage detection
   let stage: IntakeStage = "seed";
