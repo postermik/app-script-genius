@@ -273,6 +273,17 @@ export function OutputView() {
     }
   };
 
+  const handleAddOutput = (newOutput: OutputDeliverable) => {
+    const updated = [...selectedOutputs, newOutput];
+    if (intakeSelections) {
+      setIntakeSelections({ ...intakeSelections, outputs: updated });
+    } else {
+      setIntakeSelections({ purpose: "investor_pitch", outputs: updated, stage: "seed" });
+    }
+    setActiveOutputTab(newOutput);
+    toast.success(`Added ${newOutput.replace(/_/g, " ")}`);
+  };
+
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
     <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
       <p className="text-sm text-destructive font-medium">{message}</p>
