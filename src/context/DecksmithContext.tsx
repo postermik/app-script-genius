@@ -369,13 +369,38 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       if (proj?.current_thesis) currentThesis = proj.current_thesis;
     }
 
+    // Determine which outputs to generate
+    const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
+    const needsSlides = selectedOutputs.includes("slide_framework");
+
+    // Build input with output instructions to reduce AI workload
+    let augmentedInput = rawInput;
+    if (!needsSlides) {
+      augmentedInput += "\n\n---\nIMPORTANT: Do NOT generate a deckFramework or slide framework. Skip slides entirely. Only generate the core narrative foundation (thesis, narrative structure, pitch script, market logic, risks, whyNow) and the score.";
+    }
+
     const attempt = async (retry: boolean): Promise<void> => {
       try {
         const parsed = await streamFromEdgeFunction(
-          { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile, model: "claude-sonnet-4-20250514" },
+          {
+            mode: "generate",
+            input: augmentedInput,
+            outputMode: selectedMode,
+            currentThesis,
+            voiceProfile,
+            model: "claude-sonnet-4-20250514",
+            selectedOutputs,
+            skipSlides: !needsSlides,
+          },
           abortController.signal
         );
         setDetectedMode(parsed.mode);
+
+        // If slides weren't requested but AI still generated them, strip them
+        if (!needsSlides && parsed.deliverable?.deckFramework) {
+          delete parsed.deliverable.deckFramework;
+        }
+
         setOutput(parsed);
         const newCount = generationCount + 1;
         setGenerationCount(newCount);
@@ -396,7 +421,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects, streamFromEdgeFunction]);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects, streamFromEdgeFunction, intakeSelections]);
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;

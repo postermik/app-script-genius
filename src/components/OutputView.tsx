@@ -137,6 +137,7 @@ export function OutputView() {
   const [isRefiningPitch, setIsRefiningPitch] = useState(false);
   const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);
   const [isRescoring, setIsRescoring] = useState(false);
+  const [outputErrors, setOutputErrors] = useState<Record<string, string>>({});
 
   // Determine which output tabs to show
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
