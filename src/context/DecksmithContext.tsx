@@ -237,17 +237,21 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections, appliedSuggestions, dismissedSuggestions]);
 
   // Incremental save: persist a single output to output_data column
-  const saveOutputIncremental = useCallback(async (outputType: string, result: any) => {
-    if (!currentProjectId) return;
+  const saveOutputIncremental = useCallback(async (outputType: string, result: any, projectId?: string) => {
+    const pid = projectId || currentProjectId;
+    if (!pid) {
+      console.warn(`[Persistence] No project ID for saving ${outputType}, skipping`);
+      return;
+    }
     try {
       // Fetch current output_data, merge the new output, and save back
-      const { data: project } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+      const { data: project } = await supabase.from("projects").select("output_data").eq("id", pid).single();
       const existing = (project?.output_data as any) || {};
       const updated = { ...existing, [outputType]: result };
       await supabase.from("projects").update({
         output_data: updated as any,
-      }).eq("id", currentProjectId);
-      console.log(`[Persistence] Saved ${outputType} incrementally`);
+      }).eq("id", pid);
+      console.log(`[Persistence] Saved ${outputType} incrementally to project ${pid}`);
       console.log("[Persistence] Saved to output_data:", JSON.stringify(updated).substring(0, 500));
     } catch (e) {
       console.warn(`[Persistence] Failed to save ${outputType} incrementally:`, e);
@@ -722,6 +726,7 @@ Return ONLY valid JSON, no markdown fences.`;
         intent: (fullOutput as any).intent || "create",
       };
       
+      let activeProjectId = currentProjectId;
       if (currentProjectId) {
         await supabase.from("projects").update({
           title, mode: fullOutput.mode, raw_input: rawInput,
@@ -734,6 +739,7 @@ Return ONLY valid JSON, no markdown fences.`;
           output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
         }).select("id").single();
         if (insertedProject) {
+          activeProjectId = insertedProject.id;
           setCurrentProjectId(insertedProject.id);
           console.log("[Persistence] Created project with core narrative, id:", insertedProject.id);
         }
@@ -753,8 +759,8 @@ Return ONLY valid JSON, no markdown fences.`;
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => new Set(prev).add(outputType));
 
-          // Save this output to DB immediately
-          saveOutputIncremental(outputType, result);
+          // Save this output to DB immediately, passing the known project ID
+          saveOutputIncremental(outputType, result, activeProjectId);
 
           // Merge into main output for backward compatibility
           if (outputType === "slide_framework") {
