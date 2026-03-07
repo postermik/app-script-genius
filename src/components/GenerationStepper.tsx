@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
@@ -26,13 +26,11 @@ const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
 };
 
 function buildSteps(selectedOutputs: OutputDeliverable[]): OutputStep[] {
-  // Core narrative is always first
   const steps: OutputStep[] = [
     { key: "_analyzing", label: "Analyzing", icon: Search },
     OUTPUT_STEP_MAP.core_narrative,
   ];
   
-  // Add selected outputs sorted by speed
   const sorted = [...selectedOutputs]
     .filter(o => o !== "core_narrative")
     .sort((a, b) => OUTPUT_SPEED_ORDER.indexOf(a) - OUTPUT_SPEED_ORDER.indexOf(b));
@@ -48,35 +46,53 @@ function buildSteps(selectedOutputs: OutputDeliverable[]): OutputStep[] {
 }
 
 export function GenerationStepper() {
-  const { isStreaming, streamingText, isGenerating, stopGenerating, intakeSelections, completedOutputs } = useDecksmith();
+  const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs } = useDecksmith();
   const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
 
   const [steps] = useState<OutputStep[]>(() => buildSteps(selectedOutputs));
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
 
-  // Advance stepper based on completed outputs
-  useEffect(() => {
-    if (!isGenerating) return;
+  // Derive current step index directly from completedOutputs — no separate state
+  let currentStepIndex = 0;
+  
+  // Check if analyzing is done (core_narrative started means analyzing is done)
+  if (completedOutputs.has("core_narrative")) {
+    // Analyzing step is done, core_narrative is done
+    currentStepIndex = 2; // past _analyzing and core_narrative
     
-    let highest = 0;
-    for (let i = 0; i < steps.length; i++) {
+    // Check each subsequent step
+    for (let i = 2; i < steps.length; i++) {
       const step = steps[i];
-      if (step.key === "_analyzing" && streamingText.length > 100) highest = Math.max(highest, 1);
-      if (step.key === "core_narrative" && completedOutputs.has("core_narrative")) highest = Math.max(highest, i + 1);
-      if (completedOutputs.has(step.key as OutputDeliverable)) highest = Math.max(highest, i + 1);
-      if (step.key === "_scoring" && completedOutputs.has("_scoring" as any)) highest = Math.max(highest, i + 1);
+      if (step.key === "_scoring" && completedOutputs.has("_scoring")) {
+        currentStepIndex = i + 1;
+      } else if (step.key === "_done") {
+        // handled below
+      } else if (completedOutputs.has(step.key as OutputDeliverable)) {
+        currentStepIndex = Math.max(currentStepIndex, i + 1);
+      }
     }
-    setCurrentStepIndex(prev => Math.max(prev, highest));
-  }, [completedOutputs, streamingText, isGenerating, steps]);
+  } else if (completedOutputs.size > 0 || isGenerating) {
+    // Still on analyzing
+    currentStepIndex = 0;
+  }
 
   // When generation ends, jump to done
   useEffect(() => {
-    if (!isGenerating && generationDone === false && currentStepIndex > 0) {
+    if (!isGenerating && !isGeneratingSlides && !generationDone && completedOutputs.size > 0) {
       setGenerationDone(true);
-      setCurrentStepIndex(steps.length - 1);
+    }
+  }, [isGenerating, isGeneratingSlides, completedOutputs.size]);
+
+  // Reset when new generation starts
+  useEffect(() => {
+    if (isGenerating && generationDone) {
+      setGenerationDone(false);
     }
   }, [isGenerating]);
+
+  if (generationDone) {
+    currentStepIndex = steps.length - 1;
+  }
 
   const visibleSteps = steps.filter((step, index) => {
     if (step.key === "_done") return generationDone;
@@ -114,7 +130,7 @@ export function GenerationStepper() {
               `}>
                 {step.label}
               </span>
-              {isActive && !isDoneStep && isGenerating && (
+              {isActive && !isDoneStep && (isGenerating || isGeneratingSlides) && (
                 <div className="flex items-center gap-0.5 shrink-0">
                   <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -124,15 +140,6 @@ export function GenerationStepper() {
             </div>
           );
         })}
-
-        {isGenerating && !generationDone && (
-          <button
-            onClick={stopGenerating}
-            className="mt-2 text-[10px] text-muted-foreground hover:text-foreground border border-border rounded-sm px-2 py-0.5 hover:border-muted-foreground/50 transition-colors ml-6"
-          >
-            Stop
-          </button>
-        )}
       </div>
     </div>
   );
