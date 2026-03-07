@@ -196,7 +196,6 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!session) return;
     const title = (parsed as any).title || "Untitled";
     const thesis = extractThesis(parsed);
-    // Build a "generated_outputs" blob to persist all output data
     const generatedOutputs = {
       coreNarrative: extras?.coreNarrative || coreNarrative,
       outputData: extras?.outputData || outputData,
@@ -218,6 +217,23 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
     loadProjects();
   }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections]);
+
+  // Incremental save: persist a single output to the supporting column without needing full state
+  const saveOutputIncremental = useCallback(async (outputType: string, result: any) => {
+    if (!currentProjectId) return;
+    try {
+      // Fetch current supporting data, merge the new output, and save back
+      const { data: project } = await supabase.from("projects").select("supporting").eq("id", currentProjectId).single();
+      const existing = (project?.supporting as any) || {};
+      const updatedOutputData = { ...(existing.outputData || {}), [outputType]: result };
+      await supabase.from("projects").update({
+        supporting: { ...existing, outputData: updatedOutputData } as any,
+      }).eq("id", currentProjectId);
+      console.log(`[Persistence] Saved ${outputType} incrementally`);
+    } catch (e) {
+      console.warn(`[Persistence] Failed to save ${outputType} incrementally:`, e);
+    }
+  }, [currentProjectId]);
 
   const startLoadingPhases = useCallback(() => {
     setLoadingPhase("structuring");
@@ -687,6 +703,9 @@ Return ONLY valid JSON, no markdown fences.`;
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => new Set(prev).add(outputType));
 
+          // Save this output to DB immediately
+          saveOutputIncremental(outputType, result);
+
           // Merge into main output for backward compatibility
           if (outputType === "slide_framework") {
             const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
@@ -732,7 +751,7 @@ Return ONLY valid JSON, no markdown fences.`;
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
   // ── Generate a single output on demand (post-generation) ──
   const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
@@ -758,6 +777,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
       setCompletedOutputs(prev => new Set(prev).add(outputType));
+      saveOutputIncremental(outputType, result);
 
       // Merge slides into output
       if (outputType === "slide_framework") {
