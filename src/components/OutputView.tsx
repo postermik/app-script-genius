@@ -354,22 +354,22 @@ export function OutputView() {
         return renderSlideFramework();
       case "elevator_pitch": {
         const pitchData = synthesizeElevatorPitch(output);
-        if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
+        if (!pitchData) return isGenerating ? <PitchShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
         const qaItems = synthesizeInvestorQA(output);
-        if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
+        if (!qaItems) return isGenerating ? <QAShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
         const emails = synthesizePitchEmails(output);
-        if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available. Try generating with a thesis or narrative.</p>;
+        if (!emails) return isGenerating ? <EmailShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No email data available. Try generating with a thesis or narrative.</p>;
         return <PitchEmailView variants={emails} />;
       }
       case "investment_memo": {
         const memo = synthesizeInvestmentMemo(output);
-        if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
+        if (!memo) return isGenerating ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
         return <InvestmentMemoView data={memo} />;
       }
       default:

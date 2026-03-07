@@ -209,7 +209,12 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
   // Attempt to repair truncated JSON by closing unclosed brackets/braces
   const repairJSON = (text: string): any => {
-    let cleaned = text.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+    // Strip markdown fences aggressively (handle various formats)
+    let cleaned = text.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
+    // Fallback: if no fences found, just trim
+    if (cleaned === text.trim()) {
+      cleaned = text.trim();
+    }
     
     // Fix common truncation artifacts like "deliverabledeck" -> "deliverable": {"type":"deck"
     // (key-value pairs where : was lost)
@@ -341,7 +346,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setStreamingText("");
 
       // Try strict parse first, then attempt JSON repair for truncated responses
-      const cleaned = fullText.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
       try {
         return JSON.parse(cleaned);
       } catch (parseError) {
