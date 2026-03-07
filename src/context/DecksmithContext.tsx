@@ -164,24 +164,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     return "";
   };
 
-  const saveProject = useCallback(async (parsed: NarrativeOutputData) => {
+  const saveProject = useCallback(async (parsed: NarrativeOutputData, extras?: { coreNarrative?: CoreNarrativeData; outputData?: Record<string, any>; intakeSelections?: IntakeSelections }) => {
     if (!session) return;
     const title = (parsed as any).title || "Untitled";
     const thesis = extractThesis(parsed);
+    // Build a "generated_outputs" blob to persist all output data
+    const generatedOutputs = {
+      coreNarrative: extras?.coreNarrative || coreNarrative,
+      outputData: extras?.outputData || outputData,
+      intakeSelections: extras?.intakeSelections || intakeSelections,
+    };
     if (currentProjectId) {
       await supabase.from("projects").update({
         title, mode: parsed.mode, raw_input: rawInput,
         output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+        supporting: generatedOutputs as any,
       }).eq("id", currentProjectId);
     } else {
       const { data } = await supabase.from("projects").insert({
         user_id: session.user.id, title, mode: parsed.mode, raw_input: rawInput,
         output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+        supporting: generatedOutputs as any,
       }).select("id").single();
       if (data) setCurrentProjectId(data.id);
     }
     loadProjects();
-  }, [session, currentProjectId, rawInput, loadProjects]);
+  }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections]);
 
   const startLoadingPhases = useCallback(() => {
     setLoadingPhase("structuring");
@@ -624,11 +632,27 @@ Return ONLY valid JSON, no markdown fences.`;
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setCompletedOutputs(prev => new Set(prev).add("_scoring"));
 
-      // Save project
+      // Save project with all generated outputs
       const newCount = generationCount + 1;
       setGenerationCount(newCount);
       localStorage.setItem("rhetoric_gen_count", String(newCount));
-      if (fullOutput) await saveProject(fullOutput);
+      if (fullOutput) {
+        // We need to get latest outputData - use a ref-like approach
+        // Pass extras so saveProject uses current values
+        await saveProject(fullOutput, { coreNarrative: cn, intakeSelections: intakeSelections || undefined });
+        // Save again after a short delay to capture all parallel outputs
+        setTimeout(async () => {
+          try {
+            const { data: proj } = await supabase.from("projects").select("supporting").eq("id", currentProjectId || "").single();
+            // Update with latest outputData
+            if (currentProjectId) {
+              await supabase.from("projects").update({
+                supporting: { coreNarrative: cn, outputData: outputData, intakeSelections: intakeSelections } as any,
+              }).eq("id", currentProjectId);
+            }
+          } catch {}
+        }, 3000);
+      }
 
     } catch (e: any) {
       if (e.name === "AbortError") return;
@@ -953,6 +977,32 @@ Return ONLY valid JSON, no markdown fences.`;
     setAppliedSuggestions(new Set(applied));
     const dismissed = (project.output_data as any)?._dismissedSuggestions || [];
     setDismissedSuggestions(new Set(dismissed));
+
+    // Restore persisted generated outputs from the "supporting" column
+    const persisted = (project as any).supporting;
+    if (persisted?.coreNarrative?.sections?.length) {
+      console.log("[Persistence] Restoring core narrative from database");
+      setCoreNarrative(persisted.coreNarrative);
+    }
+    if (persisted?.outputData && typeof persisted.outputData === "object") {
+      console.log("[Persistence] Restoring output data from database:", Object.keys(persisted.outputData).filter(k => !k.endsWith("_error") && !k.endsWith("_rawResponse")));
+      setOutputData(persisted.outputData);
+      // Rebuild completedOutputs from persisted data
+      const completed = new Set<string>();
+      if (persisted.coreNarrative?.sections?.length) completed.add("core_narrative");
+      for (const key of Object.keys(persisted.outputData)) {
+        if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted.outputData[key]) {
+          completed.add(key);
+        }
+      }
+      completed.add("_scoring");
+      setCompletedOutputs(completed);
+    }
+    if (persisted?.intakeSelections) {
+      console.log("[Persistence] Restoring intake selections from database");
+      setIntakeSelections(persisted.intakeSelections);
+    }
+
     loadVersions(project.id);
   }, [loadVersions]);
 
