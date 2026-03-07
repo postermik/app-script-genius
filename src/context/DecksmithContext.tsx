@@ -319,6 +319,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
               }
             }
           }
+
+          // Attempt incremental parse every ~2KB of new data
+          if (fullText.length - lastPartialParseRef.current > 2000) {
+            lastPartialParseRef.current = fullText.length;
+            try {
+              const partial = repairJSON(fullText);
+              if (partial?.supporting || partial?.data) {
+                setOutput(partial);
+              }
+            } catch {
+              // Not parseable yet, continue
+            }
+          }
         }
       } finally {
         reader.releaseLock();
