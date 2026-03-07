@@ -196,7 +196,7 @@ export function GenerationStepper() {
   });
 
   return (
-    <div className="flex flex-col items-center justify-center animate-fade-in">
+    <div className="flex flex-col animate-fade-in px-3">
       <div className="space-y-1.5">
         {visibleSteps.map((step) => {
           const realIndex = steps.indexOf(step);

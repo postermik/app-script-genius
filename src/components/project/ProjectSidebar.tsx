@@ -3,6 +3,7 @@ import { Layers, Target, Search, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { GenerationStepper } from "@/components/GenerationStepper";
 
 interface SidebarItem {
   key: OutputTabKey;
@@ -25,9 +26,10 @@ interface Props {
   activeTab: OutputTabKey;
   onTabChange: (tab: OutputTabKey) => void;
   intent: "create" | "evaluate";
+  isLoading?: boolean;
 }
 
-export function ProjectSidebar({ activeTab, onTabChange, intent }: Props) {
+export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Props) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
@@ -97,6 +99,16 @@ export function ProjectSidebar({ activeTab, onTabChange, intent }: Props) {
             );
           })}
         </nav>
+
+        {/* Generation stepper in sidebar */}
+        {isLoading && (
+          <div className="mt-6 pt-4 border-t border-border">
+            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
+              Generating
+            </p>
+            <GenerationStepper />
+          </div>
+        )}
       </div>
       <div className="px-2.5 pb-5 pt-3 border-t border-border mt-auto">
         <button

@@ -1,54 +1,55 @@
-import { useState, useRef, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { Plus, Zap } from "lucide-react";
 import type { OutputDeliverable } from "@/types/rhetoric";
-
-const TAB_LABELS: Record<OutputDeliverable, string> = {
-  slide_framework: "Slide Framework",
-  elevator_pitch: "Elevator Pitch",
-  investor_qa: "Investor Q&A",
-  pitch_email: "Pitch Emails",
-  investment_memo: "Investment Memo",
-};
+import { OUTPUT_SPEED_ORDER, OUTPUT_LABELS } from "@/lib/outputOrder";
 
 const ALL_OUTPUTS: OutputDeliverable[] = [
-  "slide_framework",
   "elevator_pitch",
   "investor_qa",
   "pitch_email",
   "investment_memo",
+  "slide_framework",
 ];
 
 interface Props {
   tabs: OutputDeliverable[];
   activeTab: OutputDeliverable;
   onTabChange: (tab: OutputDeliverable) => void;
-  onAddOutput?: (output: OutputDeliverable) => void;
-  generatingOutputs?: Set<OutputDeliverable>;
+  onAddOutput?: (outputs: OutputDeliverable[]) => void;
 }
 
-export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, generatingOutputs }: Props) {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Props) {
+  const [showAddOptions, setShowAddOptions] = useState(false);
+  const [pendingOutputs, setPendingOutputs] = useState<Set<OutputDeliverable>>(new Set());
 
   const availableToAdd = ALL_OUTPUTS.filter(o => !tabs.includes(o));
 
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [dropdownOpen]);
+  // Sort displayed tabs by speed order
+  const sortedTabs = [...tabs].sort(
+    (a, b) => OUTPUT_SPEED_ORDER.indexOf(a) - OUTPUT_SPEED_ORDER.indexOf(b)
+  );
+
+  const togglePending = (output: OutputDeliverable) => {
+    setPendingOutputs(prev => {
+      const next = new Set(prev);
+      if (next.has(output)) next.delete(output);
+      else next.add(output);
+      return next;
+    });
+  };
+
+  const handleGenerate = () => {
+    if (pendingOutputs.size === 0) return;
+    onAddOutput?.(Array.from(pendingOutputs));
+    setPendingOutputs(new Set());
+    setShowAddOptions(false);
+  };
 
   return (
     <div className="border-b border-border mb-6 overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
       <div className="flex items-center gap-0 min-w-max">
-        {tabs.map(tab => {
+        {sortedTabs.map(tab => {
           const active = activeTab === tab;
-          const isGenerating = generatingOutputs?.has(tab);
           return (
             <button
               key={tab}
@@ -59,16 +60,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, genera
                   : "text-secondary-foreground hover:text-foreground"
               }`}
             >
-              <span className="flex items-center gap-1.5">
-                {TAB_LABELS[tab]}
-                {isGenerating && (
-                  <span className="flex items-center gap-0.5">
-                    <span className="w-1 h-1 bg-electric rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1 h-1 bg-electric rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1 h-1 bg-electric rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </span>
-                )}
-              </span>
+              {OUTPUT_LABELS[tab]}
               {active && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-electric rounded-full" />
               )}
@@ -76,33 +68,51 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, genera
           );
         })}
 
-        {onAddOutput && availableToAdd.length > 0 && (
-          <div className="relative" ref={dropdownRef}>
+        {/* Pending (not yet generated) output tabs */}
+        {showAddOptions && availableToAdd.map(output => {
+          const selected = pendingOutputs.has(output);
+          return (
             <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center justify-center w-7 h-7 ml-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              title="Add output"
+              key={output}
+              onClick={() => togglePending(output)}
+              className={`relative px-4 py-3 text-xs font-medium transition-colors whitespace-nowrap border-b-2 ${
+                selected
+                  ? "text-electric/70 border-b-electric/40"
+                  : "text-muted-foreground/50 hover:text-muted-foreground border-b-transparent"
+              }`}
             >
-              <Plus className="w-3.5 h-3.5" />
+              {OUTPUT_LABELS[output]}
             </button>
+          );
+        })}
 
-            {dropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 min-w-[180px] bg-card border border-border rounded-sm shadow-lg py-1 animate-fade-in">
-                {availableToAdd.map(output => (
-                  <button
-                    key={output}
-                    onClick={() => {
-                      onAddOutput(output);
-                      setDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs text-secondary-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  >
-                    {TAB_LABELS[output]}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Generate button for pending outputs */}
+        {showAddOptions && pendingOutputs.size > 0 && (
+          <button
+            onClick={handleGenerate}
+            className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity whitespace-nowrap"
+          >
+            <Zap className="w-3 h-3" />
+            Generate
+          </button>
+        )}
+
+        {/* Add button */}
+        {onAddOutput && availableToAdd.length > 0 && (
+          <button
+            onClick={() => {
+              setShowAddOptions(!showAddOptions);
+              if (showAddOptions) setPendingOutputs(new Set());
+            }}
+            className={`flex items-center justify-center w-7 h-7 ml-1 rounded-sm transition-colors ${
+              showAddOptions
+                ? "text-electric bg-electric/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+            title={showAddOptions ? "Cancel" : "Add output"}
+          >
+            <Plus className={`w-3.5 h-3.5 transition-transform ${showAddOptions ? "rotate-45" : ""}`} />
+          </button>
         )}
       </div>
     </div>
