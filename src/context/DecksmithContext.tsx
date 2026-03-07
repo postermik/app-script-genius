@@ -726,6 +726,7 @@ Return ONLY valid JSON, no markdown fences.`;
         intent: (fullOutput as any).intent || "create",
       };
       
+      let activeProjectId = currentProjectId;
       if (currentProjectId) {
         await supabase.from("projects").update({
           title, mode: fullOutput.mode, raw_input: rawInput,
@@ -738,6 +739,7 @@ Return ONLY valid JSON, no markdown fences.`;
           output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
         }).select("id").single();
         if (insertedProject) {
+          activeProjectId = insertedProject.id;
           setCurrentProjectId(insertedProject.id);
           console.log("[Persistence] Created project with core narrative, id:", insertedProject.id);
         }
@@ -757,8 +759,8 @@ Return ONLY valid JSON, no markdown fences.`;
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => new Set(prev).add(outputType));
 
-          // Save this output to DB immediately
-          saveOutputIncremental(outputType, result);
+          // Save this output to DB immediately, passing the known project ID
+          saveOutputIncremental(outputType, result, activeProjectId);
 
           // Merge into main output for backward compatibility
           if (outputType === "slide_framework") {
