@@ -106,6 +106,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+  const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!output) return;
