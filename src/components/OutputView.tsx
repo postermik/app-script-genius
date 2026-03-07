@@ -347,13 +347,12 @@ export function OutputView() {
             {activeTab === "outputs" && (
               <>
                 {rawInput && !isLoading && <OriginalInputSection rawInput={rawInput} />}
-                {selectedOutputs.length > 1 && (
-                  <OutputTabBar
-                    tabs={selectedOutputs}
-                    activeTab={activeOutputTab}
-                    onTabChange={setActiveOutputTab}
-                  />
-                )}
+                <OutputTabBar
+                  tabs={selectedOutputs}
+                  activeTab={activeOutputTab}
+                  onTabChange={setActiveOutputTab}
+                  onAddOutput={!isLoading ? handleAddOutput : undefined}
+                />
                 <div className="relative min-h-[400px]">
                   {isLoading && (
                     <div className="absolute inset-0 z-10 flex items-start justify-center pt-8">
