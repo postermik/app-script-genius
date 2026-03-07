@@ -375,6 +375,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
     setIsEvaluation(false);
+    setOutput(null);
+    lastPartialParseRef.current = 0;
     startLoadingPhases();
 
     const abortController = new AbortController();
