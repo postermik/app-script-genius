@@ -200,11 +200,36 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── JSON parsing / repair ──
+  const stripFences = (text: string): string => {
+    // Strip markdown code fences aggressively
+    let cleaned = text.trim();
+    // Remove leading ```json or ``` with optional whitespace
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, "");
+    // Remove trailing ```
+    cleaned = cleaned.replace(/\n?```\s*$/, "");
+    // If there's still a fence deeper in, extract just the JSON block
+    const fenceMatch = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (fenceMatch) cleaned = fenceMatch[1];
+    return cleaned.trim();
+  };
+
+  const extractJSON = (text: string): string => {
+    // Try to find JSON object in arbitrary text
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      return text.slice(firstBrace, lastBrace + 1);
+    }
+    return text;
+  };
+
   const repairJSON = (text: string): any => {
-    let cleaned = text.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
-    if (cleaned === text.trim()) cleaned = text.trim();
+    let cleaned = stripFences(text);
+    // If it doesn't start with {, try to extract JSON
+    if (!cleaned.startsWith("{")) cleaned = extractJSON(cleaned);
     cleaned = cleaned.replace(/,\s*$/, "");
     try { return JSON.parse(cleaned); } catch {}
+    // Strip trailing partial key-value pairs
     const lastGoodPatterns = [/,\s*"[^"]*"\s*$/, /,\s*"[^"]*":\s*"[^"]*$/, /,\s*"[^"]*":\s*$/];
     for (const pattern of lastGoodPatterns) {
       const stripped = cleaned.replace(pattern, "");
@@ -258,9 +283,20 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     } else {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      const rawContent = data.content || "";
+      console.log(`[Generation] Raw response length: ${rawContent.length}`);
+      console.log(`[Generation] Raw response (first 300):`, rawContent.slice(0, 300));
+      const cleaned = stripFences(rawContent);
       try { return JSON.parse(cleaned); }
-      catch { return repairJSON(data.content || ""); }
+      catch {
+        try { return repairJSON(rawContent); }
+        catch (e) {
+          console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
+          const err = new Error("AI response could not be parsed. Please retry.");
+          (err as any).rawResponse = rawContent;
+          throw err;
+        }
+      }
     }
   }, []);
 
@@ -291,19 +327,22 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Parse the full text
-    const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
+    console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
+    console.log(`[Generation] Stream raw (first 500):`, fullText.slice(0, 500));
+    const cleaned = stripFences(fullText);
     try { return JSON.parse(cleaned); }
     catch {
-      console.warn("Strict JSON parse failed, attempting repair...");
+      console.warn("[Generation] Strict JSON parse failed, attempting repair...");
       try {
         const repaired = repairJSON(fullText);
-        console.log("JSON repair succeeded");
+        console.log("[Generation] JSON repair succeeded");
         return repaired;
       } catch (e) {
-        console.error("JSON repair failed:", e);
-        console.error("Raw text (first 500):", fullText.slice(0, 500));
-        console.error("Raw text (last 300):", fullText.slice(-300));
-        throw new Error("AI response could not be parsed. Please retry.");
+        console.error("[Generation] JSON repair failed:", e);
+        console.error("[Generation] Full raw response:", fullText);
+        const err = new Error("AI response could not be parsed. Please retry.");
+        (err as any).rawResponse = fullText;
+        throw err;
       }
     }
   };
