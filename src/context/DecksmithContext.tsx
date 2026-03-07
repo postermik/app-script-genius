@@ -703,6 +703,9 @@ Return ONLY valid JSON, no markdown fences.`;
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => new Set(prev).add(outputType));
 
+          // Save this output to DB immediately
+          saveOutputIncremental(outputType, result);
+
           // Merge into main output for backward compatibility
           if (outputType === "slide_framework") {
             const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
