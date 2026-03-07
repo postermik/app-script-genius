@@ -632,26 +632,12 @@ Return ONLY valid JSON, no markdown fences.`;
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setCompletedOutputs(prev => new Set(prev).add("_scoring"));
 
-      // Save project with all generated outputs
+      // Save project
       const newCount = generationCount + 1;
       setGenerationCount(newCount);
       localStorage.setItem("rhetoric_gen_count", String(newCount));
       if (fullOutput) {
-        // We need to get latest outputData - use a ref-like approach
-        // Pass extras so saveProject uses current values
         await saveProject(fullOutput, { coreNarrative: cn, intakeSelections: intakeSelections || undefined });
-        // Save again after a short delay to capture all parallel outputs
-        setTimeout(async () => {
-          try {
-            const { data: proj } = await supabase.from("projects").select("supporting").eq("id", currentProjectId || "").single();
-            // Update with latest outputData
-            if (currentProjectId) {
-              await supabase.from("projects").update({
-                supporting: { coreNarrative: cn, outputData: outputData, intakeSelections: intakeSelections } as any,
-              }).eq("id", currentProjectId);
-            }
-          } catch {}
-        }, 3000);
       }
 
     } catch (e: any) {
