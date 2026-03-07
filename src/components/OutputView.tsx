@@ -152,9 +152,9 @@ export function OutputView() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [refiningCoreIndex, setRefiningCoreIndex] = useState<number | null>(null);
 
-  // Build tabs: core_narrative always first, then selected outputs sorted by speed
+  // Build tabs: core_narrative always first, then outputs in their stored order (no re-sorting)
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
-    ? ["core_narrative" as OutputDeliverable, ...sortBySpeed(intakeSelections.outputs)]
+    ? ["core_narrative" as OutputDeliverable, ...intakeSelections.outputs]
     : ["core_narrative" as OutputDeliverable, "slide_framework"];
 
   const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>("core_narrative");
@@ -284,19 +284,19 @@ export function OutputView() {
   };
 
   const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
-    const sorted = sortBySpeed(newOutputs);
+    // Append new outputs in selection order — do NOT re-sort existing tabs
     const currentOutputs = intakeSelections?.outputs || [];
-    const updated = [...currentOutputs, ...sorted];
+    const updated = [...currentOutputs, ...newOutputs];
     if (intakeSelections) {
       setIntakeSelections({ ...intakeSelections, outputs: updated });
     } else {
       setIntakeSelections({ purpose: "fundraising", outputs: updated, stage: "seed" });
     }
-    setActiveOutputTab(sorted[0]);
-    toast.success(`Added ${sorted.map(o => o.replace(/_/g, " ")).join(", ")}`);
+    setActiveOutputTab(newOutputs[0]);
+    toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
 
     // Generate each new output
-    sorted.forEach(outputType => {
+    newOutputs.forEach(outputType => {
       generateOutput(outputType);
     });
   };

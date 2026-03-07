@@ -8,6 +8,7 @@ import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode } from "@/types/narrative";
 import type { IntakeSelections } from "@/types/rhetoric";
+import { sortBySpeed } from "@/lib/outputOrder";
 import { formatDistanceToNow } from "date-fns";
 import { parseDeckFile } from "@/lib/parseDeck";
 import { GenerationStepper } from "@/components/GenerationStepper";
@@ -48,7 +49,9 @@ export function ProductView() {
   };
 
   const handleIntakeGenerate = async (selections: IntakeSelections) => {
-    setIntakeSelections(selections);
+    // Sort initial batch by speed (fastest first); subsequent adds will be appended
+    const sortedOutputs = sortBySpeed(selections.outputs);
+    setIntakeSelections({ ...selections, outputs: sortedOutputs });
     setShowIntake(false);
     // Map purpose to mode
     const purposeToMode: Record<string, OutputMode | "auto"> = {
