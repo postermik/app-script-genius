@@ -9,15 +9,19 @@ import { DocumentView } from "@/components/deliverable/DocumentView";
 import { ScoreTab } from "@/components/tabs/ScoreTab";
 import { AnalysisTab } from "@/components/tabs/AnalysisTab";
 import { OutputTabBar } from "@/components/outputs/OutputTabBar";
+import { CoreNarrativeView } from "@/components/outputs/CoreNarrativeView";
 import { ElevatorPitchView } from "@/components/outputs/ElevatorPitchView";
 import { InvestorQAView } from "@/components/outputs/InvestorQAView";
 import { PitchEmailView } from "@/components/outputs/PitchEmailView";
 import { InvestmentMemoView } from "@/components/outputs/InvestmentMemoView";
-import { SlideShimmer, PitchShimmer, QAShimmer, EmailShimmer, MemoShimmer, ScoreShimmer } from "@/components/outputs/OutputShimmer";
+import { BoardMemoView } from "@/components/outputs/BoardMemoView";
+import { KeyMetricsSummaryView } from "@/components/outputs/KeyMetricsSummaryView";
+import { StrategicMemoView } from "@/components/outputs/StrategicMemoView";
+import { SlideShimmer, PitchShimmer, QAShimmer, EmailShimmer, MemoShimmer, CoreNarrativeShimmer, ScoreShimmer } from "@/components/outputs/OutputShimmer";
 import { sortBySpeed } from "@/lib/outputOrder";
-import { Layout } from "lucide-react";
+import { Layout, RefreshCw } from "lucide-react";
 import type { DeckTheme } from "@/components/SlidePreview";
-import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData } from "@/types/rhetoric";
+import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData, BoardMemoData, KeyMetricsSummaryData, StrategicMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,95 +32,103 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 // ── Synthesize outputs from existing data ──
 
-function synthesizeElevatorPitch(output: any): ElevatorPitchData | null {
+function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
+  // Check dedicated output data first
+  const od = outputData?.elevator_pitch;
+  if (od?.elevatorPitch) return od.elevatorPitch;
+
   const d = output?.data || output?.supporting || {};
   const pitchScript = d.pitchScript;
   const thesis = d.thesis?.content || d.thesis || d.vision || d.headline || "";
   if (!pitchScript && !thesis) return null;
 
   const sixtySecond = pitchScript || thesis;
-  // Derive a 30s version: take first 3 sentences
   const sentences = sixtySecond.split(/(?<=[.!?])\s+/).filter(Boolean);
   const thirtySecond = sentences.slice(0, Math.min(3, sentences.length)).join(" ");
-
   return { thirtySecond, sixtySecond };
 }
 
-function synthesizeInvestorQA(output: any): InvestorQAItem[] | null {
-  // From analysis (evaluate mode)
+function synthesizeInvestorQA(output: any, outputData: Record<string, any>): InvestorQAItem[] | null {
+  const od = outputData?.investor_qa;
+  if (od?.investorQA?.length) return od.investorQA;
+
   if (output?.analysis?.commonQuestions?.length) {
-    return output.analysis.commonQuestions.map((q: any) => ({
-      question: q.question,
-      answer: q.suggestedAnswer,
-    }));
+    return output.analysis.commonQuestions.map((q: any) => ({ question: q.question, answer: q.suggestedAnswer }));
   }
-  // From score gaps/improvements, generate implied Q&A
   const score = output?.score;
   if (!score) return null;
   const items: InvestorQAItem[] = [];
-  const gaps = score.gaps || [];
-  const improvements = score.improvements || [];
-  gaps.forEach((gap: string, i: number) => {
+  (score.gaps || []).forEach((gap: string, i: number) => {
     items.push({
       question: `How do you address: ${gap}?`,
-      answer: improvements[i] || "Consider strengthening this area with specific data and examples.",
+      answer: (score.improvements || [])[i] || "Consider strengthening this area with specific data and examples.",
     });
   });
   return items.length > 0 ? items : null;
 }
 
-function synthesizePitchEmails(output: any): PitchEmailVariant[] | null {
+function synthesizePitchEmails(output: any, outputData: Record<string, any>): PitchEmailVariant[] | null {
+  const od = outputData?.pitch_email;
+  if (od?.pitchEmails?.length) return od.pitchEmails;
+
   const d = output?.data || output?.supporting || {};
   const thesis = d.thesis?.content || d.thesis || d.vision || "";
   const title = output?.title || "our company";
   if (!thesis) return null;
-
   const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
-
   return [
-    {
-      label: "Direct Ask",
-      subject: `{firm_name} + ${title} — Quick intro`,
-      body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]`,
-    },
-    {
-      label: "Warm Intro Request",
-      subject: `Intro request: ${title}`,
-      body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]`,
-    },
-    {
-      label: "Follow-Up",
-      subject: `Re: ${title} — following up`,
-      body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]`,
-    },
+    { label: "Direct Ask", subject: `{firm_name} + ${title} — Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
+    { label: "Warm Intro Request", subject: `Intro request: ${title}`, body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]` },
+    { label: "Follow-Up", subject: `Re: ${title} — following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]` },
   ];
 }
 
-function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
+function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>): InvestmentMemoData | null {
+  const od = outputData?.investment_memo;
+  if (od?.investmentMemo?.sections?.length) return od.investmentMemo;
+
   const d = output?.data || output?.supporting || {};
   const sections: { heading: string; content: string }[] = [];
-
   const thesis = d.thesis?.content || d.thesis || "";
   if (thesis) sections.push({ heading: "Thesis", content: thesis });
-
   const ns = d.narrativeStructure;
   if (ns?.worldToday) sections.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
   if (ns?.newModel) sections.push({ heading: "Solution", content: ns.newModel });
-
   const market = d.marketLogic;
   if (market) sections.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
-
   if (ns?.whyThisWins) sections.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
   if (d.risks) sections.push({ heading: "Risks", content: d.risks });
   if (d.whyNow) sections.push({ heading: "Why Now", content: d.whyNow });
   if (ns?.theFuture) sections.push({ heading: "The Ask", content: ns.theFuture });
-
   return sections.length > 0 ? { sections } : null;
+}
+
+function synthesizeBoardMemo(outputData: Record<string, any>): BoardMemoData | null {
+  const od = outputData?.board_memo;
+  if (od?.boardMemo?.sections?.length) return od.boardMemo;
+  return null;
+}
+
+function synthesizeKeyMetrics(outputData: Record<string, any>): KeyMetricsSummaryData | null {
+  const od = outputData?.key_metrics_summary;
+  if (od?.keyMetrics?.categories?.length) return od.keyMetrics;
+  return null;
+}
+
+function synthesizeStrategicMemo(outputData: Record<string, any>): StrategicMemoData | null {
+  const od = outputData?.strategic_memo;
+  if (od?.strategicMemo?.sections?.length) return od.strategicMemo;
+  return null;
 }
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides } = useDecksmith();
+  const {
+    output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
+    isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
+    rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
+    completedOutputs, coreNarrative, outputData,
+  } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -128,7 +140,7 @@ export function OutputView() {
 
   const effectiveIntent = isEvaluation ? "evaluate" : intent;
   const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "outputs";
-  const isLoading = isGenerating && !output;
+  const isLoading = isGenerating && !output && !coreNarrative;
 
   const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
@@ -138,16 +150,15 @@ export function OutputView() {
   const [isRefiningPitch, setIsRefiningPitch] = useState(false);
   const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);
   const [isRescoring, setIsRescoring] = useState(false);
-  const [outputErrors, setOutputErrors] = useState<Record<string, string>>({});
+  const [refiningCoreIndex, setRefiningCoreIndex] = useState<number | null>(null);
 
-  // Determine which output tabs to show — preserve user's selection order
+  // Build tabs: core_narrative always first, then selected outputs sorted by speed
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
-    ? intakeSelections.outputs
-    : ["slide_framework"];
+    ? ["core_narrative" as OutputDeliverable, ...sortBySpeed(intakeSelections.outputs)]
+    : ["core_narrative" as OutputDeliverable, "slide_framework"];
 
-  const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>(selectedOutputs[0]);
+  const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>("core_narrative");
 
-  // Ensure active output tab is valid
   useEffect(() => {
     if (!selectedOutputs.includes(activeOutputTab)) {
       setActiveOutputTab(selectedOutputs[0]);
@@ -179,7 +190,7 @@ export function OutputView() {
     }
   }, [deliverable]);
 
-  if (!output && !isGenerating) return null;
+  if (!output && !coreNarrative && !isGenerating) return null;
 
   const isFirstFree = !isPro && generationCount >= 1;
 
@@ -196,74 +207,37 @@ export function OutputView() {
     setOutput({ ...output, deliverable: updated } as any);
   };
 
-  // Render deck/memo/email/document preview
   const renderSlideFramework = () => {
-    // Check for deck data in deliverable, output.data, or output.supporting
     if (deliverable?.type === "deck" && deliverable.deckFramework?.length) {
       return (
         <DeckView
-          deliverable={deliverable}
-          excludedSlides={excludedSlides}
-          onToggleSlide={toggleSlide}
-          slideOrder={slideOrder}
-          onReorder={setSlideOrder}
-          deckTheme={deckTheme}
-          onThemeChange={setDeckTheme}
-          onUpdateDeliverable={handleUpdateDeliverable}
+          deliverable={deliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide}
+          slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme}
+          onThemeChange={setDeckTheme} onUpdateDeliverable={handleUpdateDeliverable}
         />
       );
     }
-    if (deliverable?.type === "memo") return <MemoView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
-    if (deliverable?.type === "email") return <EmailView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
-    if (deliverable?.type === "document") return <DocumentView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
 
-    // Fallback: check output.data for legacy deck framework
     const oldData = (output as any)?.data;
     if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
       const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
-      return (
-        <DeckView
-          deliverable={fallbackDeliverable}
-          excludedSlides={excludedSlides}
-          onToggleSlide={toggleSlide}
-          slideOrder={slideOrder}
-          onReorder={setSlideOrder}
-          deckTheme={deckTheme}
-          onThemeChange={setDeckTheme}
-        />
-      );
+      return <DeckView deliverable={fallbackDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} />;
     }
 
-    // Check output.supporting for deck framework
     const supporting = (output as any)?.supporting;
     if (supporting?.deckFramework?.length) {
       const fallbackDeliverable = { type: "deck" as const, deckFramework: supporting.deckFramework };
-      return (
-        <DeckView
-          deliverable={fallbackDeliverable}
-          excludedSlides={excludedSlides}
-          onToggleSlide={toggleSlide}
-          slideOrder={slideOrder}
-          onReorder={setSlideOrder}
-          deckTheme={deckTheme}
-          onThemeChange={setDeckTheme}
-        />
-      );
+      return <DeckView deliverable={fallbackDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} />;
     }
 
-    // No slides available - show generate button
-    if (isGeneratingSlides) {
-      return <SlideShimmer />;
-    }
+    if (isGeneratingSlides || (isGenerating && !completedOutputs.has("slide_framework"))) return <SlideShimmer />;
+
     return (
       <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
         <Layout className="h-8 w-8 text-muted-foreground mx-auto" />
         <p className="text-sm text-foreground font-medium">Generate Slide Framework</p>
         <p className="text-xs text-muted-foreground">Create a complete slide framework from your existing narrative.</p>
-        <button
-          onClick={() => generateSlides()}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity glow-blue"
-        >
+        <button onClick={() => generateSlides()} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity glow-blue">
           Generate Slides
         </button>
       </div>
@@ -272,105 +246,125 @@ export function OutputView() {
 
   const handleRefinePitch = async () => {
     setIsRefiningPitch(true);
-    try {
-      await refineSection("pitchScript", "pitchScript", "refine");
-    } catch { /* already toasted */ }
+    try { await refineSection("pitchScript", "pitchScript", "refine"); } catch {}
     finally { setIsRefiningPitch(false); }
   };
 
   const handleRefineQAItem = async (index: number) => {
     setRefiningQAIndex(index);
-    try {
-      await refineSection(`qa-${index}`, `analysis.commonQuestions.${index}.suggestedAnswer`, "refine");
-    } catch { /* already toasted */ }
+    try { await refineSection(`qa-${index}`, `analysis.commonQuestions.${index}.suggestedAnswer`, "refine"); } catch {}
     finally { setRefiningQAIndex(null); }
+  };
+
+  const handleRefineCoreSection = async (index: number) => {
+    setRefiningCoreIndex(index);
+    try { await refineSection(`core-${index}`, `coreNarrative.sections.${index}.content`, "refine"); } catch {}
+    finally { setRefiningCoreIndex(null); }
   };
 
   const handleRescore = async () => {
     setIsRescoring(true);
-    try {
-      await rescoreNarrative();
-    } catch { /* already toasted */ }
+    try { await rescoreNarrative(); } catch {}
     finally { setIsRescoring(false); }
   };
 
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
+      case "core_narrative": return <CoreNarrativeShimmer />;
       case "slide_framework": return <SlideShimmer />;
       case "elevator_pitch": return <PitchShimmer />;
       case "investor_qa": return <QAShimmer />;
       case "pitch_email": return <EmailShimmer />;
       case "investment_memo": return <MemoShimmer />;
-      default: return <SlideShimmer />;
+      case "board_memo": return <MemoShimmer />;
+      case "key_metrics_summary": return <MemoShimmer />;
+      case "strategic_memo": return <MemoShimmer />;
+      default: return <MemoShimmer />;
     }
   };
 
   const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
-    // Sort new outputs by speed, then append to existing selection order
     const sorted = sortBySpeed(newOutputs);
-    const updated = [...selectedOutputs, ...sorted];
+    const currentOutputs = intakeSelections?.outputs || [];
+    const updated = [...currentOutputs, ...sorted];
     if (intakeSelections) {
       setIntakeSelections({ ...intakeSelections, outputs: updated });
     } else {
-      setIntakeSelections({ purpose: "investor_pitch", outputs: updated, stage: "seed" });
+      setIntakeSelections({ purpose: "fundraising", outputs: updated, stage: "seed" });
     }
     setActiveOutputTab(sorted[0]);
     toast.success(`Added ${sorted.map(o => o.replace(/_/g, " ")).join(", ")}`);
 
-    // Trigger slide generation if slides were added
-    if (sorted.includes("slide_framework")) {
-      // Small delay to let state update
-      setTimeout(() => generateSlides(), 100);
-    }
+    // Generate each new output
+    sorted.forEach(outputType => {
+      generateOutput(outputType);
+    });
   };
 
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
     <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
       <p className="text-sm text-destructive font-medium">{message}</p>
-      <p className="text-xs text-muted-foreground">This output failed to generate. You can retry it independently.</p>
+      <p className="text-xs text-muted-foreground">This output failed to generate. Click retry to try again.</p>
       <button
-        onClick={() => {
-          setOutputErrors(prev => { const n = { ...prev }; delete n[tab]; return n; });
-          toast.info("Please regenerate to retry this output.");
-        }}
+        onClick={() => generateOutput(tab)}
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
       >
+        <RefreshCw className="h-3 w-3" />
         Retry
       </button>
     </div>
   );
 
-  // Render the active output deliverable tab
   const renderOutputContent = () => {
     if (isLoading) return getShimmerForTab(activeOutputTab);
 
     // Check for per-output errors
-    if (outputErrors[activeOutputTab]) {
-      return renderErrorWithRetry(activeOutputTab, outputErrors[activeOutputTab]);
+    const errorKey = `${activeOutputTab}_error`;
+    if (outputData[errorKey]) {
+      return renderErrorWithRetry(activeOutputTab, outputData[errorKey]);
     }
 
     switch (activeOutputTab) {
+      case "core_narrative": {
+        if (!coreNarrative) return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
+        return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+      }
       case "slide_framework":
         return renderSlideFramework();
       case "elevator_pitch": {
-        const pitchData = synthesizeElevatorPitch(output);
-        if (!pitchData) return isGenerating ? <PitchShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No pitch data available. Try generating with more narrative content.</p>;
+        const pitchData = synthesizeElevatorPitch(output, outputData);
+        if (!pitchData) return (isGenerating && !completedOutputs.has("elevator_pitch")) ? <PitchShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
-        const qaItems = synthesizeInvestorQA(output);
-        if (!qaItems) return isGenerating ? <QAShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
+        const qaItems = synthesizeInvestorQA(output, outputData);
+        if (!qaItems) return (isGenerating && !completedOutputs.has("investor_qa")) ? <QAShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
-        const emails = synthesizePitchEmails(output);
-        if (!emails) return isGenerating ? <EmailShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No email data available. Try generating with a thesis or narrative.</p>;
+        const emails = synthesizePitchEmails(output, outputData);
+        if (!emails) return (isGenerating && !completedOutputs.has("pitch_email")) ? <EmailShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
         return <PitchEmailView variants={emails} />;
       }
       case "investment_memo": {
-        const memo = synthesizeInvestmentMemo(output);
-        if (!memo) return isGenerating ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
+        const memo = synthesizeInvestmentMemo(output, outputData);
+        if (!memo) return (isGenerating && !completedOutputs.has("investment_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
         return <InvestmentMemoView data={memo} />;
+      }
+      case "board_memo": {
+        const memo = synthesizeBoardMemo(outputData);
+        if (!memo) return (isGenerating && !completedOutputs.has("board_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No board memo data available.</p>;
+        return <BoardMemoView data={memo} />;
+      }
+      case "key_metrics_summary": {
+        const metrics = synthesizeKeyMetrics(outputData);
+        if (!metrics) return (isGenerating && !completedOutputs.has("key_metrics_summary")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No metrics data available.</p>;
+        return <KeyMetricsSummaryView data={metrics} />;
+      }
+      case "strategic_memo": {
+        const memo = synthesizeStrategicMemo(outputData);
+        if (!memo) return (isGenerating && !completedOutputs.has("strategic_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No strategic memo data available.</p>;
+        return <StrategicMemoView data={memo} />;
       }
       default:
         return null;
@@ -383,7 +377,6 @@ export function OutputView() {
         <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} isLoading={isGenerating || isGeneratingSlides} />
         <div style={isMobile ? undefined : { marginLeft: 200 }}>
           <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 w-full animate-fade-in" key={activeTab}>
-            {/* Outputs tab */}
             {activeTab === "outputs" && (
               <>
                 {rawInput && !isLoading && <OriginalInputSection rawInput={rawInput} />}
@@ -392,6 +385,9 @@ export function OutputView() {
                   activeTab={activeOutputTab}
                   onTabChange={setActiveOutputTab}
                   onAddOutput={!isLoading ? handleAddOutput : undefined}
+                  purpose={intakeSelections?.purpose}
+                  completedOutputs={completedOutputs}
+                  isGenerating={isGenerating}
                 />
                 <div className="min-h-[400px] animate-tab-enter" key={activeOutputTab}>
                   {renderOutputContent()}
@@ -399,14 +395,12 @@ export function OutputView() {
               </>
             )}
 
-            {/* Score tab (with merged coaching) */}
             {activeTab === "score" && isLoading && <ScoreShimmer />}
             {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
             {activeTab === "score" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
 
-            {/* Analysis tab (evaluate mode) */}
             {activeTab === "analysis" && isLoading && <ScoreShimmer />}
             {activeTab === "analysis" && !isLoading && analysis && score && (
               <AnalysisTab analysis={analysis} score={score} mode={output!.mode} />

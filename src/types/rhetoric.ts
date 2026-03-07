@@ -56,14 +56,33 @@ export interface RhetoricOutput {
 
 // ── Intake types ──
 
-export type IntakePurpose = "investor_pitch" | "board_update" | "strategy_memo" | "team_alignment" | "general_narrative";
-export type OutputDeliverable = "slide_framework" | "elevator_pitch" | "investor_qa" | "pitch_email" | "investment_memo";
+export type IntakePurpose = "fundraising" | "board_meeting" | "strategy";
+export type OutputDeliverable = 
+  | "core_narrative"
+  | "slide_framework" 
+  | "elevator_pitch" 
+  | "investor_qa" 
+  | "pitch_email" 
+  | "investment_memo"
+  | "board_memo"
+  | "key_metrics_summary"
+  | "strategic_memo";
 export type IntakeStage = "pre_seed" | "seed" | "series_a" | "series_b" | "growth";
 
 export interface IntakeSelections {
   purpose: IntakePurpose;
   outputs: OutputDeliverable[];
   stage: IntakeStage;
+}
+
+// ── Core Narrative ──
+export interface CoreNarrativeSection {
+  heading: string;
+  content: string;
+}
+
+export interface CoreNarrativeData {
+  sections: CoreNarrativeSection[];
 }
 
 // ── Elevator pitch data ──
@@ -89,6 +108,62 @@ export interface PitchEmailVariant {
 export interface InvestmentMemoData {
   sections: { heading: string; content: string }[];
 }
+
+// ── Board Memo ──
+export interface BoardMemoData {
+  sections: { heading: string; content: string }[];
+}
+
+// ── Key Metrics Summary ──
+export interface KeyMetricItem {
+  name: string;
+  value: string;
+  trend: "up" | "down" | "flat";
+  context: string;
+}
+
+export interface KeyMetricsSummaryData {
+  categories: { category: string; metrics: KeyMetricItem[] }[];
+}
+
+// ── Strategic Memo ──
+export interface StrategicMemoData {
+  sections: { heading: string; content: string }[];
+}
+
+// ── Intent-based Core Narrative section headings ──
+export const CORE_NARRATIVE_SECTIONS: Record<IntakePurpose, string[]> = {
+  fundraising: ["Problem", "Solution", "Why Now", "Market", "Traction", "Vision"],
+  board_meeting: ["Challenges", "Progress & Metrics", "Strategic Updates", "Market Position", "Key Asks", "Next Quarter Priorities"],
+  strategy: ["Problem", "Current State", "Strategic Insight", "Market Landscape", "Action Plan", "Vision"],
+};
+
+// ── Intent-based output options ──
+export interface OutputOption {
+  value: OutputDeliverable;
+  label: string;
+  preSelected: boolean;
+}
+
+export const INTENT_OUTPUTS: Record<IntakePurpose, OutputOption[]> = {
+  fundraising: [
+    { value: "slide_framework", label: "Slide Framework", preSelected: true },
+    { value: "elevator_pitch", label: "Elevator Pitch", preSelected: true },
+    { value: "investor_qa", label: "Investor Q&A Prep", preSelected: true },
+    { value: "pitch_email", label: "Pitch Email", preSelected: false },
+    { value: "investment_memo", label: "Investment Memo", preSelected: false },
+  ],
+  board_meeting: [
+    { value: "slide_framework", label: "Slide Framework", preSelected: true },
+    { value: "board_memo", label: "Board Memo", preSelected: true },
+    { value: "key_metrics_summary", label: "Key Metrics Summary", preSelected: false },
+  ],
+  strategy: [
+    { value: "strategic_memo", label: "Strategic Memo", preSelected: true },
+    { value: "elevator_pitch", label: "Elevator Pitch", preSelected: false },
+    { value: "slide_framework", label: "Slide Framework", preSelected: false },
+  ],
+};
 
 // Helper to determine intent from any output shape
 export function getOutputIntent(output: any): "create" | "evaluate" {
