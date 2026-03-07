@@ -765,7 +765,7 @@ Return ONLY valid JSON, no markdown fences.`;
                 const updated = { ...prev } as any;
                 if (!updated.deliverable) updated.deliverable = { type: "deck" };
                 updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
-                if (updated.supporting) updated.supporting = { ...updated.supporting, deckFramework };
+                // no more supporting column
                 return updated;
               });
             }
