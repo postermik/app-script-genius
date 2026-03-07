@@ -218,6 +218,13 @@ export function OutputView() {
       );
     }
 
+    // Check outputData for persisted slide framework
+    const persistedSlides = outputData?.slide_framework?.deckFramework;
+    if (persistedSlides?.length) {
+      const persistedDeliverable = { type: "deck" as const, deckFramework: persistedSlides };
+      return <DeckView deliverable={persistedDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} onUpdateDeliverable={handleUpdateDeliverable} />;
+    }
+
     const oldData = (output as any)?.data;
     if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
       const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };

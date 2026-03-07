@@ -784,13 +784,10 @@ Return ONLY valid JSON, no markdown fences.`;
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setCompletedOutputs(prev => new Set(prev).add("_scoring"));
 
-      // Save project
+      // Increment generation count (project already saved via incremental saves + initial create above)
       const newCount = generationCount + 1;
       setGenerationCount(newCount);
       localStorage.setItem("rhetoric_gen_count", String(newCount));
-      if (fullOutput) {
-        await saveProject(fullOutput, { coreNarrative: cn, intakeSelections: intakeSelections || undefined });
-      }
 
     } catch (e: any) {
       if (e.name === "AbortError") return;
@@ -1172,12 +1169,24 @@ Return ONLY valid JSON, no markdown fences.`;
 
     // Restore the main output object for backward compatibility
     if (persisted.score || persisted.mode) {
-      setOutput({
+      const restoredOutput: any = {
         mode: persisted.mode || project.mode,
         title: persisted.title || project.title,
         score: persisted.score,
         intent: persisted.intent || "create",
-      } as any);
+      };
+      // Reconstruct deliverable from persisted slide_framework
+      const slideFw = restoredOutputData.slide_framework?.deckFramework;
+      if (slideFw?.length) {
+        restoredOutput.deliverable = { type: "deck", deckFramework: slideFw };
+      }
+      // Attach supporting data for backward compat (refine, rescore etc.)
+      const s = persisted.core_narrative?.sections;
+      if (s) {
+        restoredOutput.supporting = {};
+      }
+      console.log("[Persistence] Restored output object with keys:", Object.keys(restoredOutput));
+      setOutput(restoredOutput);
     } else {
       setOutput(null);
     }
