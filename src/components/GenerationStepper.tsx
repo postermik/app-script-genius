@@ -1,108 +1,51 @@
 import { useEffect, useState, useRef } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
-  Search, Lightbulb, FileText, Mic, Layout, Target, CheckCircle,
-  BarChart3, AlertTriangle, TrendingUp, Crosshair, Grid3X3,
-  Eye, AlertCircle, PuzzleIcon, Map, Type, HelpCircle, PenTool, Mail, RefreshCw,
+  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { OutputDeliverable } from "@/types/rhetoric";
+import { OUTPUT_SPEED_ORDER } from "@/lib/outputOrder";
 
-type StepDef = { key: string; label: string; trigger: string | null; icon: string };
+interface OutputStep {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  trigger: string | null;
+}
 
-const STEP_SETS: Record<string, StepDef[]> = {
-  fundraising: [
-    { key: "analyzing", label: "Analyzing your company", trigger: null, icon: "Search" },
-    { key: "thesis", label: "Building investment thesis", trigger: '"thesis"', icon: "Lightbulb" },
-    { key: "narrative", label: "Structuring narrative", trigger: '"narrativeStructure"', icon: "FileText" },
-    { key: "pitch", label: "Writing pitch script", trigger: '"pitchScript"', icon: "Mic" },
-    { key: "deck", label: "Generating slides", trigger: '"deckFramework"', icon: "Layout" },
-    { key: "scoring", label: "Reviewing quality", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
-  strategy: [
-    { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
-    { key: "structure", label: "Structuring argument", trigger: '"sections"', icon: "FileText" },
-    { key: "writing", label: "Writing sections", trigger: '"content"', icon: "PenTool" },
-    { key: "scoring", label: "Reviewing quality", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
-  board_update: [
-    { key: "analyzing", label: "Analyzing your update", trigger: null, icon: "Search" },
-    { key: "structure", label: "Structuring key themes", trigger: '"sections"', icon: "FileText" },
-    { key: "writing", label: "Writing sections", trigger: '"content"', icon: "PenTool" },
-    { key: "scoring", label: "Reviewing quality", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
-  investor_update: [
-    { key: "analyzing", label: "Analyzing your update", trigger: null, icon: "Search" },
-    { key: "headline", label: "Crafting headline", trigger: '"subject"', icon: "Type" },
-    { key: "writing", label: "Writing the email", trigger: '"sections"', icon: "Mail" },
-    { key: "scoring", label: "Reviewing quality", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
-  product_vision: [
-    { key: "analyzing", label: "Understanding your product", trigger: null, icon: "Search" },
-    { key: "structure", label: "Structuring vision", trigger: '"sections"', icon: "Eye" },
-    { key: "writing", label: "Writing sections", trigger: '"content"', icon: "PenTool" },
-    { key: "scoring", label: "Reviewing quality", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
-  evaluate: [
-    { key: "analyzing", label: "Reading your materials", trigger: null, icon: "Search" },
-    { key: "assessing", label: "Assessing narrative", trigger: '"analysis"', icon: "FileText" },
-    { key: "rebuilding", label: "Building recommendations", trigger: '"deckFramework"', icon: "RefreshCw" },
-    { key: "scoring", label: "Scoring readiness", trigger: '"score"', icon: "Target" },
-    { key: "complete", label: "Done", trigger: null, icon: "CheckCircle" },
-  ],
+const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
+  elevator_pitch: { key: "elevator_pitch", label: "Elevator pitch", icon: Mic, trigger: '"pitchScript"' },
+  pitch_email: { key: "pitch_email", label: "Pitch emails", icon: Mail, trigger: '"pitchScript"' },
+  investor_qa: { key: "investor_qa", label: "Investor Q&A", icon: HelpCircle, trigger: '"score"' },
+  investment_memo: { key: "investment_memo", label: "Investment memo", icon: FileText, trigger: '"narrativeStructure"' },
+  slide_framework: { key: "slide_framework", label: "Slide framework", icon: Layout, trigger: '"deckFramework"' },
 };
 
-const iconMap: Record<string, LucideIcon> = {
-  Search, Lightbulb, FileText, Mic, Layout, Target, CheckCircle,
-  BarChart3, AlertTriangle, TrendingUp, Crosshair, Grid3X3,
-  Eye, AlertCircle, PuzzleIcon, Map, Type, HelpCircle, PenTool, Mail, RefreshCw,
-};
-
-const INITIAL_STEPS: StepDef[] = [
-  { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
+const CORE_STEPS: OutputStep[] = [
+  { key: "_analyzing", label: "Analyzing", icon: Search, trigger: null },
+  { key: "_scoring", label: "Scoring", icon: Target, trigger: '"score"' },
 ];
 
-// Map step keys to the output deliverable they belong to.
-// Steps not in this map are always shown (core steps like analyzing, scoring, complete).
-const STEP_TO_OUTPUT: Record<string, string> = {
-  deck: "slide_framework",
-  pitch: "elevator_pitch",
-  writing: "_always", // generic writing step for non-fundraising modes
-  headline: "_always",
-  structure: "_always",
-  assessing: "_always",
-  rebuilding: "slide_framework",
-};
-
-function getStepsForContext(selectedMode: string, isEvaluation: boolean, selectedOutputs: string[]): StepDef[] {
-  if (isEvaluation) return STEP_SETS.evaluate;
-  let steps: StepDef[];
-  if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) {
-    steps = STEP_SETS[selectedMode];
-  } else {
-    return INITIAL_STEPS;
-  }
-  // Filter out steps whose mapped output isn't selected
-  if (selectedOutputs.length > 0) {
-    steps = steps.filter(s => {
-      const mapped = STEP_TO_OUTPUT[s.key];
-      if (!mapped || mapped === "_always") return true; // core step, always show
-      return selectedOutputs.includes(mapped);
-    });
-  }
-  return steps;
+function buildSteps(selectedOutputs: OutputDeliverable[]): OutputStep[] {
+  const sorted = [...selectedOutputs].sort(
+    (a, b) => OUTPUT_SPEED_ORDER.indexOf(a) - OUTPUT_SPEED_ORDER.indexOf(b)
+  );
+  return [
+    CORE_STEPS[0], // analyzing
+    ...sorted.map(o => OUTPUT_STEP_MAP[o]),
+    CORE_STEPS[1], // scoring
+    { key: "_done", label: "Done", icon: CheckCircle, trigger: null },
+  ];
 }
 
 export function GenerationStepper() {
-  const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating, intakeSelections } = useDecksmith();
-  const selectedOutputs = intakeSelections?.outputs || [];
+  const { isStreaming, streamingText, isGenerating, stopGenerating, intakeSelections } = useDecksmith();
+  const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
+
+  const [steps] = useState<OutputStep[]>(() => buildSteps(selectedOutputs));
   const [targetStepIndex, setTargetStepIndex] = useState(0);
   const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
-  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
@@ -126,40 +69,9 @@ export function GenerationStepper() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isStreaming, stepStartTime]);
 
-  // Reset on new generation
-  useEffect(() => {
-    if (isGenerating) {
-      setSteps(getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
-      setTargetStepIndex(0);
-      setDisplayedStepIndex(0);
-      setGenerationDone(false);
-    }
-  }, [isGenerating, selectedMode, isEvaluation, selectedOutputs]);
-
-  // Detect mode and step triggers from stream
+  // Detect step triggers from stream
   useEffect(() => {
     if (!isStreaming || !streamingText) return;
-
-    const modeMatches = [
-      { mode: "fundraising", patterns: ['"mode": "fundraising"', '"mode":"fundraising"'] },
-      { mode: "board_update", patterns: ['"mode": "board_update"', '"mode":"board_update"'] },
-      { mode: "strategy", patterns: ['"mode": "strategy"', '"mode":"strategy"'] },
-      { mode: "product_vision", patterns: ['"mode": "product_vision"', '"mode":"product_vision"'] },
-      { mode: "investor_update", patterns: ['"mode": "investor_update"', '"mode":"investor_update"'] },
-    ];
-
-    for (const { mode, patterns } of modeMatches) {
-      if (patterns.some(p => streamingText.includes(p)) && STEP_SETS[mode]) {
-        setSteps(prev => {
-          if (prev === INITIAL_STEPS || prev !== STEP_SETS[mode]) return STEP_SETS[mode];
-          return prev;
-        });
-        break;
-      }
-    }
-
-    if (steps === INITIAL_STEPS) return;
-
     let highest = 0;
     for (let i = 1; i < steps.length - 1; i++) {
       const trigger = steps[i].trigger;
@@ -170,18 +82,18 @@ export function GenerationStepper() {
     if (highest > 0) setTargetStepIndex(prev => Math.max(prev, highest));
   }, [streamingText, isStreaming, steps]);
 
-  // Pacing: increment displayedStepIndex toward targetStepIndex with 4s delay
+  // Pacing: increment displayedStepIndex toward targetStepIndex with 3s delay
   useEffect(() => {
-    if (generationDone) return; // skip pacing once done
+    if (generationDone) return;
     if (displayedStepIndex < targetStepIndex) {
       const timer = setTimeout(() => {
         setDisplayedStepIndex(prev => prev + 1);
-      }, 4000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [displayedStepIndex, targetStepIndex, generationDone]);
 
-  // When streaming ends, skip pacing and jump to Done
+  // When streaming ends, jump to Done
   useEffect(() => {
     if (!isStreaming && isGenerating && streamingText.length > 0) {
       setGenerationDone(true);
@@ -189,63 +101,69 @@ export function GenerationStepper() {
     }
   }, [isStreaming, isGenerating, streamingText, steps.length]);
 
-  // Only show completed + active steps. "Done" only when generationDone.
+  // Show completed + active steps. "Done" only when generationDone.
   const visibleSteps = steps.filter((step, index) => {
-    if (step.key === "complete") return generationDone;
+    if (step.key === "_done") return generationDone;
     return index <= displayedStepIndex;
   });
 
   return (
-    <div className="flex flex-col animate-fade-in px-3">
-      <div className="space-y-1.5">
+    <div className="flex flex-col animate-fade-in">
+      <div className="space-y-0.5">
         {visibleSteps.map((step) => {
           const realIndex = steps.indexOf(step);
           const isComplete = displayedStepIndex > realIndex;
           const isActive = displayedStepIndex === realIndex;
-          const StepIcon = iconMap[step.icon] || Search;
-          const isDoneStep = step.key === "complete";
+          const StepIcon = step.icon;
+          const isDoneStep = step.key === "_done";
 
           return (
-            <div key={step.key} className="flex items-center gap-2.5 animate-fade-in">
+            <div
+              key={step.key}
+              className="flex items-center gap-2 py-1 animate-fade-in"
+            >
               <div className={`
-                flex items-center justify-center w-6 h-6 rounded-full transition-all duration-500
+                flex items-center justify-center w-5 h-5 rounded-full shrink-0 transition-all duration-500
                 ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
-                ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
+                ${isActive && !isDoneStep ? "bg-primary/15 text-primary" : ""}
               `}>
                 {isComplete || isDoneStep ? (
-                  <CheckCircle className="w-3 h-3" />
+                  <CheckCircle className="w-2.5 h-2.5" />
                 ) : (
-                  <StepIcon className={`w-3 h-3 ${isActive ? "animate-pulse" : ""}`} />
+                  <StepIcon className={`w-2.5 h-2.5 ${isActive ? "animate-pulse" : ""}`} />
                 )}
               </div>
               <span className={`
-                text-sm transition-all duration-500
+                text-[11px] leading-tight transition-all duration-500
                 ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
                 ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
+                ${!isComplete && !isActive && !isDoneStep ? "text-muted-foreground" : ""}
               `}>
                 {step.label}
-                {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
-                  <span className="text-xs font-normal text-muted-foreground/60 ml-0.5">
-                    {secondsOnStep >= 35 ? "... almost done" : "... still working"}
-                  </span>
-                )}
               </span>
               {isActive && !isDoneStep && isStreaming && (
-                <div className="flex items-center gap-0.5 ml-0.5">
-                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               )}
             </div>
           );
         })}
+
+        {isStreaming && !generationDone && secondsOnStep >= 15 && (
+          <p className="text-[10px] text-muted-foreground/50 pl-7">
+            {secondsOnStep >= 35 ? "Almost done…" : "Still working…"}
+          </p>
+        )}
+
         {isStreaming && !generationDone && (
           <button
             onClick={stopGenerating}
-            className="mt-3 text-xs text-muted-foreground hover:text-foreground border border-border rounded-sm px-2.5 py-1 hover:border-muted-foreground transition-colors ml-8"
+            className="mt-2 text-[10px] text-muted-foreground hover:text-foreground border border-border rounded-sm px-2 py-0.5 hover:border-muted-foreground/50 transition-colors ml-7"
           >
-            Stop generating
+            Stop
           </button>
         )}
       </div>
