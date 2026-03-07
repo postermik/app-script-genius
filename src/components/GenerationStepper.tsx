@@ -152,7 +152,7 @@ export function GenerationStepper() {
           );
         })}
 
-        {isActive && !generationDone && secondsOnStep >= 15 && (
+        {isStreaming && !generationDone && secondsOnStep >= 15 && (
           <p className="text-[10px] text-muted-foreground/50 pl-7">
             {secondsOnStep >= 35 ? "Almost done…" : "Still working…"}
           </p>
