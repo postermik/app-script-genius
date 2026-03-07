@@ -95,6 +95,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
+
+  // Sync appliedSuggestions from persisted output._appliedSuggestions whenever output changes
+  useEffect(() => {
+    if (!output) return;
+    const persisted = (output as any)._appliedSuggestions;
+    if (Array.isArray(persisted) && persisted.length > 0) {
+      setAppliedSuggestions(new Set(persisted.map(String)));
+    }
+    const persistedDismissed = (output as any)._dismissedSuggestions;
+    if (Array.isArray(persistedDismissed) && persistedDismissed.length > 0) {
+      setDismissedSuggestions(new Set(persistedDismissed));
+    }
+  }, [output]);
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -471,8 +484,26 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!output) return;
     setRefiningSection("rescore");
     try {
-      const currentScore = (output as any).score;
-      const narrativeContent = (output as any).supporting || output.data || {};
+      // Gather the CURRENT narrative content including any applied suggestions
+      const deliverable = (output as any).deliverable;
+      const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
+      const narrativeData = (output as any).supporting || output.data || {};
+
+      // Build a comprehensive snapshot of the current narrative state
+      const narrativeSnapshot = {
+        deckFramework: deckFramework.map((slide: any) => ({
+          headline: slide.headline || slide,
+          content: slide.body || slide.content || "",
+        })),
+        thesis: narrativeData.thesis?.content || narrativeData.thesis || "",
+        narrativeStructure: narrativeData.narrativeStructure || {},
+        pitchScript: narrativeData.pitchScript || "",
+        marketLogic: narrativeData.marketLogic || [],
+        risks: narrativeData.risks || "",
+        whyNow: narrativeData.whyNow || "",
+      };
+
+      console.log("[Rescore] Sending current narrative snapshot with", deckFramework.length, "slides");
 
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: {
@@ -481,7 +512,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           section: "score",
           path: "score",
           tone: "rescore",
-          currentContent: JSON.stringify(currentScore),
+          currentContent: JSON.stringify(narrativeSnapshot),
         },
       });
       if (error) throw error;
@@ -492,11 +523,14 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         scoreContent = JSON.parse(scoreContent);
       }
 
+      console.log("[Rescore] New score:", scoreContent.overall, "vs old:", (output as any).score?.overall);
+
       setOutput((prev) => {
         if (!prev) return prev;
-        const updated = { ...prev, score: scoreContent };
+        const updated = JSON.parse(JSON.stringify(prev));
+        updated.score = scoreContent;
         // Clear persisted applied suggestions since we rescored
-        (updated as any)._appliedSuggestions = [];
+        updated._appliedSuggestions = [];
         saveProject(updated as NarrativeOutputData);
         return updated;
       });

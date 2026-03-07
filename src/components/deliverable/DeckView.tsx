@@ -20,7 +20,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [fadingOut, setFadingOut] = useState<number[]>([]);
   const [refiningSlideIndex, setRefiningSlideIndex] = useState<number | null>(null);
-  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection } = useDecksmith();
+  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection, appliedSuggestions } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -69,7 +69,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       {deckSuggestions.length > 0 && (
         <div className="mb-3 space-y-2">
           {deckSuggestions.map((suggestion, i) =>
-            dismissedSuggestions.has(i) || fadingOut.includes(i) ? null : (
+            dismissedSuggestions.has(i) || fadingOut.includes(i) || appliedSuggestions.has(`deck-${i}`) ? null : (
               <div
                 key={i}
                 className={`bg-accent/30 border border-accent/40 rounded-sm p-3 flex items-center gap-3 transition-all duration-400 ${
