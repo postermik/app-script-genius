@@ -98,7 +98,7 @@ export function ProductView() {
     }
   }, [setRawInput]);
 
-  if (output) return <OutputView />;
+  if (output || isGenerating) return <OutputView />;
 
   return (
     <div className="flex-1 flex flex-col">

@@ -353,7 +353,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const attempt = async (retry: boolean): Promise<void> => {
       try {
         const parsed = await streamFromEdgeFunction(
-          { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile },
+          { mode: "generate", input: rawInput, outputMode: selectedMode, currentThesis, voiceProfile, model: "claude-sonnet-4-20250514" },
           abortController.signal
         );
         setDetectedMode(parsed.mode);
@@ -485,6 +485,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           path: "deckFramework",
           tone: suggestion,
           currentContent: JSON.stringify(deckFramework),
+          model: "claude-sonnet-4-20250514",
         },
       });
       if (error) throw error;
@@ -563,6 +564,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           path: "score",
           tone: "rescore",
           currentContent: JSON.stringify(narrativeSnapshot),
+          model: "claude-sonnet-4-20250514",
         },
       });
       if (error) throw error;
