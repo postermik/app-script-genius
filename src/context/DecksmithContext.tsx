@@ -777,6 +777,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
       setCompletedOutputs(prev => new Set(prev).add(outputType));
+      saveOutputIncremental(outputType, result);
 
       // Merge slides into output
       if (outputType === "slide_framework") {
