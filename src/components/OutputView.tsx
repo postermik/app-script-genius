@@ -197,45 +197,60 @@ export function OutputView() {
 
   // Render deck/memo/email/document preview
   const renderSlideFramework = () => {
-    if (!deliverable) return <p className="text-sm text-muted-foreground text-center py-12">No deliverable content available.</p>;
-    switch (deliverable.type) {
-      case "deck":
-        return (
-          <DeckView
-            deliverable={deliverable}
-            excludedSlides={excludedSlides}
-            onToggleSlide={toggleSlide}
-            slideOrder={slideOrder}
-            onReorder={setSlideOrder}
-            deckTheme={deckTheme}
-            onThemeChange={setDeckTheme}
-            onUpdateDeliverable={handleUpdateDeliverable}
-          />
-        );
-      case "memo":
-        return <MemoView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
-      case "email":
-        return <EmailView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
-      case "document":
-        return <DocumentView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
-      default:
-        const oldData = (output as any).data;
-        if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
-          const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
-          return (
-            <DeckView
-              deliverable={fallbackDeliverable}
-              excludedSlides={excludedSlides}
-              onToggleSlide={toggleSlide}
-              slideOrder={slideOrder}
-              onReorder={setSlideOrder}
-              deckTheme={deckTheme}
-              onThemeChange={setDeckTheme}
-            />
-          );
-        }
-        return <p className="text-sm text-muted-foreground text-center py-12">Unsupported deliverable type.</p>;
+    // Check for deck data in deliverable, output.data, or output.supporting
+    if (deliverable?.type === "deck" && deliverable.deckFramework?.length) {
+      return (
+        <DeckView
+          deliverable={deliverable}
+          excludedSlides={excludedSlides}
+          onToggleSlide={toggleSlide}
+          slideOrder={slideOrder}
+          onReorder={setSlideOrder}
+          deckTheme={deckTheme}
+          onThemeChange={setDeckTheme}
+          onUpdateDeliverable={handleUpdateDeliverable}
+        />
+      );
     }
+    if (deliverable?.type === "memo") return <MemoView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
+    if (deliverable?.type === "email") return <EmailView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
+    if (deliverable?.type === "document") return <DocumentView deliverable={deliverable} onUpdateDeliverable={handleUpdateDeliverable} />;
+
+    // Fallback: check output.data for legacy deck framework
+    const oldData = (output as any)?.data;
+    if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
+      const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
+      return (
+        <DeckView
+          deliverable={fallbackDeliverable}
+          excludedSlides={excludedSlides}
+          onToggleSlide={toggleSlide}
+          slideOrder={slideOrder}
+          onReorder={setSlideOrder}
+          deckTheme={deckTheme}
+          onThemeChange={setDeckTheme}
+        />
+      );
+    }
+
+    // Check output.supporting for deck framework
+    const supporting = (output as any)?.supporting;
+    if (supporting?.deckFramework?.length) {
+      const fallbackDeliverable = { type: "deck" as const, deckFramework: supporting.deckFramework };
+      return (
+        <DeckView
+          deliverable={fallbackDeliverable}
+          excludedSlides={excludedSlides}
+          onToggleSlide={toggleSlide}
+          slideOrder={slideOrder}
+          onReorder={setSlideOrder}
+          deckTheme={deckTheme}
+          onThemeChange={setDeckTheme}
+        />
+      );
+    }
+
+    return <p className="text-sm text-muted-foreground text-center py-12">No slide framework data available. Try regenerating with Slide Framework selected.</p>;
   };
 
   const handleRefinePitch = async () => {
