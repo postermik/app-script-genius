@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Zap } from "lucide-react";
 import type { OutputDeliverable } from "@/types/rhetoric";
-import { OUTPUT_SPEED_ORDER, OUTPUT_LABELS } from "@/lib/outputOrder";
+import { OUTPUT_LABELS } from "@/lib/outputOrder";
 
 const ALL_OUTPUTS: OutputDeliverable[] = [
   "elevator_pitch",
