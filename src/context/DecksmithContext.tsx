@@ -26,6 +26,7 @@ interface DecksmithContextType {
   refiningSection: string | null;
   generationCount: number;
   generate: () => Promise<void>;
+  generateSlides: () => Promise<void>;
   evaluateDeck: (extractedText: string) => Promise<void>;
   refineSection: (sectionKey: string, path: string, tone: RefinementTone) => Promise<void>;
   reset: () => void;
@@ -62,6 +63,7 @@ interface DecksmithContextType {
   rescoreNarrative: () => Promise<void>;
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
+  isGeneratingSlides: boolean;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -95,6 +97,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
+  const lastPartialParseRef = useRef(0);
 
   // Sync appliedSuggestions from persisted output._appliedSuggestions whenever output changes
   useEffect(() => {
@@ -315,6 +319,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
               }
             }
           }
+
+          // Attempt incremental parse every ~2KB of new data
+          if (fullText.length - lastPartialParseRef.current > 2000) {
+            lastPartialParseRef.current = fullText.length;
+            try {
+              const partial = repairJSON(fullText);
+              if (partial?.supporting || partial?.data) {
+                setOutput(partial);
+              }
+            } catch {
+              // Not parseable yet, continue
+            }
+          }
         }
       } finally {
         reader.releaseLock();
@@ -358,6 +375,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
     setIsEvaluation(false);
+    setOutput(null);
+    lastPartialParseRef.current = 0;
     startLoadingPhases();
 
     const abortController = new AbortController();
@@ -422,6 +441,94 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     stopLoadingPhases();
     setIsGenerating(false);
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects, streamFromEdgeFunction, intakeSelections]);
+
+  // Generate slides on demand (when user adds slide_framework after initial generation)
+  const generateSlides = useCallback(async () => {
+    if (!rawInput.trim() || !output || isGeneratingSlides) return;
+    setIsGeneratingSlides(true);
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    try {
+      // Build a focused prompt that includes the existing narrative context
+      const supporting = (output as any).supporting || (output as any).data || {};
+      const thesis = supporting.thesis?.content || supporting.thesis || "";
+      const narrative = supporting.narrativeStructure ? JSON.stringify(supporting.narrativeStructure) : "";
+      const pitchScript = supporting.pitchScript || "";
+
+      const slideInput = `Generate ONLY a deckFramework (slide framework) for this company. Use the existing narrative foundation below to create the slides.
+
+EXISTING THESIS: ${thesis}
+
+EXISTING NARRATIVE: ${narrative}
+
+EXISTING PITCH SCRIPT: ${pitchScript}
+
+ORIGINAL INPUT: ${rawInput}
+
+Return ONLY a JSON object with this structure:
+{
+  "deckFramework": [
+    {
+      "slideNumber": 1,
+      "headline": "...",
+      "body": ["bullet 1", "bullet 2"],
+      "speakerNotes": "...",
+      "layoutRecommendation": "...",
+      "categoryLabel": "..."
+    }
+  ]
+}`;
+
+      const parsed = await streamFromEdgeFunction(
+        {
+          mode: "generate",
+          input: slideInput,
+          outputMode: "fundraising",
+          model: "claude-sonnet-4-20250514",
+          selectedOutputs: ["slide_framework"],
+          skipSlides: false,
+        },
+        abortController.signal
+      );
+
+      // Extract deckFramework from response
+      const deckFramework = parsed.deckFramework
+        || parsed.deliverable?.deckFramework
+        || parsed.data?.deckFramework
+        || parsed.supporting?.deckFramework;
+
+      if (deckFramework?.length) {
+        // Merge into existing output
+        setOutput((prev: any) => {
+          if (!prev) return prev;
+          const updated = { ...prev };
+          if (!updated.deliverable) updated.deliverable = { type: "deck" };
+          updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
+          // Also store in supporting/data for fallback lookups
+          if (updated.supporting) updated.supporting = { ...updated.supporting, deckFramework };
+          if (updated.data) updated.data = { ...updated.data, deckFramework };
+          return updated;
+        });
+        toast.success("Slide framework generated!");
+        // Save updated project
+        if (currentProjectId) {
+          await supabase.from("projects").update({ updated_at: new Date().toISOString() }).eq("id", currentProjectId);
+        }
+      } else {
+        toast.error("Failed to generate slides. Please try again.");
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        console.error("Slide generation error:", e);
+        toast.error("Failed to generate slides. Please try again.");
+      }
+    } finally {
+      abortControllerRef.current = null;
+      setIsGeneratingSlides(false);
+    }
+  }, [rawInput, output, isGeneratingSlides, streamFromEdgeFunction, currentProjectId]);
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;
@@ -828,6 +935,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections,
+        generateSlides, isGeneratingSlides,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));
           // Persist in output
