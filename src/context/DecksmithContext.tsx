@@ -206,8 +206,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   // Attempt to repair truncated JSON by closing unclosed brackets/braces
   const repairJSON = (text: string): any => {
     let cleaned = text.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-    // Remove trailing commas before closing brackets
+    
+    // Fix common truncation artifacts like "deliverabledeck" -> "deliverable": {"type":"deck"
+    // (key-value pairs where : was lost)
     cleaned = cleaned.replace(/,\s*$/, "");
+    
+    // Try parsing as-is first
+    try { return JSON.parse(cleaned); } catch {}
+    
+    // Remove any trailing incomplete key-value pair
+    // Find the last complete value (ending with }, ], ", number, true, false, null)
+    const lastGoodPatterns = [/,\s*"[^"]*"\s*$/, /,\s*"[^"]*":\s*"[^"]*$/, /,\s*"[^"]*":\s*$/];
+    for (const pattern of lastGoodPatterns) {
+      const stripped = cleaned.replace(pattern, "");
+      if (stripped !== cleaned) {
+        cleaned = stripped;
+        break;
+      }
+    }
     
     // Count unclosed brackets
     let braces = 0, brackets = 0;
@@ -225,6 +241,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     
     // If we're inside an unterminated string, close it
     if (inString) cleaned += '"';
+    
+    // Remove trailing commas before closing
+    cleaned = cleaned.replace(/,\s*$/, "");
     
     // Close any unclosed brackets/braces
     for (let i = 0; i < brackets; i++) cleaned += ']';
