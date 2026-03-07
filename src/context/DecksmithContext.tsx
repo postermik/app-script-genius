@@ -129,6 +129,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); });
   }, []);
 
+  // Refs for persistence effect
+  const outputDataRef = useRef(outputData);
+  outputDataRef.current = outputData;
+  const coreNarrativeRef = useRef(coreNarrative);
+  coreNarrativeRef.current = coreNarrative;
+  const intakeSelectionsRef = useRef(intakeSelections);
+  intakeSelectionsRef.current = intakeSelections;
+
+  // Persist outputData to DB when generation finishes
+  useEffect(() => {
+    if (!isGenerating && currentProjectId && coreNarrative && Object.keys(outputData).length > 0) {
+      const timer = setTimeout(async () => {
+        console.log("[Persistence] Saving all output data to database...");
+        await supabase.from("projects").update({
+          supporting: {
+            coreNarrative: coreNarrativeRef.current,
+            outputData: outputDataRef.current,
+            intakeSelections: intakeSelectionsRef.current,
+          } as any,
+        }).eq("id", currentProjectId);
+        console.log("[Persistence] Save complete");
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isGenerating, currentProjectId, coreNarrative, outputData]);
+
   const loadProjects = useCallback(async () => {
     if (!session) return;
     const { data, error } = await supabase.from("projects").select("*").order("updated_at", { ascending: false });
