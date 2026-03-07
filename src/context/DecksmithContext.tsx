@@ -751,7 +751,7 @@ Return ONLY valid JSON, no markdown fences.`;
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
   // ── Generate a single output on demand (post-generation) ──
   const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
