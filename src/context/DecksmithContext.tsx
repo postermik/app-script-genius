@@ -1167,12 +1167,13 @@ Return ONLY valid JSON, no markdown fences.`;
     const dismissed = persisted.dismissed_suggestions || [];
     setDismissedSuggestions(new Set(dismissed));
 
-    // Restore the main output object for backward compatibility
-    if (persisted.score || persisted.mode) {
+    // Restore the main output object so ProductView renders OutputView
+    const hasPersistedData = persisted.core_narrative || persisted.score || Object.keys(restoredOutputData).length > 0;
+    if (hasPersistedData) {
       const restoredOutput: any = {
         mode: persisted.mode || project.mode,
         title: persisted.title || project.title,
-        score: persisted.score,
+        score: persisted.score || null,
         intent: persisted.intent || "create",
       };
       // Reconstruct deliverable from persisted slide_framework
