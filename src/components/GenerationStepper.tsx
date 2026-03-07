@@ -66,7 +66,19 @@ const INITIAL_STEPS: StepDef[] = [
   { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
 ];
 
-function getStepsForContext(selectedMode: string, isEvaluation: boolean, skipSlides: boolean): StepDef[] {
+// Map step keys to the output deliverable they belong to.
+// Steps not in this map are always shown (core steps like analyzing, scoring, complete).
+const STEP_TO_OUTPUT: Record<string, string> = {
+  deck: "slide_framework",
+  pitch: "elevator_pitch",
+  writing: "_always", // generic writing step for non-fundraising modes
+  headline: "_always",
+  structure: "_always",
+  assessing: "_always",
+  rebuilding: "slide_framework",
+};
+
+function getStepsForContext(selectedMode: string, isEvaluation: boolean, selectedOutputs: string[]): StepDef[] {
   if (isEvaluation) return STEP_SETS.evaluate;
   let steps: StepDef[];
   if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) {
@@ -74,19 +86,23 @@ function getStepsForContext(selectedMode: string, isEvaluation: boolean, skipSli
   } else {
     return INITIAL_STEPS;
   }
-  // Filter out the deck/slides step when slides aren't selected
-  if (skipSlides) {
-    steps = steps.filter(s => s.key !== "deck");
+  // Filter out steps whose mapped output isn't selected
+  if (selectedOutputs.length > 0) {
+    steps = steps.filter(s => {
+      const mapped = STEP_TO_OUTPUT[s.key];
+      if (!mapped || mapped === "_always") return true; // core step, always show
+      return selectedOutputs.includes(mapped);
+    });
   }
   return steps;
 }
 
 export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating, intakeSelections } = useDecksmith();
-  const skipSlides = intakeSelections?.outputs ? !intakeSelections.outputs.includes("slide_framework") : false;
+  const selectedOutputs = intakeSelections?.outputs || [];
   const [targetStepIndex, setTargetStepIndex] = useState(0);
   const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
-  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, skipSlides));
+  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
@@ -113,12 +129,12 @@ export function GenerationStepper() {
   // Reset on new generation
   useEffect(() => {
     if (isGenerating) {
-      setSteps(getStepsForContext(selectedMode, isEvaluation, skipSlides));
+      setSteps(getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
       setTargetStepIndex(0);
       setDisplayedStepIndex(0);
       setGenerationDone(false);
     }
-  }, [isGenerating, selectedMode, isEvaluation, skipSlides]);
+  }, [isGenerating, selectedMode, isEvaluation, selectedOutputs]);
 
   // Detect mode and step triggers from stream
   useEffect(() => {
