@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
-import type { IntakeSelections } from "@/types/rhetoric";
+import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
+import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
@@ -27,6 +28,7 @@ interface DecksmithContextType {
   generationCount: number;
   generate: () => Promise<void>;
   generateSlides: () => Promise<void>;
+  generateOutput: (outputType: OutputDeliverable) => Promise<void>;
   evaluateDeck: (extractedText: string) => Promise<void>;
   refineSection: (sectionKey: string, path: string, tone: RefinementTone) => Promise<void>;
   reset: () => void;
@@ -64,6 +66,9 @@ interface DecksmithContextType {
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
+  completedOutputs: Set<string>;
+  coreNarrative: CoreNarrativeData | null;
+  outputData: Record<string, any>;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -98,9 +103,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
-  const lastPartialParseRef = useRef(0);
+  const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
+  const [outputData, setOutputData] = useState<Record<string, any>>({});
 
-  // Sync appliedSuggestions from persisted output._appliedSuggestions whenever output changes
   useEffect(() => {
     if (!output) return;
     const persisted = (output as any)._appliedSuggestions;
@@ -112,26 +118,20 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setDismissedSuggestions(new Set(persistedDismissed));
     }
   }, [output]);
+
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    supabase.auth.onAuthStateChange((_event, session) => { setSession(session); });
+    supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); });
   }, []);
 
   const loadProjects = useCallback(async () => {
     if (!session) return;
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("updated_at", { ascending: false });
+    const { data, error } = await supabase.from("projects").select("*").order("updated_at", { ascending: false });
     if (!error && data) {
       setProjects(data.map((p: any) => ({
         id: p.id, title: p.title, mode: p.mode, raw_input: p.raw_input,
@@ -144,16 +144,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  useEffect(() => {
-    if (session) loadProjects();
-  }, [session, loadProjects]);
+  useEffect(() => { if (session) loadProjects(); }, [session, loadProjects]);
 
   const loadVersions = useCallback(async (projectId: string) => {
-    const { data } = await supabase
-      .from("project_versions")
-      .select("id, version_number, summary, created_at")
-      .eq("project_id", projectId)
-      .order("version_number", { ascending: false });
+    const { data } = await supabase.from("project_versions").select("id, version_number, summary, created_at").eq("project_id", projectId).order("version_number", { ascending: false });
     if (data) {
       setVersions(data);
       if (data.length > 0) setCurrentVersion(data[0].version_number);
@@ -195,9 +189,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setLoadingPhase("sharpening");
       phaseTimerRef.current = setTimeout(() => {
         setLoadingPhase("designing");
-        phaseTimerRef.current = setTimeout(() => {
-          setLoadingPhase("scoring");
-        }, 4000);
+        phaseTimerRef.current = setTimeout(() => { setLoadingPhase("scoring"); }, 4000);
       }, 3000);
     }, 3000);
   }, []);
@@ -207,36 +199,18 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setLoadingPhase("idle");
   }, []);
 
-  // Attempt to repair truncated JSON by closing unclosed brackets/braces
+  // ── JSON parsing / repair ──
   const repairJSON = (text: string): any => {
-    // Strip markdown fences aggressively (handle various formats)
     let cleaned = text.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
-    // Fallback: if no fences found, just trim
-    if (cleaned === text.trim()) {
-      cleaned = text.trim();
-    }
-    
-    // Fix common truncation artifacts like "deliverabledeck" -> "deliverable": {"type":"deck"
-    // (key-value pairs where : was lost)
+    if (cleaned === text.trim()) cleaned = text.trim();
     cleaned = cleaned.replace(/,\s*$/, "");
-    
-    // Try parsing as-is first
     try { return JSON.parse(cleaned); } catch {}
-    
-    // Remove any trailing incomplete key-value pair
-    // Find the last complete value (ending with }, ], ", number, true, false, null)
     const lastGoodPatterns = [/,\s*"[^"]*"\s*$/, /,\s*"[^"]*":\s*"[^"]*$/, /,\s*"[^"]*":\s*$/];
     for (const pattern of lastGoodPatterns) {
       const stripped = cleaned.replace(pattern, "");
-      if (stripped !== cleaned) {
-        cleaned = stripped;
-        break;
-      }
+      if (stripped !== cleaned) { cleaned = stripped; break; }
     }
-    
-    // Count unclosed brackets
-    let braces = 0, brackets = 0;
-    let inString = false, escape = false;
+    let braces = 0, brackets = 0, inString = false, escape = false;
     for (const ch of cleaned) {
       if (escape) { escape = false; continue; }
       if (ch === '\\') { escape = true; continue; }
@@ -247,32 +221,99 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       if (ch === '[') brackets++;
       if (ch === ']') brackets--;
     }
-    
-    // If we're inside an unterminated string, close it
     if (inString) cleaned += '"';
-    
-    // Remove trailing commas before closing
     cleaned = cleaned.replace(/,\s*$/, "");
-    
-    // Close any unclosed brackets/braces
     for (let i = 0; i < brackets; i++) cleaned += ']';
     for (let i = 0; i < braces; i++) cleaned += '}';
-    
-    // Remove trailing commas before closing brackets (again after repair)
     cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
-    
     return JSON.parse(cleaned);
   };
 
-  const streamFromEdgeFunction = useCallback(async (
-    body: Record<string, any>,
-    signal: AbortSignal
-  ): Promise<any> => {
+  // ── Non-streaming API call (for individual outputs) ──
+  const callEdgeFunction = useCallback(async (body: Record<string, any>, signal?: AbortSignal): Promise<any> => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (!currentSession) throw new Error("Not authenticated");
 
-    // Always request generous token limit
-    const bodyWithTokens = { ...body, max_tokens: 16384 };
+    console.log(`[Generation] Calling decksmith-ai: mode=${body.mode}, outputType=${body.outputType || 'full'}`);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/decksmith-ai`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${currentSession.access_token}`,
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ ...body, max_tokens: body.max_tokens || 4096, model: "claude-sonnet-4-20250514" }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Generation failed (${response.status})`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream")) {
+      return await readStream(response);
+    } else {
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      try { return JSON.parse(cleaned); }
+      catch { return repairJSON(data.content || ""); }
+    }
+  }, []);
+
+  const readStream = async (response: Response): Promise<any> => {
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Failed to read stream");
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          const trimmed = line.trim();
+          if (trimmed === "data: [DONE]") continue;
+          if (trimmed.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(trimmed.slice(6));
+              if (parsed.text) fullText += parsed.text;
+            } catch {}
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // Parse the full text
+    const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
+    try { return JSON.parse(cleaned); }
+    catch {
+      console.warn("Strict JSON parse failed, attempting repair...");
+      try {
+        const repaired = repairJSON(fullText);
+        console.log("JSON repair succeeded");
+        return repaired;
+      } catch (e) {
+        console.error("JSON repair failed:", e);
+        console.error("Raw text (first 500):", fullText.slice(0, 500));
+        console.error("Raw text (last 300):", fullText.slice(-300));
+        throw new Error("AI response could not be parsed. Please retry.");
+      }
+    }
+  };
+
+  // ── Streaming call (for main generation showing progress) ──
+  const streamFromEdgeFunction = useCallback(async (body: Record<string, any>, signal: AbortSignal): Promise<any> => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession) throw new Error("Not authenticated");
+
+    const bodyWithTokens = { ...body, max_tokens: body.max_tokens || 16384 };
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/decksmith-ai`, {
       method: "POST",
@@ -291,11 +332,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
 
     const contentType = response.headers.get("content-type") || "";
-
     if (contentType.includes("text/event-stream")) {
       const reader = response.body?.getReader();
       if (!reader) throw new Error("Failed to read stream");
-
       const decoder = new TextDecoder();
       let fullText = "";
       setIsStreaming(true);
@@ -305,36 +344,15 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
+          for (const line of chunk.split("\n")) {
             const trimmed = line.trim();
             if (trimmed === "data: [DONE]") continue;
             if (trimmed.startsWith("data: ")) {
               try {
                 const parsed = JSON.parse(trimmed.slice(6));
-                if (parsed.text) {
-                  fullText += parsed.text;
-                  setStreamingText(fullText);
-                }
-              } catch {
-                // skip unparseable chunks
-              }
-            }
-          }
-
-          // Attempt incremental parse every ~2KB of new data
-          if (fullText.length - lastPartialParseRef.current > 2000) {
-            lastPartialParseRef.current = fullText.length;
-            try {
-              const partial = repairJSON(fullText);
-              if (partial?.supporting || partial?.data) {
-                setOutput(partial);
-              }
-            } catch {
-              // Not parseable yet, continue
+                if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); }
+              } catch {}
             }
           }
         }
@@ -345,195 +363,281 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setIsStreaming(false);
       setStreamingText("");
 
-      // Try strict parse first, then attempt JSON repair for truncated responses
       const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
-      try {
-        return JSON.parse(cleaned);
-      } catch (parseError) {
+      try { return JSON.parse(cleaned); }
+      catch {
         console.warn("Strict JSON parse failed, attempting repair...");
         try {
           const repaired = repairJSON(fullText);
-          console.log("JSON repair succeeded");
           toast.info("Output was slightly truncated but recovered successfully.");
           return repaired;
-        } catch (repairError) {
-          console.error("JSON repair also failed:", repairError);
-          console.error("Raw text (first 1000 chars):", fullText.slice(0, 1000));
-          console.error("Raw text (last 500 chars):", fullText.slice(-500));
-          throw new Error("Generation failed. The AI response was incomplete. Please try again with fewer selected outputs.");
+        } catch (e) {
+          console.error("JSON repair failed:", e);
+          console.error("Raw text (first 500):", fullText.slice(0, 500));
+          throw new Error("AI response could not be parsed. Please retry.");
         }
       }
     } else {
-      // Non-streaming fallback
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-      try {
-        return JSON.parse(cleaned);
-      } catch {
-        return repairJSON(data.content || "");
-      }
+      try { return JSON.parse(cleaned); }
+      catch { return repairJSON(data.content || ""); }
     }
   }, []);
 
+  // ── Core Narrative Generation ──
+  const generateCoreNarrative = useCallback(async (
+    input: string,
+    purpose: IntakePurpose,
+    signal: AbortSignal
+  ): Promise<{ coreNarrative: CoreNarrativeData; fullOutput: any }> => {
+    const sectionHeadings = CORE_NARRATIVE_SECTIONS[purpose];
+    
+    const promptSuffix = `\n\n---\nGENERATION INSTRUCTIONS:
+Generate a complete narrative analysis. Return a JSON object with:
+1. "coreNarrative": An object with "sections" array. Each section must have "heading" and "content" (3-5 sentence paragraph). Use these exact headings: ${sectionHeadings.map(h => `"${h}"`).join(", ")}
+2. "supporting": Object with thesis, narrativeStructure, pitchScript, marketLogic, risks, whyNow fields
+3. "score": Object with overall (0-100), components (Record<string,number>), strengths (string[]), gaps (string[]), improvements (string[])
+4. "title": A short title for this narrative
+5. "intent": "create"
+6. "mode": "${purpose === 'board_meeting' ? 'board_update' : purpose}"
+
+Do NOT generate deckFramework or slides. Focus only on the narrative foundation.
+Return ONLY valid JSON, no markdown fences.`;
+
+    console.log("[Generation] Starting Core Narrative generation...");
+    
+    const parsed = await streamFromEdgeFunction(
+      {
+        mode: "generate",
+        input: input + promptSuffix,
+        outputMode: purpose === "board_meeting" ? "board_update" : purpose,
+        model: "claude-sonnet-4-20250514",
+        selectedOutputs: ["core_narrative"],
+        skipSlides: true,
+        max_tokens: 8192,
+      },
+      signal
+    );
+
+    console.log("[Generation] Core Narrative received, parsing...");
+
+    // Extract core narrative from response
+    let cn: CoreNarrativeData;
+    if (parsed.coreNarrative?.sections?.length) {
+      cn = parsed.coreNarrative;
+    } else {
+      // Synthesize from supporting data
+      const s = parsed.supporting || parsed.data || {};
+      cn = {
+        sections: sectionHeadings.map(heading => {
+          const key = heading.toLowerCase().replace(/[^a-z]/g, "");
+          // Try to find matching content
+          let content = "";
+          if (key === "problem") content = s.narrativeStructure?.worldToday || s.narrativeStructure?.breakingPoint || "";
+          else if (key === "solution") content = s.narrativeStructure?.newModel || "";
+          else if (key === "whynow") content = s.whyNow || "";
+          else if (key === "market") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : (s.marketLogic || "");
+          else if (key === "traction") content = s.narrativeStructure?.whyThisWins || "";
+          else if (key === "vision") content = s.narrativeStructure?.theFuture || s.thesis?.content || s.thesis || "";
+          else if (key === "challenges") content = s.risks || "";
+          else if (key === "progressmetrics") content = s.narrativeStructure?.whyThisWins || "";
+          else if (key === "strategicupdates") content = s.thesis?.content || s.thesis || "";
+          else if (key === "marketposition") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : "";
+          else if (key === "keyasks") content = s.narrativeStructure?.theFuture || "";
+          else if (key === "nextquarterpriorities") content = s.whyNow || "";
+          else if (key === "currentstate") content = s.narrativeStructure?.worldToday || "";
+          else if (key === "strategicinsight") content = s.thesis?.coreInsight || s.thesis?.content || s.thesis || "";
+          else if (key === "marketlandscape") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : "";
+          else if (key === "actionplan") content = s.narrativeStructure?.newModel || "";
+          
+          return { heading, content: content || `[Content for ${heading} will be generated]` };
+        })
+      };
+    }
+
+    return { coreNarrative: cn, fullOutput: parsed };
+  }, [streamFromEdgeFunction]);
+
+  // ── Generate a single output type using core narrative as context ──
+  const generateSingleOutput = useCallback(async (
+    outputType: OutputDeliverable,
+    input: string,
+    coreNarrativeText: string,
+    purpose: IntakePurpose,
+    signal: AbortSignal
+  ): Promise<any> => {
+    console.log(`[Generation] Starting output: ${outputType}`);
+
+    const outputPrompts: Record<string, string> = {
+      elevator_pitch: `Generate elevator pitch versions. Return JSON: { "elevatorPitch": { "thirtySecond": "...", "sixtySecond": "..." } }`,
+      pitch_email: `Generate 3 pitch email variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }`,
+      investor_qa: `Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }`,
+      investment_memo: `Generate an investment memo with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
+      board_memo: `Generate a board memo with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
+      key_metrics_summary: `Generate a key metrics summary organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }`,
+      strategic_memo: `Generate a strategic memo with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
+      slide_framework: `Generate a complete slide framework (deckFramework). Each slide needs: categoryLabel, headline, subheadline, bodyContent (array), closingStatement, speakerNotes, suggestion, layoutRecommendation, metadata. Return JSON: { "deckFramework": [...] }`,
+    };
+
+    const prompt = outputPrompts[outputType] || "";
+    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\nORIGINAL INPUT:\n${input}\n\n---\n${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+
+    const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
+
+    const parsed = await callEdgeFunction(
+      {
+        mode: "generate",
+        input: fullInput,
+        outputMode: purpose === "board_meeting" ? "board_update" : purpose,
+        selectedOutputs: [outputType],
+        skipSlides: outputType !== "slide_framework",
+        max_tokens: maxTokens,
+      },
+      signal
+    );
+
+    console.log(`[Generation] Output complete: ${outputType}`);
+    return parsed;
+  }, [callEdgeFunction]);
+
+  // ── Main generate function ──
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
     setIsEvaluation(false);
     setOutput(null);
-    lastPartialParseRef.current = 0;
+    setCoreNarrative(null);
+    setOutputData({});
+    setCompletedOutputs(new Set());
     startLoadingPhases();
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    let currentThesis: string | undefined;
-    if (currentProjectId) {
-      const proj = projects.find(p => p.id === currentProjectId);
-      if (proj?.current_thesis) currentThesis = proj.current_thesis;
-    }
-
-    // Determine which outputs to generate
+    const purpose = intakeSelections?.purpose || "fundraising";
     const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
-    const needsSlides = selectedOutputs.includes("slide_framework");
 
-    // Build input with output instructions to reduce AI workload
-    let augmentedInput = rawInput;
-    if (!needsSlides) {
-      augmentedInput += "\n\n---\nIMPORTANT: Do NOT generate a deckFramework or slide framework. Skip slides entirely. Only generate the core narrative foundation (thesis, narrative structure, pitch script, market logic, risks, whyNow) and the score.";
+    console.log(`[Generation] Starting generation for: ${selectedOutputs.join(", ")}`);
+
+    try {
+      // Step 1: Generate Core Narrative (always first)
+      const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
+      
+      setCoreNarrative(cn);
+      setOutput(fullOutput);
+      setDetectedMode(fullOutput.mode);
+      setCompletedOutputs(prev => new Set(prev).add("core_narrative"));
+      console.log("[Generation] Core Narrative complete");
+
+      // Build core narrative text for downstream outputs
+      const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
+
+      // Step 2: Generate all selected outputs in parallel
+      const outputPromises = selectedOutputs.map(async (outputType) => {
+        try {
+          const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal);
+          
+          // Store the result
+          setOutputData(prev => ({ ...prev, [outputType]: result }));
+          setCompletedOutputs(prev => new Set(prev).add(outputType));
+
+          // Merge into main output for backward compatibility
+          if (outputType === "slide_framework") {
+            const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
+            if (deckFramework?.length) {
+              setOutput(prev => {
+                if (!prev) return prev;
+                const updated = { ...prev };
+                if (!updated.deliverable) (updated as any).deliverable = { type: "deck" };
+                (updated as any).deliverable = { ...(updated as any).deliverable, type: "deck", deckFramework };
+                if ((updated as any).supporting) (updated as any).supporting = { ...(updated as any).supporting, deckFramework };
+                return updated;
+              });
+            }
+          }
+
+          console.log(`[Generation] Complete: ${outputType}`);
+        } catch (e: any) {
+          if (e.name === "AbortError") return;
+          console.error(`[Generation] FAILED: ${outputType}:`, e.message);
+          setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message }));
+        }
+      });
+
+      await Promise.allSettled(outputPromises);
+
+      // Step 3: Mark scoring complete (score comes from core narrative generation)
+      setCompletedOutputs(prev => new Set(prev).add("_scoring"));
+
+      // Save project
+      const newCount = generationCount + 1;
+      setGenerationCount(newCount);
+      localStorage.setItem("rhetoric_gen_count", String(newCount));
+      if (fullOutput) await saveProject(fullOutput);
+
+    } catch (e: any) {
+      if (e.name === "AbortError") return;
+      console.error("[Generation] Error:", e);
+      toast.error(e.message || "Generation failed. Please try again.");
     }
 
-    const attempt = async (retry: boolean): Promise<void> => {
-      try {
-        const parsed = await streamFromEdgeFunction(
-          {
-            mode: "generate",
-            input: augmentedInput,
-            outputMode: selectedMode,
-            currentThesis,
-            voiceProfile,
-            model: "claude-sonnet-4-20250514",
-            selectedOutputs,
-            skipSlides: !needsSlides,
-          },
-          abortController.signal
-        );
-        setDetectedMode(parsed.mode);
-
-        // If slides weren't requested but AI still generated them, strip them
-        if (!needsSlides && parsed.deliverable?.deckFramework) {
-          delete parsed.deliverable.deckFramework;
-        }
-
-        setOutput(parsed);
-        const newCount = generationCount + 1;
-        setGenerationCount(newCount);
-        localStorage.setItem("rhetoric_gen_count", String(newCount));
-        await saveProject(parsed);
-      } catch (e: any) {
-        if (e.name === "AbortError") return;
-        if (retry) {
-          console.warn("First attempt failed, retrying...", e);
-          return attempt(false);
-        }
-        console.error("Generation error:", e);
-        toast.error(e.message || "Generation failed. Please try again.");
-      }
-    };
-
-    await attempt(true);
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
-  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, currentProjectId, projects, streamFromEdgeFunction, intakeSelections]);
+  }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
-  // Generate slides on demand (when user adds slide_framework after initial generation)
-  const generateSlides = useCallback(async () => {
-    if (!rawInput.trim() || !output || isGeneratingSlides) return;
-    setIsGeneratingSlides(true);
-
+  // ── Generate a single output on demand (post-generation) ──
+  const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
+    if (!rawInput.trim() || !coreNarrative) return;
+    
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+    const purpose = intakeSelections?.purpose || "fundraising";
+    const coreNarrativeText = coreNarrative.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
     try {
-      // Build a focused prompt that includes the existing narrative context
-      const supporting = (output as any).supporting || (output as any).data || {};
-      const thesis = supporting.thesis?.content || supporting.thesis || "";
-      const narrative = supporting.narrativeStructure ? JSON.stringify(supporting.narrativeStructure) : "";
-      const pitchScript = supporting.pitchScript || "";
+      if (outputType === "slide_framework") {
+        setIsGeneratingSlides(true);
+      }
 
-      const slideInput = `Generate ONLY a deckFramework (slide framework) for this company. Use the existing narrative foundation below to create the slides.
+      const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal);
+      setOutputData(prev => ({ ...prev, [outputType]: result }));
+      setCompletedOutputs(prev => new Set(prev).add(outputType));
 
-EXISTING THESIS: ${thesis}
-
-EXISTING NARRATIVE: ${narrative}
-
-EXISTING PITCH SCRIPT: ${pitchScript}
-
-ORIGINAL INPUT: ${rawInput}
-
-Return ONLY a JSON object with this structure:
-{
-  "deckFramework": [
-    {
-      "slideNumber": 1,
-      "headline": "...",
-      "body": ["bullet 1", "bullet 2"],
-      "speakerNotes": "...",
-      "layoutRecommendation": "...",
-      "categoryLabel": "..."
-    }
-  ]
-}`;
-
-      const parsed = await streamFromEdgeFunction(
-        {
-          mode: "generate",
-          input: slideInput,
-          outputMode: "fundraising",
-          model: "claude-sonnet-4-20250514",
-          selectedOutputs: ["slide_framework"],
-          skipSlides: false,
-        },
-        abortController.signal
-      );
-
-      // Extract deckFramework from response
-      const deckFramework = parsed.deckFramework
-        || parsed.deliverable?.deckFramework
-        || parsed.data?.deckFramework
-        || parsed.supporting?.deckFramework;
-
-      if (deckFramework?.length) {
-        // Merge into existing output
-        setOutput((prev: any) => {
-          if (!prev) return prev;
-          const updated = { ...prev };
-          if (!updated.deliverable) updated.deliverable = { type: "deck" };
-          updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
-          // Also store in supporting/data for fallback lookups
-          if (updated.supporting) updated.supporting = { ...updated.supporting, deckFramework };
-          if (updated.data) updated.data = { ...updated.data, deckFramework };
-          return updated;
-        });
-        toast.success("Slide framework generated!");
-        // Save updated project
-        if (currentProjectId) {
-          await supabase.from("projects").update({ updated_at: new Date().toISOString() }).eq("id", currentProjectId);
+      // Merge slides into output
+      if (outputType === "slide_framework") {
+        const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
+        if (deckFramework?.length) {
+          setOutput(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev };
+            if (!updated.deliverable) (updated as any).deliverable = { type: "deck" };
+            (updated as any).deliverable = { ...(updated as any).deliverable, type: "deck", deckFramework };
+            return updated;
+          });
+          toast.success("Slide framework generated!");
         }
       } else {
-        toast.error("Failed to generate slides. Please try again.");
+        toast.success(`${outputType.replace(/_/g, " ")} generated!`);
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
-        console.error("Slide generation error:", e);
-        toast.error("Failed to generate slides. Please try again.");
+        console.error(`[Generation] On-demand FAILED: ${outputType}:`, e.message);
+        setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message }));
+        toast.error(`Failed to generate ${outputType.replace(/_/g, " ")}. Please retry.`);
       }
     } finally {
       abortControllerRef.current = null;
-      setIsGeneratingSlides(false);
+      if (outputType === "slide_framework") setIsGeneratingSlides(false);
     }
-  }, [rawInput, output, isGeneratingSlides, streamFromEdgeFunction, currentProjectId]);
+  }, [rawInput, coreNarrative, intakeSelections, generateSingleOutput]);
+
+  // Generate slides on demand
+  const generateSlides = useCallback(async () => {
+    await generateOutput("slide_framework");
+  }, [generateOutput]);
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;
@@ -553,8 +657,6 @@ Return ONLY a JSON object with this structure:
         );
         setDetectedMode(parsed.mode);
         setOutput(parsed);
-
-        // Save as evaluation project
         if (session) {
           const title = (parsed as any).title || "Deck Evaluation";
           const thesis = extractThesis(parsed);
@@ -567,10 +669,7 @@ Return ONLY a JSON object with this structure:
         }
       } catch (e: any) {
         if (e.name === "AbortError") return;
-        if (retry) {
-          console.warn("Evaluation first attempt failed, retrying...", e);
-          return attempt(false);
-        }
+        if (retry) { console.warn("Evaluation first attempt failed, retrying...", e); return attempt(false); }
         console.error("Evaluation error:", e);
         toast.error(e.message || "Evaluation failed. Please try again.");
         setIsEvaluation(false);
@@ -587,7 +686,6 @@ Return ONLY a JSON object with this structure:
     if (!output) return;
     setRefiningSection(sectionKey);
     try {
-      // Read from supporting first (new format), then data (legacy)
       const sourceObj = (output as any).supporting || output.data || {};
       const currentContent = getNestedValue(sourceObj, path);
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
@@ -595,11 +693,9 @@ Return ONLY a JSON object with this structure:
       });
       if (error) throw error;
       const refined = data.content;
-
       setOutput((prev) => {
         if (!prev) return prev;
         const updated = JSON.parse(JSON.stringify(prev));
-        // Write back to the same location we read from
         if (updated.supporting && getNestedValue(updated.supporting, path.split(".")[0]) !== undefined) {
           setNestedValue(updated.supporting, path, refined);
         } else if (updated.data) {
@@ -608,14 +704,12 @@ Return ONLY a JSON object with this structure:
           setNestedValue(updated.supporting, path, refined);
         }
         saveProject(updated as NarrativeOutputData);
-
         if (currentProjectId && session) {
           const historyEntry = { section: sectionKey, tone, timestamp: new Date().toISOString(), before: currentContent, after: refined };
           supabase.from("projects").update({
             refinement_history: [...(projects.find(p => p.id === currentProjectId)?.refinement_history || []), historyEntry] as any,
           }).eq("id", currentProjectId).then();
         }
-
         return updated;
       });
     } catch (e: any) {
@@ -632,50 +726,32 @@ Return ONLY a JSON object with this structure:
     try {
       const deliverable = (output as any).deliverable;
       const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
-
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: {
-          mode: "refine",
-          input: rawInput,
-          section: "deckFramework",
-          path: "deckFramework",
-          tone: suggestion,
-          currentContent: JSON.stringify(deckFramework),
-          model: "claude-sonnet-4-20250514",
-        },
+        body: { mode: "refine", input: rawInput, section: "deckFramework", path: "deckFramework", tone: suggestion, currentContent: JSON.stringify(deckFramework), model: "claude-sonnet-4-20250514" },
       });
       if (error) throw error;
-
       let refined = data.content;
       if (typeof refined === "string") {
         const cleaned = refined.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-        try { refined = JSON.parse(cleaned); } catch { /* leave as string if not JSON */ }
+        try { refined = JSON.parse(cleaned); } catch {}
       }
-
       setOutput((prev) => {
         if (!prev) return prev;
         const updated = JSON.parse(JSON.stringify(prev));
-
         if (Array.isArray(refined)) {
-          // AI returned a full updated framework
           if (updated.deliverable) updated.deliverable.deckFramework = refined;
           if (updated.data?.deckFramework) updated.data.deckFramework = refined;
         } else if (refined && typeof refined === "object" && refined.headline) {
-          // AI returned a single new slide - append it
           const fw = updated.deliverable?.deckFramework || updated.data?.deckFramework || [];
           fw.push(refined);
           if (updated.deliverable) updated.deliverable.deckFramework = fw;
           if (updated.data?.deckFramework) updated.data.deckFramework = fw;
         }
-
-        // Persist applied suggestion
         if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
         updated._appliedSuggestions.push(`deck-${suggestionIndex}`);
-
         saveProject(updated as NarrativeOutputData);
         return updated;
       });
-
       setAppliedSuggestions(prev => new Set(prev).add(`deck-${suggestionIndex}`));
       setDismissedSuggestions(prev => new Set(prev).add(suggestionIndex));
       toast.success("Suggestion applied to deck.");
@@ -691,17 +767,11 @@ Return ONLY a JSON object with this structure:
     if (!output) return;
     setRefiningSection("rescore");
     try {
-      // Gather the CURRENT narrative content including any applied suggestions
       const deliverable = (output as any).deliverable;
       const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
       const narrativeData = (output as any).supporting || output.data || {};
-
-      // Build a comprehensive snapshot of the current narrative state
       const narrativeSnapshot = {
-        deckFramework: deckFramework.map((slide: any) => ({
-          headline: slide.headline || slide,
-          content: slide.body || slide.content || "",
-        })),
+        deckFramework: deckFramework.map((slide: any) => ({ headline: slide.headline || slide, content: slide.body || slide.content || "" })),
         thesis: narrativeData.thesis?.content || narrativeData.thesis || "",
         narrativeStructure: narrativeData.narrativeStructure || {},
         pitchScript: narrativeData.pitchScript || "",
@@ -709,40 +779,23 @@ Return ONLY a JSON object with this structure:
         risks: narrativeData.risks || "",
         whyNow: narrativeData.whyNow || "",
       };
-
-      console.log("[Rescore] Sending current narrative snapshot with", deckFramework.length, "slides");
-
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: {
-          mode: "refine",
-          input: rawInput,
-          section: "score",
-          path: "score",
-          tone: "rescore",
-          currentContent: JSON.stringify(narrativeSnapshot),
-          model: "claude-sonnet-4-20250514",
-        },
+        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514" },
       });
       if (error) throw error;
-
       let scoreContent = data.content;
       if (typeof scoreContent === "string") {
         scoreContent = scoreContent.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
         scoreContent = JSON.parse(scoreContent);
       }
-
-      console.log("[Rescore] New score:", scoreContent.overall, "vs old:", (output as any).score?.overall);
-
       setOutput((prev) => {
         if (!prev) return prev;
         const updated = JSON.parse(JSON.stringify(prev));
         updated.score = scoreContent;
-        // Clear persisted applied suggestions since we rescored
         updated._appliedSuggestions = [];
         saveProject(updated as NarrativeOutputData);
         return updated;
       });
-
       setAppliedSuggestions(new Set());
       toast.success("Score updated.");
     } catch (e: any) {
@@ -755,7 +808,6 @@ Return ONLY a JSON object with this structure:
 
   const dismissSuggestion = useCallback((index: number) => {
     setDismissedSuggestions(prev => new Set(prev).add(index));
-    // Persist in output
     setOutput((prev) => {
       if (!prev) return prev;
       const updated = { ...prev };
@@ -778,10 +830,7 @@ Return ONLY a JSON object with this structure:
   }, []);
 
   const reset = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
     setRawInput("");
     setOutput(null);
     setDetectedMode(null);
@@ -797,11 +846,13 @@ Return ONLY a JSON object with this structure:
     setIntakeSelections(null);
     setAppliedSuggestions(new Set());
     setDismissedSuggestions(new Set());
+    setCoreNarrative(null);
+    setOutputData({});
+    setCompletedOutputs(new Set());
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
     if (!output || !rawInput.trim()) return;
-    // If we already have this variant cached, just switch
     if (audienceVariants[audience]) {
       setActiveAudience(audience);
       setOutput(audienceVariants[audience]);
@@ -811,9 +862,9 @@ Return ONLY a JSON object with this structure:
     try {
       const audiencePrompts: Record<AudienceType, string> = {
         general: "",
-        investors: "Adapt this for external investors. Be risk-aware, returns-focused, and persuasive. Emphasize market opportunity, traction, and exit potential.",
-        board: "Adapt this for a board of directors. Be metrics-heavy, strategic, and concise. Focus on governance, KPIs, and decision items.",
-        internal: "Adapt this for internal employees. Be transparent, motivational, and operational. Focus on team impact, roadmap, and company vision.",
+        investors: "Adapt this for external investors. Be risk-aware, returns-focused, and persuasive.",
+        board: "Adapt this for a board of directors. Be metrics-heavy, strategic, and concise.",
+        internal: "Adapt this for internal employees. Be transparent, motivational, and operational.",
       };
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: { mode: "generate", input: `${rawInput}\n\n---\nAUDIENCE INSTRUCTION: ${audiencePrompts[audience]}`, outputMode: output.mode, voiceProfile },
@@ -825,10 +876,8 @@ Return ONLY a JSON object with this structure:
       setAudienceVariants(prev => ({ ...prev, [audience]: parsed }));
       setActiveAudience(audience);
       setOutput(parsed);
-      // Save variant to project
       if (currentProjectId) {
-        const existing = audienceVariants;
-        const allVariants = { ...existing, [audience]: parsed };
+        const allVariants = { ...audienceVariants, [audience]: parsed };
         await supabase.from("projects").update({ audience_variants: allVariants as any }).eq("id", currentProjectId);
       }
       toast.success(`Adapted for ${audience} audience.`);
@@ -847,7 +896,6 @@ Return ONLY a JSON object with this structure:
     setCurrentProjectId(project.id);
     setOutreachTracker(project.outreach_tracker || []);
     setIsEvaluation(project.detected_intent === "evaluate");
-    // Restore persisted suggestion state
     const applied = (project.output_data as any)?._appliedSuggestions || [];
     setAppliedSuggestions(new Set(applied));
     const dismissed = (project.output_data as any)?._dismissedSuggestions || [];
@@ -891,12 +939,7 @@ Return ONLY a JSON object with this structure:
 
   const loadVersion = useCallback(async (versionNumber: number) => {
     if (!currentProjectId) return;
-    const { data } = await supabase
-      .from("project_versions")
-      .select("*")
-      .eq("project_id", currentProjectId)
-      .eq("version_number", versionNumber)
-      .single();
+    const { data } = await supabase.from("project_versions").select("*").eq("project_id", currentProjectId).eq("version_number", versionNumber).single();
     if (data) {
       setRawInput(data.raw_input);
       setOutput(data.output_data as unknown as NarrativeOutputData);
@@ -911,20 +954,9 @@ Return ONLY a JSON object with this structure:
     await supabase.from("projects").update({ outreach_tracker: tracker as any }).eq("id", currentProjectId);
   }, [currentProjectId]);
 
-  const addOutreachEntry = useCallback(async (entry: OutreachEntry) => {
-    await syncOutreach([...outreachTracker, entry]);
-  }, [outreachTracker, syncOutreach]);
-
-  const updateOutreachEntry = useCallback(async (index: number, entry: OutreachEntry) => {
-    const updated = [...outreachTracker];
-    updated[index] = entry;
-    await syncOutreach(updated);
-  }, [outreachTracker, syncOutreach]);
-
-  const removeOutreachEntry = useCallback(async (index: number) => {
-    const updated = outreachTracker.filter((_, i) => i !== index);
-    await syncOutreach(updated);
-  }, [outreachTracker, syncOutreach]);
+  const addOutreachEntry = useCallback(async (entry: OutreachEntry) => { await syncOutreach([...outreachTracker, entry]); }, [outreachTracker, syncOutreach]);
+  const updateOutreachEntry = useCallback(async (index: number, entry: OutreachEntry) => { const updated = [...outreachTracker]; updated[index] = entry; await syncOutreach(updated); }, [outreachTracker, syncOutreach]);
+  const removeOutreachEntry = useCallback(async (index: number) => { await syncOutreach(outreachTracker.filter((_, i) => i !== index)); }, [outreachTracker, syncOutreach]);
 
   return (
     <DecksmithContext.Provider
@@ -941,9 +973,10 @@ Return ONLY a JSON object with this structure:
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections,
         generateSlides, isGeneratingSlides,
+        generateOutput,
+        completedOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));
-          // Persist in output
           setOutput((prev: any) => {
             if (!prev) return prev;
             const updated = { ...prev };
