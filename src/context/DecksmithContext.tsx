@@ -142,19 +142,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isGenerating && currentProjectId && coreNarrative && Object.keys(outputData).length > 0) {
       const timer = setTimeout(async () => {
+        const persistPayload = {
+          core_narrative: coreNarrativeRef.current,
+          ...outputDataRef.current,
+          intake_selections: intakeSelectionsRef.current,
+          applied_suggestions: Array.from(appliedSuggestions),
+          dismissed_suggestions: Array.from(dismissedSuggestions),
+          tab_order: intakeSelectionsRef.current?.outputs || [],
+        };
         console.log("[Persistence] Saving all output data to database...");
+        console.log("[Persistence] Saved to output_data:", JSON.stringify(persistPayload).substring(0, 500));
         await supabase.from("projects").update({
-          supporting: {
-            coreNarrative: coreNarrativeRef.current,
-            outputData: outputDataRef.current,
-            intakeSelections: intakeSelectionsRef.current,
-          } as any,
+          output_data: persistPayload as any,
         }).eq("id", currentProjectId);
         console.log("[Persistence] Save complete");
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [isGenerating, currentProjectId, coreNarrative, outputData]);
+  }, [isGenerating, currentProjectId, coreNarrative, outputData, appliedSuggestions, dismissedSuggestions]);
 
   const loadProjects = useCallback(async () => {
     if (!session) return;
@@ -162,11 +167,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!error && data) {
       setProjects(data.map((p: any) => ({
         id: p.id, title: p.title, mode: p.mode, raw_input: p.raw_input,
-        output_data: p.output_data as NarrativeOutputData | null,
+        output_data: p.output_data || null,
         detected_intent: p.detected_intent, current_thesis: p.current_thesis,
         refinement_history: p.refinement_history || [],
         outreach_tracker: p.outreach_tracker || [],
-        supporting: p.supporting || null,
         created_at: p.created_at, updated_at: p.updated_at,
       })));
     }
@@ -196,40 +200,55 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     if (!session) return;
     const title = (parsed as any).title || "Untitled";
     const thesis = extractThesis(parsed);
-    const generatedOutputs = {
-      coreNarrative: extras?.coreNarrative || coreNarrative,
-      outputData: extras?.outputData || outputData,
-      intakeSelections: extras?.intakeSelections || intakeSelections,
+    const cn = extras?.coreNarrative || coreNarrative;
+    const od = extras?.outputData || outputData;
+    const is = extras?.intakeSelections || intakeSelections;
+    
+    // Build the unified output_data payload
+    const persistPayload = {
+      core_narrative: cn,
+      ...od,
+      intake_selections: is,
+      applied_suggestions: Array.from(appliedSuggestions),
+      dismissed_suggestions: Array.from(dismissedSuggestions),
+      tab_order: is?.outputs || [],
+      // Keep legacy fields for backward compat
+      score: (parsed as any).score || null,
+      mode: parsed.mode,
+      title,
+      intent: (parsed as any).intent || "create",
     };
+    
+    console.log("[Persistence] saveProject payload:", JSON.stringify(persistPayload).substring(0, 500));
+    
     if (currentProjectId) {
       await supabase.from("projects").update({
         title, mode: parsed.mode, raw_input: rawInput,
-        output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
-        supporting: generatedOutputs as any,
+        output_data: persistPayload as any, detected_intent: parsed.mode, current_thesis: thesis,
       }).eq("id", currentProjectId);
     } else {
       const { data } = await supabase.from("projects").insert({
         user_id: session.user.id, title, mode: parsed.mode, raw_input: rawInput,
-        output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
-        supporting: generatedOutputs as any,
+        output_data: persistPayload as any, detected_intent: parsed.mode, current_thesis: thesis,
       }).select("id").single();
       if (data) setCurrentProjectId(data.id);
     }
     loadProjects();
-  }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections]);
+  }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections, appliedSuggestions, dismissedSuggestions]);
 
-  // Incremental save: persist a single output to the supporting column without needing full state
+  // Incremental save: persist a single output to output_data column
   const saveOutputIncremental = useCallback(async (outputType: string, result: any) => {
     if (!currentProjectId) return;
     try {
-      // Fetch current supporting data, merge the new output, and save back
-      const { data: project } = await supabase.from("projects").select("supporting").eq("id", currentProjectId).single();
-      const existing = (project?.supporting as any) || {};
-      const updatedOutputData = { ...(existing.outputData || {}), [outputType]: result };
+      // Fetch current output_data, merge the new output, and save back
+      const { data: project } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+      const existing = (project?.output_data as any) || {};
+      const updated = { ...existing, [outputType]: result };
       await supabase.from("projects").update({
-        supporting: { ...existing, outputData: updatedOutputData } as any,
+        output_data: updated as any,
       }).eq("id", currentProjectId);
       console.log(`[Persistence] Saved ${outputType} incrementally`);
+      console.log("[Persistence] Saved to output_data:", JSON.stringify(updated).substring(0, 500));
     } catch (e) {
       console.warn(`[Persistence] Failed to save ${outputType} incrementally:`, e);
     }
@@ -1065,39 +1084,71 @@ Return ONLY valid JSON, no markdown fences.`;
 
   const openProject = useCallback((project: Project) => {
     setRawInput(project.raw_input);
-    setOutput(project.output_data);
     setDetectedMode(project.mode as OutputMode);
     setCurrentProjectId(project.id);
     setOutreachTracker(project.outreach_tracker || []);
     setIsEvaluation(project.detected_intent === "evaluate");
-    const applied = (project.output_data as any)?._appliedSuggestions || [];
-    setAppliedSuggestions(new Set(applied));
-    const dismissed = (project.output_data as any)?._dismissedSuggestions || [];
-    setDismissedSuggestions(new Set(dismissed));
 
-    // Restore persisted generated outputs from the "supporting" column
-    const persisted = (project as any).supporting;
-    if (persisted?.coreNarrative?.sections?.length) {
+    // All persisted data now lives in output_data
+    const persisted = (project.output_data as any) || {};
+    console.log("[Persistence] Loaded output_data:", JSON.stringify(persisted).substring(0, 500));
+
+    // Restore core narrative
+    if (persisted.core_narrative?.sections?.length) {
       console.log("[Persistence] Restoring core narrative from database");
-      setCoreNarrative(persisted.coreNarrative);
+      setCoreNarrative(persisted.core_narrative);
+    } else {
+      setCoreNarrative(null);
     }
-    if (persisted?.outputData && typeof persisted.outputData === "object") {
-      console.log("[Persistence] Restoring output data from database:", Object.keys(persisted.outputData).filter(k => !k.endsWith("_error") && !k.endsWith("_rawResponse")));
-      setOutputData(persisted.outputData);
-      // Rebuild completedOutputs from persisted data
+
+    // Restore individual outputs (everything except meta keys)
+    const META_KEYS = new Set(["core_narrative", "intake_selections", "applied_suggestions", "dismissed_suggestions", "tab_order", "score", "mode", "title", "intent"]);
+    const restoredOutputData: Record<string, any> = {};
+    for (const key of Object.keys(persisted)) {
+      if (!META_KEYS.has(key) && !key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted[key]) {
+        restoredOutputData[key] = persisted[key];
+      }
+    }
+    
+    if (Object.keys(restoredOutputData).length > 0) {
+      console.log("[Persistence] Restoring output data from database:", Object.keys(restoredOutputData));
+      setOutputData(restoredOutputData);
+      
+      // Rebuild completedOutputs
       const completed = new Set<string>();
-      if (persisted.coreNarrative?.sections?.length) completed.add("core_narrative");
-      for (const key of Object.keys(persisted.outputData)) {
-        if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted.outputData[key]) {
-          completed.add(key);
-        }
+      if (persisted.core_narrative?.sections?.length) completed.add("core_narrative");
+      for (const key of Object.keys(restoredOutputData)) {
+        completed.add(key);
       }
       completed.add("_scoring");
       setCompletedOutputs(completed);
+    } else {
+      setOutputData({});
+      setCompletedOutputs(new Set());
     }
-    if (persisted?.intakeSelections) {
+
+    // Restore intake selections
+    if (persisted.intake_selections) {
       console.log("[Persistence] Restoring intake selections from database");
-      setIntakeSelections(persisted.intakeSelections);
+      setIntakeSelections(persisted.intake_selections);
+    }
+
+    // Restore suggestion states
+    const applied = persisted.applied_suggestions || [];
+    setAppliedSuggestions(new Set(applied.map(String)));
+    const dismissed = persisted.dismissed_suggestions || [];
+    setDismissedSuggestions(new Set(dismissed));
+
+    // Restore the main output object for backward compatibility
+    if (persisted.score || persisted.mode) {
+      setOutput({
+        mode: persisted.mode || project.mode,
+        title: persisted.title || project.title,
+        score: persisted.score,
+        intent: persisted.intent || "create",
+      } as any);
+    } else {
+      setOutput(null);
     }
 
     loadVersions(project.id);
