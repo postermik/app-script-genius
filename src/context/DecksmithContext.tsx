@@ -97,6 +97,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
+  const lastPartialParseRef = useRef(0);
 
   // Sync appliedSuggestions from persisted output._appliedSuggestions whenever output changes
   useEffect(() => {
