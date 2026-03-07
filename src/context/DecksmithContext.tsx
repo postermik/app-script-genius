@@ -771,6 +771,7 @@ Return ONLY valid JSON, no markdown fences.`;
         toast.error(`Failed to generate ${outputType.replace(/_/g, " ")}. Please retry.`);
       }
     } finally {
+      inFlightOutputsRef.current.delete(outputType);
       abortControllerRef.current = null;
       if (outputType === "slide_framework") setIsGeneratingSlides(false);
     }
