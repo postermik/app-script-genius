@@ -380,7 +380,7 @@ export function OutputView() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col">
-        <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} isLoading={isLoading} />
+        <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} isLoading={isGenerating || isGeneratingSlides} />
         <div style={isMobile ? undefined : { marginLeft: 200 }}>
           <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 w-full animate-fade-in" key={activeTab}>
             {/* Outputs tab */}
