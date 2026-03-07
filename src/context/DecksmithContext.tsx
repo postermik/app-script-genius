@@ -727,6 +727,12 @@ Return ONLY valid JSON, no markdown fences.`;
   // ── Generate a single output on demand (post-generation) ──
   const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
     if (!rawInput.trim() || !coreNarrative) return;
+    // Prevent duplicate in-flight calls for the same output
+    if (inFlightOutputsRef.current.has(outputType)) {
+      console.warn(`[Generation] Skipping duplicate call for: ${outputType}`);
+      return;
+    }
+    inFlightOutputsRef.current.add(outputType);
     
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
