@@ -86,7 +86,7 @@ export function GenerationStepper() {
   const skipSlides = intakeSelections?.outputs ? !intakeSelections.outputs.includes("slide_framework") : false;
   const [targetStepIndex, setTargetStepIndex] = useState(0);
   const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
-  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
+  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, skipSlides));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
@@ -113,7 +113,7 @@ export function GenerationStepper() {
   // Reset on new generation
   useEffect(() => {
     if (isGenerating) {
-      setSteps(getStepsForContext(selectedMode, isEvaluation));
+      setSteps(getStepsForContext(selectedMode, isEvaluation, skipSlides));
       setTargetStepIndex(0);
       setDisplayedStepIndex(0);
       setGenerationDone(false);
