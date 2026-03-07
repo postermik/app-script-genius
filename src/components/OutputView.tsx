@@ -316,6 +316,12 @@ export function OutputView() {
     }
     setActiveOutputTab(sorted[0]);
     toast.success(`Added ${sorted.map(o => o.replace(/_/g, " ")).join(", ")}`);
+
+    // Trigger slide generation if slides were added
+    if (sorted.includes("slide_framework")) {
+      // Small delay to let state update
+      setTimeout(() => generateSlides(), 100);
+    }
   };
 
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
