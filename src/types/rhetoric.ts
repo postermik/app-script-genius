@@ -100,44 +100,49 @@ export function getOutputIntent(output: any): "create" | "evaluate" {
 // Helper to get deliverable from new or old format
 export function getDeliverable(output: any): Deliverable | null {
   if (output?.deliverable) return output.deliverable;
-  if (output?.data) {
-    const d = output.data;
-    const mode = output.mode;
-    if (mode === "fundraising") {
-      if (d.deckFramework?.length) return { type: "deck", deckFramework: d.deckFramework };
-      // No slides generated (skipSlides) — return null, deliverables are synthesized per-tab
-      return null;
-    }
-    if (mode === "board_update") {
-      return { type: "document", sections: [], boardDeckOutline: d.boardDeckOutline };
-    }
-    if (mode === "investor_update") {
-      return { type: "email", subject: d.headline, sections: [
-        { heading: "Progress", content: d.progress || "" },
-        { heading: "Metrics", content: d.metrics || "" },
-        { heading: "Challenges", content: d.challenges || "" },
-        { heading: "Next Milestones", content: d.nextMilestones || "" },
-        { heading: "The Ask", content: d.askUpdate || "" },
-      ].filter(s => s.content) };
-    }
-    if (mode === "strategy") {
-      return { type: "memo", subject: d.thesis ? "Strategic Thesis" : undefined, sections: [
-        { heading: "Thesis", content: d.thesis || "" },
-        { heading: "Positioning", content: d.positioning || "" },
-        { heading: "Market Analysis", content: d.marketAnalysis || "" },
-        { heading: "Competitive Framework", content: d.competitiveFramework || "" },
-      ].filter(s => s.content) };
-    }
-    if (mode === "product_vision") {
-      return { type: "document", sections: [
-        { heading: "Vision", content: d.vision || "" },
-        { heading: "User Problem", content: d.userProblem || "" },
-        { heading: "Solution Framework", content: d.solutionFramework || "" },
-        { heading: "Roadmap", content: d.roadmapNarrative || "" },
-      ].filter(s => s.content) };
-    }
-    if (d.deckFramework?.length) return { type: "deck", deckFramework: d.deckFramework };
+  
+  // Check both data and supporting for deck framework
+  const d = output?.data || {};
+  const s = output?.supporting || {};
+  const mode = output?.mode;
+  
+  // Try to find deckFramework from any location
+  const deckFramework = d.deckFramework || s.deckFramework || output?.deckFramework;
+  
+  if (mode === "fundraising") {
+    if (deckFramework?.length) return { type: "deck", deckFramework };
+    return null;
   }
+  if (mode === "board_update") {
+    const boardOutline = d.boardDeckOutline || s.boardDeckOutline;
+    return { type: "document", sections: [], boardDeckOutline: boardOutline };
+  }
+  if (mode === "investor_update") {
+    return { type: "email", subject: d.headline || s.headline, sections: [
+      { heading: "Progress", content: d.progress || s.progress || "" },
+      { heading: "Metrics", content: d.metrics || s.metrics || "" },
+      { heading: "Challenges", content: d.challenges || s.challenges || "" },
+      { heading: "Next Milestones", content: d.nextMilestones || s.nextMilestones || "" },
+      { heading: "The Ask", content: d.askUpdate || s.askUpdate || "" },
+    ].filter(sec => sec.content) };
+  }
+  if (mode === "strategy") {
+    return { type: "memo", subject: (d.thesis || s.thesis) ? "Strategic Thesis" : undefined, sections: [
+      { heading: "Thesis", content: d.thesis || s.thesis || "" },
+      { heading: "Positioning", content: d.positioning || s.positioning || "" },
+      { heading: "Market Analysis", content: d.marketAnalysis || s.marketAnalysis || "" },
+      { heading: "Competitive Framework", content: d.competitiveFramework || s.competitiveFramework || "" },
+    ].filter(sec => sec.content) };
+  }
+  if (mode === "product_vision") {
+    return { type: "document", sections: [
+      { heading: "Vision", content: d.vision || s.vision || "" },
+      { heading: "User Problem", content: d.userProblem || s.userProblem || "" },
+      { heading: "Solution Framework", content: d.solutionFramework || s.solutionFramework || "" },
+      { heading: "Roadmap", content: d.roadmapNarrative || s.roadmapNarrative || "" },
+    ].filter(sec => sec.content) };
+  }
+  if (deckFramework?.length) return { type: "deck", deckFramework };
   return null;
 }
 
