@@ -549,10 +549,10 @@ Return ONLY valid JSON, no markdown fences.`;
             if (deckFramework?.length) {
               setOutput(prev => {
                 if (!prev) return prev;
-                const updated = { ...prev };
-                if (!updated.deliverable) (updated as any).deliverable = { type: "deck" };
-                (updated as any).deliverable = { ...(updated as any).deliverable, type: "deck", deckFramework };
-                if ((updated as any).supporting) (updated as any).supporting = { ...(updated as any).supporting, deckFramework };
+                const updated = { ...prev } as any;
+                if (!updated.deliverable) updated.deliverable = { type: "deck" };
+                updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
+                if (updated.supporting) updated.supporting = { ...updated.supporting, deckFramework };
                 return updated;
               });
             }
@@ -612,9 +612,9 @@ Return ONLY valid JSON, no markdown fences.`;
         if (deckFramework?.length) {
           setOutput(prev => {
             if (!prev) return prev;
-            const updated = { ...prev };
-            if (!updated.deliverable) (updated as any).deliverable = { type: "deck" };
-            (updated as any).deliverable = { ...(updated as any).deliverable, type: "deck", deckFramework };
+            const updated = { ...prev } as any;
+            if (!updated.deliverable) updated.deliverable = { type: "deck" };
+            updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
             return updated;
           });
           toast.success("Slide framework generated!");
