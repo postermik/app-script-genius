@@ -106,6 +106,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+  const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!output) return;
@@ -726,6 +727,12 @@ Return ONLY valid JSON, no markdown fences.`;
   // ── Generate a single output on demand (post-generation) ──
   const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
     if (!rawInput.trim() || !coreNarrative) return;
+    // Prevent duplicate in-flight calls for the same output
+    if (inFlightOutputsRef.current.has(outputType)) {
+      console.warn(`[Generation] Skipping duplicate call for: ${outputType}`);
+      return;
+    }
+    inFlightOutputsRef.current.add(outputType);
     
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -764,6 +771,7 @@ Return ONLY valid JSON, no markdown fences.`;
         toast.error(`Failed to generate ${outputType.replace(/_/g, " ")}. Please retry.`);
       }
     } finally {
+      inFlightOutputsRef.current.delete(outputType);
       abortControllerRef.current = null;
       if (outputType === "slide_framework") setIsGeneratingSlides(false);
     }
