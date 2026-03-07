@@ -313,7 +313,12 @@ export function OutputView() {
             {/* Outputs tab */}
             {activeTab === "outputs" && (
               <>
-                {rawInput && <OriginalInputSection rawInput={rawInput} />}
+                {isLoading && (
+                  <div className="mb-8">
+                    <GenerationStepper />
+                  </div>
+                )}
+                {rawInput && !isLoading && <OriginalInputSection rawInput={rawInput} />}
                 {selectedOutputs.length > 1 && (
                   <OutputTabBar
                     tabs={selectedOutputs}
@@ -326,19 +331,21 @@ export function OutputView() {
             )}
 
             {/* Score tab (with merged coaching) */}
-            {activeTab === "score" && score && <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
-            {activeTab === "score" && !score && (
+            {activeTab === "score" && isLoading && <ScoreShimmer />}
+            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
+            {activeTab === "score" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
 
             {/* Analysis tab (evaluate mode) */}
-            {activeTab === "analysis" && analysis && score && (
-              <AnalysisTab analysis={analysis} score={score} mode={output.mode} />
+            {activeTab === "analysis" && isLoading && <ScoreShimmer />}
+            {activeTab === "analysis" && !isLoading && analysis && score && (
+              <AnalysisTab analysis={analysis} score={score} mode={output!.mode} />
             )}
-            {activeTab === "analysis" && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output.mode} onRescore={handleRescore} isRescoring={isRescoring} />
+            {activeTab === "analysis" && !isLoading && (!analysis || !score) && score && (
+              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} />
             )}
-            {activeTab === "analysis" && !score && (
+            {activeTab === "analysis" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
             )}
           </div>
