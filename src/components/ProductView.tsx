@@ -48,7 +48,9 @@ export function ProductView() {
   };
 
   const handleIntakeGenerate = async (selections: IntakeSelections) => {
-    setIntakeSelections(selections);
+    // Sort initial batch by speed (fastest first); subsequent adds will be appended
+    const sortedOutputs = sortBySpeed(selections.outputs);
+    setIntakeSelections({ ...selections, outputs: sortedOutputs });
     setShowIntake(false);
     // Map purpose to mode
     const purposeToMode: Record<string, OutputMode | "auto"> = {
