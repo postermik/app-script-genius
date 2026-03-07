@@ -14,7 +14,7 @@ import { InvestorQAView } from "@/components/outputs/InvestorQAView";
 import { PitchEmailView } from "@/components/outputs/PitchEmailView";
 import { InvestmentMemoView } from "@/components/outputs/InvestmentMemoView";
 import { SlideShimmer, PitchShimmer, QAShimmer, EmailShimmer, MemoShimmer, ScoreShimmer } from "@/components/outputs/OutputShimmer";
-import { GenerationStepper } from "@/components/GenerationStepper";
+import { sortBySpeed } from "@/lib/outputOrder";
 import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
