@@ -250,7 +250,23 @@ export function OutputView() {
       );
     }
 
-    return <p className="text-sm text-muted-foreground text-center py-12">No slide framework data available. Try regenerating with Slide Framework selected.</p>;
+    // No slides available - show generate button
+    if (isGeneratingSlides) {
+      return <SlideShimmer />;
+    }
+    return (
+      <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
+        <Layout className="h-8 w-8 text-muted-foreground mx-auto" />
+        <p className="text-sm text-foreground font-medium">Generate Slide Framework</p>
+        <p className="text-xs text-muted-foreground">Create a complete slide framework from your existing narrative.</p>
+        <button
+          onClick={() => generateSlides()}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity glow-blue"
+        >
+          Generate Slides
+        </button>
+      </div>
+    );
   };
 
   const handleRefinePitch = async () => {
