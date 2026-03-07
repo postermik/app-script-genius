@@ -203,12 +203,48 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setLoadingPhase("idle");
   }, []);
 
+  // Attempt to repair truncated JSON by closing unclosed brackets/braces
+  const repairJSON = (text: string): any => {
+    let cleaned = text.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+    // Remove trailing commas before closing brackets
+    cleaned = cleaned.replace(/,\s*$/, "");
+    
+    // Count unclosed brackets
+    let braces = 0, brackets = 0;
+    let inString = false, escape = false;
+    for (const ch of cleaned) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') braces++;
+      if (ch === '}') braces--;
+      if (ch === '[') brackets++;
+      if (ch === ']') brackets--;
+    }
+    
+    // If we're inside an unterminated string, close it
+    if (inString) cleaned += '"';
+    
+    // Close any unclosed brackets/braces
+    for (let i = 0; i < brackets; i++) cleaned += ']';
+    for (let i = 0; i < braces; i++) cleaned += '}';
+    
+    // Remove trailing commas before closing brackets (again after repair)
+    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+    
+    return JSON.parse(cleaned);
+  };
+
   const streamFromEdgeFunction = useCallback(async (
     body: Record<string, any>,
     signal: AbortSignal
   ): Promise<any> => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (!currentSession) throw new Error("Not authenticated");
+
+    // Always request generous token limit
+    const bodyWithTokens = { ...body, max_tokens: 16384 };
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/decksmith-ai`, {
       method: "POST",
@@ -217,7 +253,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         "Content-Type": "application/json",
         "apikey": SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(bodyWithTokens),
       signal,
     });
 
@@ -268,20 +304,34 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setIsStreaming(false);
       setStreamingText("");
 
+      // Try strict parse first, then attempt JSON repair for truncated responses
+      const cleaned = fullText.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
       try {
-        const cleaned = fullText.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
         return JSON.parse(cleaned);
       } catch (parseError) {
-        console.error("Failed to parse streamed response:", parseError);
-        console.error("Raw text (first 500 chars):", fullText.slice(0, 500));
-        throw new Error("Generation failed. The AI response was incomplete. Please try again.");
+        console.warn("Strict JSON parse failed, attempting repair...");
+        try {
+          const repaired = repairJSON(fullText);
+          console.log("JSON repair succeeded");
+          toast.info("Output was slightly truncated but recovered successfully.");
+          return repaired;
+        } catch (repairError) {
+          console.error("JSON repair also failed:", repairError);
+          console.error("Raw text (first 1000 chars):", fullText.slice(0, 1000));
+          console.error("Raw text (last 500 chars):", fullText.slice(-500));
+          throw new Error("Generation failed. The AI response was incomplete. Please try again with fewer selected outputs.");
+        }
       }
     } else {
       // Non-streaming fallback
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-      return JSON.parse(cleaned);
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        return repairJSON(data.content || "");
+      }
     }
   }, []);
 
