@@ -273,15 +273,15 @@ export function OutputView() {
     }
   };
 
-  const handleAddOutput = (newOutput: OutputDeliverable) => {
-    const updated = [...selectedOutputs, newOutput];
+  const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
+    const updated = [...selectedOutputs, ...newOutputs];
     if (intakeSelections) {
       setIntakeSelections({ ...intakeSelections, outputs: updated });
     } else {
       setIntakeSelections({ purpose: "investor_pitch", outputs: updated, stage: "seed" });
     }
-    setActiveOutputTab(newOutput);
-    toast.success(`Added ${newOutput.replace(/_/g, " ")}`);
+    setActiveOutputTab(newOutputs[0]);
+    toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
   };
 
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
