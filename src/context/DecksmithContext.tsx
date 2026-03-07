@@ -611,11 +611,11 @@ Return ONLY valid JSON, no markdown fences.`;
             }
           }
 
-          console.log(`[Generation] Complete: ${outputType}`);
+          console.log(`[Generation] ✓ Complete: ${outputType}`);
         } catch (e: any) {
           if (e.name === "AbortError") return;
-          console.error(`[Generation] FAILED: ${outputType}:`, e.message);
-          setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message }));
+          console.error(`[Generation] ✗ FAILED: ${outputType}:`, e.message);
+          setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
         }
       });
 
@@ -677,8 +677,8 @@ Return ONLY valid JSON, no markdown fences.`;
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
-        console.error(`[Generation] On-demand FAILED: ${outputType}:`, e.message);
-        setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message }));
+        console.error(`[Generation] On-demand ✗ FAILED: ${outputType}:`, e.message);
+        setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
         toast.error(`Failed to generate ${outputType.replace(/_/g, " ")}. Please retry.`);
       }
     } finally {
