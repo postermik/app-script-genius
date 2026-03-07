@@ -115,7 +115,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -273,6 +273,17 @@ export function OutputView() {
     }
   };
 
+  const handleAddOutput = (newOutput: OutputDeliverable) => {
+    const updated = [...selectedOutputs, newOutput];
+    if (intakeSelections) {
+      setIntakeSelections({ ...intakeSelections, outputs: updated });
+    } else {
+      setIntakeSelections({ purpose: "investor_pitch", outputs: updated, stage: "seed" });
+    }
+    setActiveOutputTab(newOutput);
+    toast.success(`Added ${newOutput.replace(/_/g, " ")}`);
+  };
+
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
     <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
       <p className="text-sm text-destructive font-medium">{message}</p>
@@ -336,13 +347,12 @@ export function OutputView() {
             {activeTab === "outputs" && (
               <>
                 {rawInput && !isLoading && <OriginalInputSection rawInput={rawInput} />}
-                {selectedOutputs.length > 1 && (
-                  <OutputTabBar
-                    tabs={selectedOutputs}
-                    activeTab={activeOutputTab}
-                    onTabChange={setActiveOutputTab}
-                  />
-                )}
+                <OutputTabBar
+                  tabs={selectedOutputs}
+                  activeTab={activeOutputTab}
+                  onTabChange={setActiveOutputTab}
+                  onAddOutput={!isLoading ? handleAddOutput : undefined}
+                />
                 <div className="relative min-h-[400px]">
                   {isLoading && (
                     <div className="absolute inset-0 z-10 flex items-start justify-center pt-8">
