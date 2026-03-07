@@ -754,7 +754,8 @@ Return ONLY valid JSON, no markdown fences.`;
         setIsGeneratingSlides(true);
       }
 
-      const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal);
+      const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
+      const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
       setCompletedOutputs(prev => new Set(prev).add(outputType));
 
