@@ -129,6 +129,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); });
   }, []);
 
+  // Refs for persistence effect
+  const outputDataRef = useRef(outputData);
+  outputDataRef.current = outputData;
+  const coreNarrativeRef = useRef(coreNarrative);
+  coreNarrativeRef.current = coreNarrative;
+  const intakeSelectionsRef = useRef(intakeSelections);
+  intakeSelectionsRef.current = intakeSelections;
+
+  // Persist outputData to DB when generation finishes
+  useEffect(() => {
+    if (!isGenerating && currentProjectId && coreNarrative && Object.keys(outputData).length > 0) {
+      const timer = setTimeout(async () => {
+        console.log("[Persistence] Saving all output data to database...");
+        await supabase.from("projects").update({
+          supporting: {
+            coreNarrative: coreNarrativeRef.current,
+            outputData: outputDataRef.current,
+            intakeSelections: intakeSelectionsRef.current,
+          } as any,
+        }).eq("id", currentProjectId);
+        console.log("[Persistence] Save complete");
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isGenerating, currentProjectId, coreNarrative, outputData]);
+
   const loadProjects = useCallback(async () => {
     if (!session) return;
     const { data, error } = await supabase.from("projects").select("*").order("updated_at", { ascending: false });
@@ -139,6 +165,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         detected_intent: p.detected_intent, current_thesis: p.current_thesis,
         refinement_history: p.refinement_history || [],
         outreach_tracker: p.outreach_tracker || [],
+        supporting: p.supporting || null,
         created_at: p.created_at, updated_at: p.updated_at,
       })));
     }
@@ -164,24 +191,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     return "";
   };
 
-  const saveProject = useCallback(async (parsed: NarrativeOutputData) => {
+  const saveProject = useCallback(async (parsed: NarrativeOutputData, extras?: { coreNarrative?: CoreNarrativeData; outputData?: Record<string, any>; intakeSelections?: IntakeSelections }) => {
     if (!session) return;
     const title = (parsed as any).title || "Untitled";
     const thesis = extractThesis(parsed);
+    // Build a "generated_outputs" blob to persist all output data
+    const generatedOutputs = {
+      coreNarrative: extras?.coreNarrative || coreNarrative,
+      outputData: extras?.outputData || outputData,
+      intakeSelections: extras?.intakeSelections || intakeSelections,
+    };
     if (currentProjectId) {
       await supabase.from("projects").update({
         title, mode: parsed.mode, raw_input: rawInput,
         output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+        supporting: generatedOutputs as any,
       }).eq("id", currentProjectId);
     } else {
       const { data } = await supabase.from("projects").insert({
         user_id: session.user.id, title, mode: parsed.mode, raw_input: rawInput,
         output_data: parsed as any, detected_intent: parsed.mode, current_thesis: thesis,
+        supporting: generatedOutputs as any,
       }).select("id").single();
       if (data) setCurrentProjectId(data.id);
     }
     loadProjects();
-  }, [session, currentProjectId, rawInput, loadProjects]);
+  }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections]);
 
   const startLoadingPhases = useCallback(() => {
     setLoadingPhase("structuring");
@@ -214,9 +249,16 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   };
 
   const extractJSON = (text: string): string => {
-    // Try to find JSON object in arbitrary text
+    // Try array first
+    const firstBracket = text.indexOf("[");
+    const lastBracket = text.lastIndexOf("]");
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
+    
+    // If array comes first and seems complete, use it
+    if (firstBracket !== -1 && lastBracket > firstBracket && (firstBrace === -1 || firstBracket < firstBrace)) {
+      return text.slice(firstBracket, lastBracket + 1);
+    }
     if (firstBrace !== -1 && lastBrace > firstBrace) {
       return text.slice(firstBrace, lastBrace + 1);
     }
@@ -285,17 +327,36 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       if (data.error) throw new Error(data.error);
       const rawContent = data.content || "";
       console.log(`[Generation] Raw response length: ${rawContent.length}`);
-      console.log(`[Generation] Raw response (first 300):`, rawContent.slice(0, 300));
+      console.log(`[Generation] Raw response (first 500):`, rawContent.substring(0, 500));
       const cleaned = stripFences(rawContent);
-      try { return JSON.parse(cleaned); }
-      catch {
-        try { return repairJSON(rawContent); }
-        catch (e) {
-          console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
-          const err = new Error("AI response could not be parsed. Please retry.");
-          (err as any).rawResponse = rawContent;
-          throw err;
+      // Try direct parse (handles both objects and arrays)
+      try {
+        const result = JSON.parse(cleaned);
+        // If it's an array, wrap it (likely slide framework)
+        if (Array.isArray(result)) {
+          console.log(`[Generation] Parsed as array with ${result.length} items`);
+          return { deckFramework: result };
         }
+        console.log(`[Generation] Successfully parsed response`);
+        return result;
+      } catch {}
+      // Try extracting JSON
+      const extracted = extractJSON(rawContent);
+      try {
+        const result = JSON.parse(extracted);
+        if (Array.isArray(result)) return { deckFramework: result };
+        return result;
+      } catch {}
+      // Try repair
+      try {
+        const repaired = repairJSON(rawContent);
+        if (Array.isArray(repaired)) return { deckFramework: repaired };
+        return repaired;
+      } catch (e) {
+        console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
+        const err = new Error("AI response could not be parsed. Please retry.");
+        (err as any).rawResponse = rawContent;
+        throw err;
       }
     }
   }, []);
@@ -328,22 +389,32 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
     // Parse the full text
     console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
-    console.log(`[Generation] Stream raw (first 500):`, fullText.slice(0, 500));
+    console.log(`[Generation] Stream raw (first 500):`, fullText.substring(0, 500));
     const cleaned = stripFences(fullText);
-    try { return JSON.parse(cleaned); }
-    catch {
-      console.warn("[Generation] Strict JSON parse failed, attempting repair...");
-      try {
-        const repaired = repairJSON(fullText);
-        console.log("[Generation] JSON repair succeeded");
-        return repaired;
-      } catch (e) {
-        console.error("[Generation] JSON repair failed:", e);
-        console.error("[Generation] Full raw response:", fullText);
-        const err = new Error("AI response could not be parsed. Please retry.");
-        (err as any).rawResponse = fullText;
-        throw err;
-      }
+    try {
+      const result = JSON.parse(cleaned);
+      if (Array.isArray(result)) return { deckFramework: result };
+      return result;
+    } catch {}
+    // Try extracting JSON
+    const extracted = extractJSON(fullText);
+    try {
+      const result = JSON.parse(extracted);
+      if (Array.isArray(result)) return { deckFramework: result };
+      return result;
+    } catch {}
+    console.warn("[Generation] Strict JSON parse failed, attempting repair...");
+    try {
+      const repaired = repairJSON(fullText);
+      if (Array.isArray(repaired)) return { deckFramework: repaired };
+      console.log("[Generation] JSON repair succeeded");
+      return repaired;
+    } catch (e) {
+      console.error("[Generation] JSON repair failed:", e);
+      console.error("[Generation] Full raw response:", fullText);
+      const err = new Error("AI response could not be parsed. Please retry.");
+      (err as any).rawResponse = fullText;
+      throw err;
     }
   };
 
@@ -403,22 +474,31 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setStreamingText("");
 
       console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
-      console.log(`[Generation] Stream raw (first 500):`, fullText.slice(0, 500));
+      console.log(`[Generation] Stream raw (first 500):`, fullText.substring(0, 500));
       const cleaned = stripFences(fullText);
-      try { return JSON.parse(cleaned); }
-      catch {
-        console.warn("[Generation] Strict stream JSON parse failed, attempting repair...");
-        try {
-          const repaired = repairJSON(fullText);
-          toast.info("Output was slightly truncated but recovered successfully.");
-          return repaired;
-        } catch (e) {
-          console.error("[Generation] Stream JSON repair failed:", e);
-          console.error("[Generation] Full raw stream response:", fullText);
-          const err = new Error("AI response could not be parsed. Please retry.");
-          (err as any).rawResponse = fullText;
-          throw err;
-        }
+      try {
+        const result = JSON.parse(cleaned);
+        if (Array.isArray(result)) return { deckFramework: result };
+        return result;
+      } catch {}
+      const extracted = extractJSON(fullText);
+      try {
+        const result = JSON.parse(extracted);
+        if (Array.isArray(result)) return { deckFramework: result };
+        return result;
+      } catch {}
+      console.warn("[Generation] Strict stream JSON parse failed, attempting repair...");
+      try {
+        const repaired = repairJSON(fullText);
+        if (Array.isArray(repaired)) return { deckFramework: repaired };
+        toast.info("Output was slightly truncated but recovered successfully.");
+        return repaired;
+      } catch (e) {
+        console.error("[Generation] Stream JSON repair failed:", e);
+        console.error("[Generation] Full raw stream response:", fullText);
+        const err = new Error("AI response could not be parsed. Please retry.");
+        (err as any).rawResponse = fullText;
+        throw err;
       }
     } else {
       const data = await response.json();
@@ -628,7 +708,9 @@ Return ONLY valid JSON, no markdown fences.`;
       const newCount = generationCount + 1;
       setGenerationCount(newCount);
       localStorage.setItem("rhetoric_gen_count", String(newCount));
-      if (fullOutput) await saveProject(fullOutput);
+      if (fullOutput) {
+        await saveProject(fullOutput, { coreNarrative: cn, intakeSelections: intakeSelections || undefined });
+      }
 
     } catch (e: any) {
       if (e.name === "AbortError") return;
@@ -953,6 +1035,32 @@ Return ONLY valid JSON, no markdown fences.`;
     setAppliedSuggestions(new Set(applied));
     const dismissed = (project.output_data as any)?._dismissedSuggestions || [];
     setDismissedSuggestions(new Set(dismissed));
+
+    // Restore persisted generated outputs from the "supporting" column
+    const persisted = (project as any).supporting;
+    if (persisted?.coreNarrative?.sections?.length) {
+      console.log("[Persistence] Restoring core narrative from database");
+      setCoreNarrative(persisted.coreNarrative);
+    }
+    if (persisted?.outputData && typeof persisted.outputData === "object") {
+      console.log("[Persistence] Restoring output data from database:", Object.keys(persisted.outputData).filter(k => !k.endsWith("_error") && !k.endsWith("_rawResponse")));
+      setOutputData(persisted.outputData);
+      // Rebuild completedOutputs from persisted data
+      const completed = new Set<string>();
+      if (persisted.coreNarrative?.sections?.length) completed.add("core_narrative");
+      for (const key of Object.keys(persisted.outputData)) {
+        if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted.outputData[key]) {
+          completed.add(key);
+        }
+      }
+      completed.add("_scoring");
+      setCompletedOutputs(completed);
+    }
+    if (persisted?.intakeSelections) {
+      console.log("[Persistence] Restoring intake selections from database");
+      setIntakeSelections(persisted.intakeSelections);
+    }
+
     loadVersions(project.id);
   }, [loadVersions]);
 

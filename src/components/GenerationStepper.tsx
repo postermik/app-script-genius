@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
@@ -49,30 +49,28 @@ export function GenerationStepper() {
   const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs } = useDecksmith();
   const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
 
-  const [steps] = useState<OutputStep[]>(() => buildSteps(selectedOutputs));
+  // Rebuild steps when outputs change (useMemo, not useState)
+  const steps = useMemo(() => buildSteps(selectedOutputs), [selectedOutputs.join(",")]);
   const [generationDone, setGenerationDone] = useState(false);
 
-  // Derive current step index directly from completedOutputs — no separate state
+  // Derive current step index directly from completedOutputs
   let currentStepIndex = 0;
   
-  // Check if analyzing is done (core_narrative started means analyzing is done)
   if (completedOutputs.has("core_narrative")) {
-    // Analyzing step is done, core_narrative is done
-    currentStepIndex = 2; // past _analyzing and core_narrative
+    // Analyzing + core_narrative are done
+    currentStepIndex = 2;
     
-    // Check each subsequent step
+    // Walk through remaining steps, mark complete if in completedOutputs
     for (let i = 2; i < steps.length; i++) {
       const step = steps[i];
-      if (step.key === "_scoring" && completedOutputs.has("_scoring")) {
-        currentStepIndex = i + 1;
-      } else if (step.key === "_done") {
-        // handled below
-      } else if (completedOutputs.has(step.key as OutputDeliverable)) {
+      if (step.key === "_done") continue;
+      if (step.key === "_scoring") {
+        if (completedOutputs.has("_scoring")) currentStepIndex = i + 1;
+      } else if (completedOutputs.has(step.key)) {
         currentStepIndex = Math.max(currentStepIndex, i + 1);
       }
     }
   } else if (completedOutputs.size > 0 || isGenerating) {
-    // Still on analyzing
     currentStepIndex = 0;
   }
 
@@ -112,7 +110,7 @@ export function GenerationStepper() {
           return (
             <div key={step.key} className="flex items-center gap-2 py-0.5 animate-fade-in">
               <div className={`
-                flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-500
+                flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-300
                 ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
                 ${isActive && !isDoneStep ? "bg-primary/15 text-primary" : ""}
               `}>
@@ -123,7 +121,7 @@ export function GenerationStepper() {
                 )}
               </div>
               <span className={`
-                text-[10px] leading-tight transition-all duration-500
+                text-[10px] leading-tight transition-all duration-300
                 ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
                 ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
                 ${!isComplete && !isActive && !isDoneStep ? "text-muted-foreground" : ""}
