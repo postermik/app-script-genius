@@ -402,26 +402,40 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setIsStreaming(false);
       setStreamingText("");
 
-      const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
+      console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
+      console.log(`[Generation] Stream raw (first 500):`, fullText.slice(0, 500));
+      const cleaned = stripFences(fullText);
       try { return JSON.parse(cleaned); }
       catch {
-        console.warn("Strict JSON parse failed, attempting repair...");
+        console.warn("[Generation] Strict stream JSON parse failed, attempting repair...");
         try {
           const repaired = repairJSON(fullText);
           toast.info("Output was slightly truncated but recovered successfully.");
           return repaired;
         } catch (e) {
-          console.error("JSON repair failed:", e);
-          console.error("Raw text (first 500):", fullText.slice(0, 500));
-          throw new Error("AI response could not be parsed. Please retry.");
+          console.error("[Generation] Stream JSON repair failed:", e);
+          console.error("[Generation] Full raw stream response:", fullText);
+          const err = new Error("AI response could not be parsed. Please retry.");
+          (err as any).rawResponse = fullText;
+          throw err;
         }
       }
     } else {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
-      const cleaned = (data.content || "").replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      const rawContent = data.content || "";
+      console.log(`[Generation] Stream non-SSE response length: ${rawContent.length}`);
+      const cleaned = stripFences(rawContent);
       try { return JSON.parse(cleaned); }
-      catch { return repairJSON(data.content || ""); }
+      catch {
+        try { return repairJSON(rawContent); }
+        catch (e) {
+          console.error("[Generation] Stream non-SSE parse failed. Full response:", rawContent);
+          const err = new Error("AI response could not be parsed. Please retry.");
+          (err as any).rawResponse = rawContent;
+          throw err;
+        }
+      }
     }
   }, []);
 
