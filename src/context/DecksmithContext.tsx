@@ -709,6 +709,37 @@ Return ONLY valid JSON, no markdown fences.`;
       setCompletedOutputs(prev => new Set(prev).add("core_narrative"));
       console.log("[Generation] Core Narrative complete");
 
+      // Save project immediately so we have a currentProjectId for incremental saves
+      const title = (fullOutput as any).title || "Untitled";
+      const thesis = extractThesis(fullOutput);
+      const initialPayload = {
+        core_narrative: cn,
+        intake_selections: intakeSelections,
+        tab_order: selectedOutputs,
+        score: (fullOutput as any).score || null,
+        mode: fullOutput.mode,
+        title,
+        intent: (fullOutput as any).intent || "create",
+      };
+      
+      if (currentProjectId) {
+        await supabase.from("projects").update({
+          title, mode: fullOutput.mode, raw_input: rawInput,
+          output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
+        }).eq("id", currentProjectId);
+        console.log("[Persistence] Updated project with core narrative, id:", currentProjectId);
+      } else {
+        const { data: insertedProject } = await supabase.from("projects").insert({
+          user_id: session!.user.id, title, mode: fullOutput.mode, raw_input: rawInput,
+          output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
+        }).select("id").single();
+        if (insertedProject) {
+          setCurrentProjectId(insertedProject.id);
+          console.log("[Persistence] Created project with core narrative, id:", insertedProject.id);
+        }
+      }
+      console.log("[Persistence] Saved to output_data:", JSON.stringify(initialPayload).substring(0, 500));
+
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
