@@ -335,11 +335,6 @@ export function OutputView() {
             {/* Outputs tab */}
             {activeTab === "outputs" && (
               <>
-                {isLoading && (
-                  <div className="mb-8">
-                    <GenerationStepper />
-                  </div>
-                )}
                 {rawInput && !isLoading && <OriginalInputSection rawInput={rawInput} />}
                 {selectedOutputs.length > 1 && (
                   <OutputTabBar
@@ -348,7 +343,18 @@ export function OutputView() {
                     onTabChange={setActiveOutputTab}
                   />
                 )}
-                {renderOutputContent()}
+                <div className="relative min-h-[400px]">
+                  {isLoading && (
+                    <div className="absolute inset-0 z-10 flex items-start justify-center pt-8">
+                      <div className="bg-background/80 backdrop-blur-sm rounded-lg px-6 py-5 border border-border/50 shadow-lg">
+                        <GenerationStepper />
+                      </div>
+                    </div>
+                  )}
+                  <div className={isLoading ? "opacity-40 pointer-events-none" : "animate-tab-enter"}>
+                    {renderOutputContent()}
+                  </div>
+                </div>
               </>
             )}
 

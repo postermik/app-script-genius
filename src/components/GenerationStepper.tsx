@@ -66,7 +66,19 @@ const INITIAL_STEPS: StepDef[] = [
   { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
 ];
 
-function getStepsForContext(selectedMode: string, isEvaluation: boolean, skipSlides: boolean): StepDef[] {
+// Map step keys to the output deliverable they belong to.
+// Steps not in this map are always shown (core steps like analyzing, scoring, complete).
+const STEP_TO_OUTPUT: Record<string, string> = {
+  deck: "slide_framework",
+  pitch: "elevator_pitch",
+  writing: "_always", // generic writing step for non-fundraising modes
+  headline: "_always",
+  structure: "_always",
+  assessing: "_always",
+  rebuilding: "slide_framework",
+};
+
+function getStepsForContext(selectedMode: string, isEvaluation: boolean, selectedOutputs: string[]): StepDef[] {
   if (isEvaluation) return STEP_SETS.evaluate;
   let steps: StepDef[];
   if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) {
@@ -74,19 +86,23 @@ function getStepsForContext(selectedMode: string, isEvaluation: boolean, skipSli
   } else {
     return INITIAL_STEPS;
   }
-  // Filter out the deck/slides step when slides aren't selected
-  if (skipSlides) {
-    steps = steps.filter(s => s.key !== "deck");
+  // Filter out steps whose mapped output isn't selected
+  if (selectedOutputs.length > 0) {
+    steps = steps.filter(s => {
+      const mapped = STEP_TO_OUTPUT[s.key];
+      if (!mapped || mapped === "_always") return true; // core step, always show
+      return selectedOutputs.includes(mapped);
+    });
   }
   return steps;
 }
 
 export function GenerationStepper() {
   const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating, intakeSelections } = useDecksmith();
-  const skipSlides = intakeSelections?.outputs ? !intakeSelections.outputs.includes("slide_framework") : false;
+  const selectedOutputs = intakeSelections?.outputs || [];
   const [targetStepIndex, setTargetStepIndex] = useState(0);
   const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
-  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, skipSlides));
+  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
@@ -113,12 +129,12 @@ export function GenerationStepper() {
   // Reset on new generation
   useEffect(() => {
     if (isGenerating) {
-      setSteps(getStepsForContext(selectedMode, isEvaluation, skipSlides));
+      setSteps(getStepsForContext(selectedMode, isEvaluation, selectedOutputs));
       setTargetStepIndex(0);
       setDisplayedStepIndex(0);
       setGenerationDone(false);
     }
-  }, [isGenerating, selectedMode, isEvaluation, skipSlides]);
+  }, [isGenerating, selectedMode, isEvaluation, selectedOutputs]);
 
   // Detect mode and step triggers from stream
   useEffect(() => {
@@ -180,8 +196,8 @@ export function GenerationStepper() {
   });
 
   return (
-    <div className="flex flex-col items-center justify-center py-4 animate-fade-in">
-      <div className="space-y-2">
+    <div className="flex flex-col items-center justify-center animate-fade-in">
+      <div className="space-y-1.5">
         {visibleSteps.map((step) => {
           const realIndex = steps.indexOf(step);
           const isComplete = displayedStepIndex > realIndex;
@@ -190,46 +206,44 @@ export function GenerationStepper() {
           const isDoneStep = step.key === "complete";
 
           return (
-            <div key={step.key}>
-              <div className="flex items-center gap-3 animate-fade-in">
-                <div className={`
-                  flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
-                  ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
-                  ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
-                `}>
-                  {isComplete || isDoneStep ? (
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  ) : (
-                    <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
-                  )}
-                </div>
-                <span className={`
-                  text-base transition-all duration-500
-                  ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
-                  ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
-                `}>
-                  {step.label}
-                  {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
-                    <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
-                      {secondsOnStep >= 35 ? "... almost done" : "... still working"}
-                    </span>
-                  )}
-                </span>
-                {isActive && !isDoneStep && isStreaming && (
-                  <div className="flex items-center gap-1 ml-1">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
+            <div key={step.key} className="flex items-center gap-2.5 animate-fade-in">
+              <div className={`
+                flex items-center justify-center w-6 h-6 rounded-full transition-all duration-500
+                ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
+                ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
+              `}>
+                {isComplete || isDoneStep ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : (
+                  <StepIcon className={`w-3 h-3 ${isActive ? "animate-pulse" : ""}`} />
                 )}
               </div>
+              <span className={`
+                text-sm transition-all duration-500
+                ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
+                ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
+              `}>
+                {step.label}
+                {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
+                  <span className="text-xs font-normal text-muted-foreground/60 ml-0.5">
+                    {secondsOnStep >= 35 ? "... almost done" : "... still working"}
+                  </span>
+                )}
+              </span>
+              {isActive && !isDoneStep && isStreaming && (
+                <div className="flex items-center gap-0.5 ml-0.5">
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
             </div>
           );
         })}
         {isStreaming && !generationDone && (
           <button
             onClick={stopGenerating}
-            className="mt-4 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md px-3 py-1.5 hover:border-muted-foreground transition-colors ml-10"
+            className="mt-3 text-xs text-muted-foreground hover:text-foreground border border-border rounded-sm px-2.5 py-1 hover:border-muted-foreground transition-colors ml-8"
           >
             Stop generating
           </button>
