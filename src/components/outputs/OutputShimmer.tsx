@@ -73,6 +73,27 @@ export function MemoShimmer() {
   );
 }
 
+export function CoreNarrativeShimmer() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <Skeleton className="h-3 w-32 bg-muted/40" />
+        <Skeleton className="h-6 w-20 bg-muted/30" />
+      </div>
+      <div className="card-gradient rounded-sm border border-border divide-y divide-border">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="p-5 space-y-3">
+            <Skeleton className="h-3 w-24 bg-muted/40" />
+            <Skeleton className="h-3 w-full bg-muted/30" />
+            <Skeleton className="h-3 w-5/6 bg-muted/30" />
+            <Skeleton className="h-3 w-4/6 bg-muted/30" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ScoreShimmer() {
   return (
     <div className="space-y-6">
