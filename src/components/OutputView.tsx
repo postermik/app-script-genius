@@ -139,10 +139,10 @@ export function OutputView() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [outputErrors, setOutputErrors] = useState<Record<string, string>>({});
 
-  // Determine which output tabs to show, sorted by speed
-  const selectedOutputs: OutputDeliverable[] = sortBySpeed(
-    intakeSelections?.outputs?.length ? intakeSelections.outputs : ["slide_framework"]
-  );
+  // Determine which output tabs to show — preserve user's selection order
+  const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
+    ? intakeSelections.outputs
+    : ["slide_framework"];
 
   const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>(selectedOutputs[0]);
 
@@ -274,14 +274,16 @@ export function OutputView() {
   };
 
   const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
-    const updated = [...selectedOutputs, ...newOutputs];
+    // Sort new outputs by speed, then append to existing selection order
+    const sorted = sortBySpeed(newOutputs);
+    const updated = [...selectedOutputs, ...sorted];
     if (intakeSelections) {
       setIntakeSelections({ ...intakeSelections, outputs: updated });
     } else {
       setIntakeSelections({ purpose: "investor_pitch", outputs: updated, stage: "seed" });
     }
-    setActiveOutputTab(newOutputs[0]);
-    toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
+    setActiveOutputTab(sorted[0]);
+    toast.success(`Added ${sorted.map(o => o.replace(/_/g, " ")).join(", ")}`);
   };
 
   const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (

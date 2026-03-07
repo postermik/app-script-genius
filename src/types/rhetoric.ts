@@ -104,7 +104,9 @@ export function getDeliverable(output: any): Deliverable | null {
     const d = output.data;
     const mode = output.mode;
     if (mode === "fundraising") {
-      return { type: "deck", deckFramework: d.deckFramework };
+      if (d.deckFramework?.length) return { type: "deck", deckFramework: d.deckFramework };
+      // No slides generated (skipSlides) — return null, deliverables are synthesized per-tab
+      return null;
     }
     if (mode === "board_update") {
       return { type: "document", sections: [], boardDeckOutline: d.boardDeckOutline };

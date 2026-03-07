@@ -24,10 +24,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
 
   const availableToAdd = ALL_OUTPUTS.filter(o => !tabs.includes(o));
 
-  // Sort displayed tabs by speed order
-  const sortedTabs = [...tabs].sort(
-    (a, b) => OUTPUT_SPEED_ORDER.indexOf(a) - OUTPUT_SPEED_ORDER.indexOf(b)
-  );
+  // Tabs are displayed in their original selection order (no re-sorting)
 
   const togglePending = (output: OutputDeliverable) => {
     setPendingOutputs(prev => {
@@ -48,7 +45,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
   return (
     <div className="border-b border-border mb-6 overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
       <div className="flex items-center gap-0 min-w-max">
-        {sortedTabs.map(tab => {
+        {tabs.map(tab => {
           const active = activeTab === tab;
           return (
             <button
