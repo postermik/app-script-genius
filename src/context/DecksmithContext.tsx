@@ -435,7 +435,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       const sourceObj = (output as any).supporting || output.data || {};
       const currentContent = getNestedValue(sourceObj, path);
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent },
+        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514" },
       });
       if (error) throw error;
       const refined = data.content;
