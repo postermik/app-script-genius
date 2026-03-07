@@ -340,7 +340,7 @@ export function OutputView() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col">
-        <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} />
+        <ProjectSidebar activeTab={activeTab} onTabChange={setActiveTab} intent={effectiveIntent} isLoading={isLoading} />
         <div style={isMobile ? undefined : { marginLeft: 200 }}>
           <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 w-full animate-fade-in" key={activeTab}>
             {/* Outputs tab */}
@@ -353,17 +353,8 @@ export function OutputView() {
                   onTabChange={setActiveOutputTab}
                   onAddOutput={!isLoading ? handleAddOutput : undefined}
                 />
-                <div className="relative min-h-[400px]">
-                  {isLoading && (
-                    <div className="absolute inset-0 z-10 flex items-start justify-center pt-8">
-                      <div className="bg-background/80 backdrop-blur-sm rounded-lg px-6 py-5 border border-border/50 shadow-lg">
-                        <GenerationStepper />
-                      </div>
-                    </div>
-                  )}
-                  <div className={isLoading ? "opacity-40 pointer-events-none" : "animate-tab-enter"}>
-                    {renderOutputContent()}
-                  </div>
+                <div className="min-h-[400px] animate-tab-enter" key={activeOutputTab}>
+                  {renderOutputContent()}
                 </div>
               </>
             )}
