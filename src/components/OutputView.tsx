@@ -296,7 +296,7 @@ export function OutputView() {
     toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
 
     // Generate each new output
-    sorted.forEach(outputType => {
+    newOutputs.forEach(outputType => {
       generateOutput(outputType);
     });
   };
