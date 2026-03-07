@@ -26,6 +26,7 @@ interface DecksmithContextType {
   refiningSection: string | null;
   generationCount: number;
   generate: () => Promise<void>;
+  generateSlides: () => Promise<void>;
   evaluateDeck: (extractedText: string) => Promise<void>;
   refineSection: (sectionKey: string, path: string, tone: RefinementTone) => Promise<void>;
   reset: () => void;
@@ -62,6 +63,7 @@ interface DecksmithContextType {
   rescoreNarrative: () => Promise<void>;
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
+  isGeneratingSlides: boolean;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
