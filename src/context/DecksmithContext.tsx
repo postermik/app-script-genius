@@ -311,7 +311,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         "Content-Type": "application/json",
         "apikey": SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ ...body, max_tokens: body.max_tokens || 4096, model: "claude-sonnet-4-20250514" }),
+      body: JSON.stringify({ ...body, max_tokens: body.max_tokens || 4096, model: body.model || "claude-sonnet-4-20250514" }),
       signal,
     });
 
@@ -594,15 +594,22 @@ Return ONLY valid JSON, no markdown fences.`;
     return { coreNarrative: cn, fullOutput: parsed };
   }, [streamFromEdgeFunction]);
 
+  // ── Models by output type ──
+  const FAST_OUTPUTS: OutputDeliverable[] = ["elevator_pitch", "pitch_email", "board_memo", "strategic_memo", "key_metrics_summary"];
+  const HEAVY_OUTPUTS: OutputDeliverable[] = ["investor_qa", "investment_memo", "slide_framework"];
+  const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+  const SONNET_MODEL = "claude-sonnet-4-20250514";
+
   // ── Generate a single output type using core narrative as context ──
   const generateSingleOutput = useCallback(async (
     outputType: OutputDeliverable,
     input: string,
     coreNarrativeText: string,
     purpose: IntakePurpose,
-    signal: AbortSignal
+    signal: AbortSignal,
+    model?: string
   ): Promise<any> => {
-    console.log(`[Generation] Starting output: ${outputType}`);
+    console.log(`[Generation] Starting output: ${outputType} (model: ${model || SONNET_MODEL})`);
 
     const outputPrompts: Record<string, string> = {
       elevator_pitch: `Generate elevator pitch versions. Return JSON: { "elevatorPitch": { "thirtySecond": "...", "sixtySecond": "..." } }`,
@@ -616,7 +623,8 @@ Return ONLY valid JSON, no markdown fences.`;
     };
 
     const prompt = outputPrompts[outputType] || "";
-    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\nORIGINAL INPUT:\n${input}\n\n---\n${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    // Derivative outputs only need the Core Narrative — skip the original input to cut tokens
+    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
 
@@ -628,6 +636,7 @@ Return ONLY valid JSON, no markdown fences.`;
         selectedOutputs: [outputType],
         skipSlides: outputType !== "slide_framework",
         max_tokens: maxTokens,
+        model: model || SONNET_MODEL,
       },
       signal
     );
@@ -668,10 +677,11 @@ Return ONLY valid JSON, no markdown fences.`;
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
-      // Step 2: Generate all selected outputs in parallel
+      // Step 2: Fire all selected outputs in parallel (fast ones use Haiku, heavy ones use Sonnet)
       const outputPromises = selectedOutputs.map(async (outputType) => {
+        const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
-          const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal);
+          const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
           
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
