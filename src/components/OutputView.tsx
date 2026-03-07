@@ -301,19 +301,37 @@ export function OutputView() {
     });
   };
 
-  const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
-    <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
-      <p className="text-sm text-destructive font-medium">{message}</p>
-      <p className="text-xs text-muted-foreground">This output failed to generate. Click retry to try again.</p>
-      <button
-        onClick={() => generateOutput(tab)}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
-      >
-        <RefreshCw className="h-3 w-3" />
-        Retry
-      </button>
-    </div>
-  );
+  const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => {
+    const rawResponse = outputData[`${tab}_rawResponse`];
+    return (
+      <div className="card-gradient border border-border rounded-sm p-8 space-y-4">
+        <div className="text-center space-y-4">
+          <p className="text-sm text-destructive font-medium">{message}</p>
+          <p className="text-xs text-muted-foreground">This output failed to generate. Click retry to try again.</p>
+          <button
+            onClick={() => {
+              // Clear the error before retrying
+              generateOutput(tab);
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Retry
+          </button>
+        </div>
+        {rawResponse && (
+          <details className="mt-4 border-t border-border pt-4">
+            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              Show raw AI response
+            </summary>
+            <pre className="mt-2 text-[10px] text-muted-foreground bg-muted/30 rounded-sm p-3 overflow-x-auto whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+              {rawResponse}
+            </pre>
+          </details>
+        )}
+      </div>
+    );
+  };
 
   const renderOutputContent = () => {
     if (isLoading) return getShimmerForTab(activeOutputTab);
