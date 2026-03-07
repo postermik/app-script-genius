@@ -115,7 +115,7 @@ function synthesizeInvestmentMemo(output: any): InvestmentMemoData | null {
 
 
 export function OutputView() {
-  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection, rescoreNarrative } = useDecksmith();
+  const { output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput, isEvaluation, intakeSelections, refineSection, refiningSection, rescoreNarrative, isGenerating } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
@@ -127,6 +127,7 @@ export function OutputView() {
 
   const effectiveIntent = isEvaluation ? "evaluate" : intent;
   const defaultTab: OutputTabKey = effectiveIntent === "evaluate" ? "analysis" : "outputs";
+  const isLoading = isGenerating && !output;
 
   const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
