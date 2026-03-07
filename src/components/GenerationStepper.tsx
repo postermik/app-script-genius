@@ -196,8 +196,8 @@ export function GenerationStepper() {
   });
 
   return (
-    <div className="flex flex-col items-center justify-center py-4 animate-fade-in">
-      <div className="space-y-2">
+    <div className="flex flex-col items-center justify-center animate-fade-in">
+      <div className="space-y-1.5">
         {visibleSteps.map((step) => {
           const realIndex = steps.indexOf(step);
           const isComplete = displayedStepIndex > realIndex;
@@ -206,46 +206,44 @@ export function GenerationStepper() {
           const isDoneStep = step.key === "complete";
 
           return (
-            <div key={step.key}>
-              <div className="flex items-center gap-3 animate-fade-in">
-                <div className={`
-                  flex items-center justify-center w-7 h-7 rounded-full transition-all duration-500
-                  ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
-                  ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
-                `}>
-                  {isComplete || isDoneStep ? (
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  ) : (
-                    <StepIcon className={`w-3.5 h-3.5 ${isActive ? "animate-pulse" : ""}`} />
-                  )}
-                </div>
-                <span className={`
-                  text-base transition-all duration-500
-                  ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
-                  ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
-                `}>
-                  {step.label}
-                  {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
-                    <span className="text-sm font-normal text-muted-foreground/60 ml-0.5">
-                      {secondsOnStep >= 35 ? "... almost done" : "... still working"}
-                    </span>
-                  )}
-                </span>
-                {isActive && !isDoneStep && isStreaming && (
-                  <div className="flex items-center gap-1 ml-1">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
+            <div key={step.key} className="flex items-center gap-2.5 animate-fade-in">
+              <div className={`
+                flex items-center justify-center w-6 h-6 rounded-full transition-all duration-500
+                ${isComplete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
+                ${isActive && !isDoneStep ? "bg-primary/20 text-primary" : ""}
+              `}>
+                {isComplete || isDoneStep ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : (
+                  <StepIcon className={`w-3 h-3 ${isActive ? "animate-pulse" : ""}`} />
                 )}
               </div>
+              <span className={`
+                text-sm transition-all duration-500
+                ${isComplete || isDoneStep ? "text-emerald-400/80" : ""}
+                ${isActive && !isDoneStep ? "text-primary font-medium" : ""}
+              `}>
+                {step.label}
+                {isActive && !isComplete && !isDoneStep && isStreaming && secondsOnStep >= 15 && (
+                  <span className="text-xs font-normal text-muted-foreground/60 ml-0.5">
+                    {secondsOnStep >= 35 ? "... almost done" : "... still working"}
+                  </span>
+                )}
+              </span>
+              {isActive && !isDoneStep && isStreaming && (
+                <div className="flex items-center gap-0.5 ml-0.5">
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
             </div>
           );
         })}
         {isStreaming && !generationDone && (
           <button
             onClick={stopGenerating}
-            className="mt-4 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md px-3 py-1.5 hover:border-muted-foreground transition-colors ml-10"
+            className="mt-3 text-xs text-muted-foreground hover:text-foreground border border-border rounded-sm px-2.5 py-1 hover:border-muted-foreground transition-colors ml-8"
           >
             Stop generating
           </button>
