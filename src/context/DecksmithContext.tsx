@@ -165,6 +165,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         detected_intent: p.detected_intent, current_thesis: p.current_thesis,
         refinement_history: p.refinement_history || [],
         outreach_tracker: p.outreach_tracker || [],
+        supporting: p.supporting || null,
         created_at: p.created_at, updated_at: p.updated_at,
       })));
     }
