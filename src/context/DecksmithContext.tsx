@@ -530,6 +530,7 @@ Return ONLY a JSON object with this structure:
     }
   }, [rawInput, output, isGeneratingSlides, streamFromEdgeFunction, currentProjectId]);
 
+  const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;
     setIsGenerating(true);
     setIsEvaluation(true);
