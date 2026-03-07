@@ -118,7 +118,7 @@ export function GenerationStepper() {
       setDisplayedStepIndex(0);
       setGenerationDone(false);
     }
-  }, [isGenerating, selectedMode, isEvaluation]);
+  }, [isGenerating, selectedMode, isEvaluation, skipSlides]);
 
   // Detect mode and step triggers from stream
   useEffect(() => {
