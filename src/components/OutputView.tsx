@@ -137,6 +137,7 @@ export function OutputView() {
   const [isRefiningPitch, setIsRefiningPitch] = useState(false);
   const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);
   const [isRescoring, setIsRescoring] = useState(false);
+  const [outputErrors, setOutputErrors] = useState<Record<string, string>>({});
 
   // Determine which output tabs to show
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
@@ -272,9 +273,30 @@ export function OutputView() {
     }
   };
 
+  const renderErrorWithRetry = (tab: OutputDeliverable, message: string) => (
+    <div className="card-gradient border border-border rounded-sm p-8 text-center space-y-4">
+      <p className="text-sm text-destructive font-medium">{message}</p>
+      <p className="text-xs text-muted-foreground">This output failed to generate. You can retry it independently.</p>
+      <button
+        onClick={() => {
+          setOutputErrors(prev => { const n = { ...prev }; delete n[tab]; return n; });
+          toast.info("Please regenerate to retry this output.");
+        }}
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
+      >
+        Retry
+      </button>
+    </div>
+  );
+
   // Render the active output deliverable tab
   const renderOutputContent = () => {
     if (isLoading) return getShimmerForTab(activeOutputTab);
+
+    // Check for per-output errors
+    if (outputErrors[activeOutputTab]) {
+      return renderErrorWithRetry(activeOutputTab, outputErrors[activeOutputTab]);
+    }
 
     switch (activeOutputTab) {
       case "slide_framework":

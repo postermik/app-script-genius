@@ -66,17 +66,27 @@ const INITIAL_STEPS: StepDef[] = [
   { key: "analyzing", label: "Analyzing your input", trigger: null, icon: "Search" },
 ];
 
-function getStepsForContext(selectedMode: string, isEvaluation: boolean): StepDef[] {
+function getStepsForContext(selectedMode: string, isEvaluation: boolean, skipSlides: boolean): StepDef[] {
   if (isEvaluation) return STEP_SETS.evaluate;
-  if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) return STEP_SETS[selectedMode];
-  return INITIAL_STEPS;
+  let steps: StepDef[];
+  if (selectedMode && selectedMode !== "auto" && STEP_SETS[selectedMode]) {
+    steps = STEP_SETS[selectedMode];
+  } else {
+    return INITIAL_STEPS;
+  }
+  // Filter out the deck/slides step when slides aren't selected
+  if (skipSlides) {
+    steps = steps.filter(s => s.key !== "deck");
+  }
+  return steps;
 }
 
 export function GenerationStepper() {
-  const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating } = useDecksmith();
+  const { isStreaming, streamingText, isGenerating, selectedMode, isEvaluation, stopGenerating, intakeSelections } = useDecksmith();
+  const skipSlides = intakeSelections?.outputs ? !intakeSelections.outputs.includes("slide_framework") : false;
   const [targetStepIndex, setTargetStepIndex] = useState(0);
   const [displayedStepIndex, setDisplayedStepIndex] = useState(0);
-  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation));
+  const [steps, setSteps] = useState<StepDef[]>(() => getStepsForContext(selectedMode, isEvaluation, skipSlides));
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [secondsOnStep, setSecondsOnStep] = useState(0);
   const [generationDone, setGenerationDone] = useState(false);
@@ -103,12 +113,12 @@ export function GenerationStepper() {
   // Reset on new generation
   useEffect(() => {
     if (isGenerating) {
-      setSteps(getStepsForContext(selectedMode, isEvaluation));
+      setSteps(getStepsForContext(selectedMode, isEvaluation, skipSlides));
       setTargetStepIndex(0);
       setDisplayedStepIndex(0);
       setGenerationDone(false);
     }
-  }, [isGenerating, selectedMode, isEvaluation]);
+  }, [isGenerating, selectedMode, isEvaluation, skipSlides]);
 
   // Detect mode and step triggers from stream
   useEffect(() => {
