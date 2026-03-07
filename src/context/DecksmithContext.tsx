@@ -346,7 +346,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       setStreamingText("");
 
       // Try strict parse first, then attempt JSON repair for truncated responses
-      const cleaned = fullText.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      const cleaned = fullText.replace(/^[\s\S]*?```(?:json)?\s*\n?/, "").replace(/\n?```[\s\S]*$/, "").trim();
       try {
         return JSON.parse(cleaned);
       } catch (parseError) {
