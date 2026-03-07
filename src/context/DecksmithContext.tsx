@@ -392,7 +392,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const attempt = async (retry: boolean): Promise<void> => {
       try {
         const parsed = await streamFromEdgeFunction(
-          { mode: "evaluate", input: extractedText },
+          { mode: "evaluate", input: extractedText, model: "claude-sonnet-4-20250514" },
           abortController.signal
         );
         setDetectedMode(parsed.mode);
