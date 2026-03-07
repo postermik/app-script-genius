@@ -177,7 +177,7 @@ export function OutputView() {
     }
   }, [deliverable]);
 
-  if (!output) return null;
+  if (!output && !isGenerating) return null;
 
   const isFirstFree = !isPro && generationCount >= 1;
 
@@ -261,8 +261,21 @@ export function OutputView() {
     finally { setIsRescoring(false); }
   };
 
+  const getShimmerForTab = (tab: OutputDeliverable) => {
+    switch (tab) {
+      case "slide_framework": return <SlideShimmer />;
+      case "elevator_pitch": return <PitchShimmer />;
+      case "investor_qa": return <QAShimmer />;
+      case "pitch_email": return <EmailShimmer />;
+      case "investment_memo": return <MemoShimmer />;
+      default: return <SlideShimmer />;
+    }
+  };
+
   // Render the active output deliverable tab
   const renderOutputContent = () => {
+    if (isLoading) return getShimmerForTab(activeOutputTab);
+
     switch (activeOutputTab) {
       case "slide_framework":
         return renderSlideFramework();
