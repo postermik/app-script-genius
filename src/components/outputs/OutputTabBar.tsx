@@ -1,30 +1,26 @@
 import { useState } from "react";
 import { Plus, Zap } from "lucide-react";
-import type { OutputDeliverable } from "@/types/rhetoric";
-import { OUTPUT_LABELS } from "@/lib/outputOrder";
-
-const ALL_OUTPUTS: OutputDeliverable[] = [
-  "elevator_pitch",
-  "investor_qa",
-  "pitch_email",
-  "investment_memo",
-  "slide_framework",
-];
+import type { OutputDeliverable, IntakePurpose } from "@/types/rhetoric";
+import { OUTPUT_LABELS, sortBySpeed } from "@/lib/outputOrder";
+import { INTENT_OUTPUTS } from "@/types/rhetoric";
 
 interface Props {
   tabs: OutputDeliverable[];
   activeTab: OutputDeliverable;
   onTabChange: (tab: OutputDeliverable) => void;
   onAddOutput?: (outputs: OutputDeliverable[]) => void;
+  purpose?: IntakePurpose;
+  completedOutputs?: Set<string>;
+  isGenerating?: boolean;
 }
 
-export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Props) {
+export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpose, completedOutputs, isGenerating }: Props) {
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [pendingOutputs, setPendingOutputs] = useState<Set<OutputDeliverable>>(new Set());
 
-  const availableToAdd = ALL_OUTPUTS.filter(o => !tabs.includes(o));
-
-  // Tabs are displayed in their original selection order (no re-sorting)
+  // Available outputs depend on the current purpose
+  const allForPurpose = purpose ? INTENT_OUTPUTS[purpose].map(o => o.value) : [];
+  const availableToAdd = allForPurpose.filter(o => !tabs.includes(o));
 
   const togglePending = (output: OutputDeliverable) => {
     setPendingOutputs(prev => {
@@ -47,6 +43,8 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
       <div className="flex items-center gap-0 min-w-max">
         {tabs.map(tab => {
           const active = activeTab === tab;
+          const isCompleted = completedOutputs?.has(tab);
+          const isLoading = isGenerating && !isCompleted && tab !== "core_narrative";
           return (
             <button
               key={tab}
@@ -54,12 +52,17 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
               className={`relative px-4 py-3 text-xs font-medium transition-colors whitespace-nowrap ${
                 active
                   ? "text-electric"
-                  : "text-secondary-foreground hover:text-foreground"
+                  : isLoading
+                    ? "text-muted-foreground/50"
+                    : "text-secondary-foreground hover:text-foreground"
               }`}
             >
-              {OUTPUT_LABELS[tab]}
+              {OUTPUT_LABELS[tab] || tab}
               {active && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-electric rounded-full" />
+              )}
+              {isLoading && (
+                <span className="absolute top-2 right-1 w-1.5 h-1.5 bg-primary/50 rounded-full animate-pulse" />
               )}
             </button>
           );
@@ -78,7 +81,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
                   : "text-muted-foreground/50 hover:text-muted-foreground border-b-transparent"
               }`}
             >
-              {OUTPUT_LABELS[output]}
+              {OUTPUT_LABELS[output] || output}
             </button>
           );
         })}
@@ -95,7 +98,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput }: Prop
         )}
 
         {/* Add button */}
-        {onAddOutput && availableToAdd.length > 0 && (
+        {onAddOutput && availableToAdd.length > 0 && !isGenerating && (
           <button
             onClick={() => {
               setShowAddOptions(!showAddOptions);
