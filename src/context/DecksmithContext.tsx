@@ -935,6 +935,7 @@ Return ONLY a JSON object with this structure:
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections,
+        generateSlides, isGeneratingSlides,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));
           // Persist in output
