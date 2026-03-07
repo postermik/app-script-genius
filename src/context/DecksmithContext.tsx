@@ -248,9 +248,16 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   };
 
   const extractJSON = (text: string): string => {
-    // Try to find JSON object in arbitrary text
+    // Try array first
+    const firstBracket = text.indexOf("[");
+    const lastBracket = text.lastIndexOf("]");
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
+    
+    // If array comes first and seems complete, use it
+    if (firstBracket !== -1 && lastBracket > firstBracket && (firstBrace === -1 || firstBracket < firstBrace)) {
+      return text.slice(firstBracket, lastBracket + 1);
+    }
     if (firstBrace !== -1 && lastBrace > firstBrace) {
       return text.slice(firstBrace, lastBrace + 1);
     }
@@ -319,17 +326,36 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       if (data.error) throw new Error(data.error);
       const rawContent = data.content || "";
       console.log(`[Generation] Raw response length: ${rawContent.length}`);
-      console.log(`[Generation] Raw response (first 300):`, rawContent.slice(0, 300));
+      console.log(`[Generation] Raw response (first 500):`, rawContent.substring(0, 500));
       const cleaned = stripFences(rawContent);
-      try { return JSON.parse(cleaned); }
-      catch {
-        try { return repairJSON(rawContent); }
-        catch (e) {
-          console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
-          const err = new Error("AI response could not be parsed. Please retry.");
-          (err as any).rawResponse = rawContent;
-          throw err;
+      // Try direct parse (handles both objects and arrays)
+      try {
+        const result = JSON.parse(cleaned);
+        // If it's an array, wrap it (likely slide framework)
+        if (Array.isArray(result)) {
+          console.log(`[Generation] Parsed as array with ${result.length} items`);
+          return { deckFramework: result };
         }
+        console.log(`[Generation] Successfully parsed response`);
+        return result;
+      } catch {}
+      // Try extracting JSON
+      const extracted = extractJSON(rawContent);
+      try {
+        const result = JSON.parse(extracted);
+        if (Array.isArray(result)) return { deckFramework: result };
+        return result;
+      } catch {}
+      // Try repair
+      try {
+        const repaired = repairJSON(rawContent);
+        if (Array.isArray(repaired)) return { deckFramework: repaired };
+        return repaired;
+      } catch (e) {
+        console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
+        const err = new Error("AI response could not be parsed. Please retry.");
+        (err as any).rawResponse = rawContent;
+        throw err;
       }
     }
   }, []);
