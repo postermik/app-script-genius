@@ -139,10 +139,10 @@ export function OutputView() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [outputErrors, setOutputErrors] = useState<Record<string, string>>({});
 
-  // Determine which output tabs to show
-  const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
-    ? intakeSelections.outputs
-    : ["slide_framework"]; // fallback for legacy projects
+  // Determine which output tabs to show, sorted by speed
+  const selectedOutputs: OutputDeliverable[] = sortBySpeed(
+    intakeSelections?.outputs?.length ? intakeSelections.outputs : ["slide_framework"]
+  );
 
   const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>(selectedOutputs[0]);
 
