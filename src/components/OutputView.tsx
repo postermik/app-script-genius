@@ -219,7 +219,7 @@ export function OutputView() {
     }
 
     // Check outputData for persisted slide framework
-    const persistedSlides = outputData?.slide_framework?.deckFramework;
+    const persistedSlides = outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework;
     if (persistedSlides?.length) {
       const persistedDeliverable = { type: "deck" as const, deckFramework: persistedSlides };
       return <DeckView deliverable={persistedDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} onUpdateDeliverable={handleUpdateDeliverable} />;
