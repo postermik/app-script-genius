@@ -137,6 +137,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   coreNarrativeRef.current = coreNarrative;
   const intakeSelectionsRef = useRef(intakeSelections);
   intakeSelectionsRef.current = intakeSelections;
+  const setIntakeSelectionsWithRef = useCallback((s: IntakeSelections | null) => {
+    intakeSelectionsRef.current = s;
+    setIntakeSelections(s);
+  }, []);
 
   // Batch save removed — incremental saves handle output content.
   // Metadata-only save happens at end of generate() via saveQueueRef.
