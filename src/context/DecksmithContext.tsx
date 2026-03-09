@@ -1279,7 +1279,7 @@ Return ONLY valid JSON, no markdown fences.`;
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
-        intakeSelections, setIntakeSelections,
+        intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
         generateOutput,
         completedOutputs, coreNarrative, outputData,
