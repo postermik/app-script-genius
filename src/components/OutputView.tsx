@@ -24,6 +24,7 @@ import { Layout, RefreshCw } from "lucide-react";
 import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData, BoardMemoData, KeyMetricsSummaryData, StrategicMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
+import { findData } from "@/lib/findData";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -34,19 +35,25 @@ import { useIsMobile } from "@/hooks/use-mobile";
 // ── Synthesize outputs from existing data ──
 
 function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
-  // Check dedicated output data first
   const od = outputData?.elevator_pitch;
-  console.log("[ElevatorPitch] outputData.elevator_pitch:", JSON.stringify(od)?.slice(0, 500));
-  if (od?.elevatorPitch) return od.elevatorPitch;
-  if (od?.deliverable?.elevatorPitch) return od.deliverable.elevatorPitch;
-  // Handle case where od itself is the pitch data
+  console.log("[Render] elevator_pitch structure:", Object.keys(od || {}));
+
+  // Check all known paths for the pitch object
+  const pitch = findData<ElevatorPitchData>(od,
+    "elevatorPitch",
+    "deliverable.elevatorPitch",
+    "data.elevatorPitch",
+  );
+  if (pitch?.thirtySecond) return pitch;
+
+  // Maybe od itself IS the pitch data
   if (od?.thirtySecond && od?.sixtySecond) return od as ElevatorPitchData;
 
+  // Fallback: synthesize from legacy output shape
   const d = output?.data || output?.supporting || {};
   const pitchScript = d.pitchScript;
   const thesis = d.thesis?.content || d.thesis || d.vision || d.headline || "";
   if (!pitchScript && !thesis) return null;
-
   const sixtySecond = pitchScript || thesis;
   const sentences = sixtySecond.split(/(?<=[.!?])\s+/).filter(Boolean);
   const thirtySecond = sentences.slice(0, Math.min(3, sentences.length)).join(" ");
@@ -55,27 +62,49 @@ function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): 
 
 function synthesizeInvestorQA(output: any, outputData: Record<string, any>): InvestorQAItem[] | null {
   const od = outputData?.investor_qa;
-  if (od?.investorQA?.length) return od.investorQA;
+  console.log("[Render] investor_qa structure:", Object.keys(od || {}));
 
+  const items = findData<InvestorQAItem[]>(od,
+    "investorQA",
+    "deliverable.investorQA",
+    "data.investorQA",
+    "questions",
+    "deliverable.questions",
+  );
+  if (items?.length) return items;
+
+  // Fallback: from analysis
   if (output?.analysis?.commonQuestions?.length) {
     return output.analysis.commonQuestions.map((q: any) => ({ question: q.question, answer: q.suggestedAnswer }));
   }
   const score = output?.score;
   if (!score) return null;
-  const items: InvestorQAItem[] = [];
+  const fallback: InvestorQAItem[] = [];
   (score.gaps || []).forEach((gap: string, i: number) => {
-    items.push({
+    fallback.push({
       question: `How do you address: ${gap}?`,
       answer: (score.improvements || [])[i] || "Consider strengthening this area with specific data and examples.",
     });
   });
-  return items.length > 0 ? items : null;
+  return fallback.length > 0 ? fallback : null;
 }
 
 function synthesizePitchEmails(output: any, outputData: Record<string, any>): PitchEmailVariant[] | null {
   const od = outputData?.pitch_email;
-  if (od?.pitchEmails?.length) return od.pitchEmails;
+  console.log("[Render] pitch_email structure:", Object.keys(od || {}));
 
+  const emails = findData<PitchEmailVariant[]>(od,
+    "pitchEmails",
+    "deliverable.pitchEmails",
+    "data.pitchEmails",
+    "emails",
+    "deliverable.emails",
+    "variants",
+    "deliverable.variants",
+  );
+  if (emails?.length) return emails;
+
+  // Fallback: synthesize templates from legacy output
   const d = output?.data || output?.supporting || {};
   const thesis = d.thesis?.content || d.thesis || d.vision || "";
   const title = output?.title || "our company";
@@ -90,39 +119,112 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
 
 function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>): InvestmentMemoData | null {
   const od = outputData?.investment_memo;
-  if (od?.investmentMemo?.sections?.length) return od.investmentMemo;
+  console.log("[Render] investment_memo structure:", Object.keys(od || {}));
 
+  // Check all known paths for sections array
+  const sections = findData<{ heading: string; content: string }[]>(od,
+    "investmentMemo.sections",
+    "deliverable.sections",
+    "data.sections",
+    "sections",
+    "memo.sections",
+    "deliverable.investmentMemo.sections",
+  );
+  if (sections?.length) return { sections };
+
+  // Check for the investmentMemo wrapper object itself
+  const memoObj = findData<InvestmentMemoData>(od,
+    "investmentMemo",
+    "deliverable.investmentMemo",
+    "data.investmentMemo",
+  );
+  if (memoObj?.sections?.length) return memoObj;
+
+  // Fallback: synthesize from legacy output
   const d = output?.data || output?.supporting || {};
-  const sections: { heading: string; content: string }[] = [];
+  const fallback: { heading: string; content: string }[] = [];
   const thesis = d.thesis?.content || d.thesis || "";
-  if (thesis) sections.push({ heading: "Thesis", content: thesis });
+  if (thesis) fallback.push({ heading: "Thesis", content: thesis });
   const ns = d.narrativeStructure;
-  if (ns?.worldToday) sections.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
-  if (ns?.newModel) sections.push({ heading: "Solution", content: ns.newModel });
+  if (ns?.worldToday) fallback.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
+  if (ns?.newModel) fallback.push({ heading: "Solution", content: ns.newModel });
   const market = d.marketLogic;
-  if (market) sections.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
-  if (ns?.whyThisWins) sections.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
-  if (d.risks) sections.push({ heading: "Risks", content: d.risks });
-  if (d.whyNow) sections.push({ heading: "Why Now", content: d.whyNow });
-  if (ns?.theFuture) sections.push({ heading: "The Ask", content: ns.theFuture });
-  return sections.length > 0 ? { sections } : null;
+  if (market) fallback.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
+  if (ns?.whyThisWins) fallback.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
+  if (d.risks) fallback.push({ heading: "Risks", content: d.risks });
+  if (d.whyNow) fallback.push({ heading: "Why Now", content: d.whyNow });
+  if (ns?.theFuture) fallback.push({ heading: "The Ask", content: ns.theFuture });
+  return fallback.length > 0 ? { sections: fallback } : null;
 }
 
 function synthesizeBoardMemo(outputData: Record<string, any>): BoardMemoData | null {
   const od = outputData?.board_memo;
-  if (od?.boardMemo?.sections?.length) return od.boardMemo;
+  console.log("[Render] board_memo structure:", Object.keys(od || {}));
+
+  const sections = findData<{ heading: string; content: string }[]>(od,
+    "boardMemo.sections",
+    "deliverable.sections",
+    "data.sections",
+    "sections",
+    "deliverable.boardMemo.sections",
+  );
+  if (sections?.length) return { sections };
+
+  const memoObj = findData<BoardMemoData>(od,
+    "boardMemo",
+    "deliverable.boardMemo",
+    "data.boardMemo",
+  );
+  if (memoObj?.sections?.length) return memoObj;
+
   return null;
 }
 
 function synthesizeKeyMetrics(outputData: Record<string, any>): KeyMetricsSummaryData | null {
   const od = outputData?.key_metrics_summary;
-  if (od?.keyMetrics?.categories?.length) return od.keyMetrics;
+  console.log("[Render] key_metrics_summary structure:", Object.keys(od || {}));
+
+  const categories = findData<KeyMetricsSummaryData["categories"]>(od,
+    "keyMetrics.categories",
+    "deliverable.categories",
+    "data.categories",
+    "categories",
+    "deliverable.keyMetrics.categories",
+    "keyMetricsSummary.categories",
+  );
+  if (categories?.length) return { categories };
+
+  const metricsObj = findData<KeyMetricsSummaryData>(od,
+    "keyMetrics",
+    "deliverable.keyMetrics",
+    "data.keyMetrics",
+    "keyMetricsSummary",
+  );
+  if (metricsObj?.categories?.length) return metricsObj;
+
   return null;
 }
 
 function synthesizeStrategicMemo(outputData: Record<string, any>): StrategicMemoData | null {
   const od = outputData?.strategic_memo;
-  if (od?.strategicMemo?.sections?.length) return od.strategicMemo;
+  console.log("[Render] strategic_memo structure:", Object.keys(od || {}));
+
+  const sections = findData<{ heading: string; content: string }[]>(od,
+    "strategicMemo.sections",
+    "deliverable.sections",
+    "data.sections",
+    "sections",
+    "deliverable.strategicMemo.sections",
+  );
+  if (sections?.length) return { sections };
+
+  const memoObj = findData<StrategicMemoData>(od,
+    "strategicMemo",
+    "deliverable.strategicMemo",
+    "data.strategicMemo",
+  );
+  if (memoObj?.sections?.length) return memoObj;
+
   return null;
 }
 
