@@ -1,5 +1,6 @@
 import { useDecksmith } from "@/context/DecksmithContext";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { ArrowRight } from "lucide-react";
 import { ProjectSidebar } from "@/components/project/ProjectSidebar";
 import { OriginalInputSection } from "@/components/project/OriginalInputSection";
 import { DeckView } from "@/components/deliverable/DeckView";
