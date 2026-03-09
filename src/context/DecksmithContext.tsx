@@ -777,12 +777,13 @@ Return ONLY valid JSON, no markdown fences.`;
         saveQueueRef.current = saveQueueRef.current.then(async () => {
           const { data: project } = await supabase.from("projects").select("output_data").eq("id", activeProjectId).single();
           const existing = (project?.output_data as any) || {};
+          const completedTypes = selectedOutputs.filter(t => !(outputDataRef.current as any)?.[`${t}_error`]);
           const metadataUpdate = {
             ...existing,
-            intake_selections: intakeSelections,
+            intake_selections: intakeSelectionsRef.current,
             applied_suggestions: Array.from(appliedSuggestions),
             dismissed_suggestions: Array.from(dismissedSuggestions),
-            tab_order: intakeSelections?.outputs || existing.tab_order || [],
+            tab_order: completedTypes,
             score: (fullOutput as any)?.score || existing.score || null,
           };
           await supabase.from("projects").update({ output_data: metadataUpdate as any }).eq("id", activeProjectId);
