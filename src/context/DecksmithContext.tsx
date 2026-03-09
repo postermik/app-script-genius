@@ -1019,8 +1019,9 @@ Return ONLY valid JSON, no markdown fences.`;
         risks: narrativeData.risks || "",
         whyNow: narrativeData.whyNow || "",
       };
+      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514" },
+        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       let scoreContent = data.content;
