@@ -4,7 +4,7 @@ import { useDecksmith } from "@/context/DecksmithContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
+import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode } from "@/types/narrative";
 import type { IntakeSelections } from "@/types/rhetoric";
