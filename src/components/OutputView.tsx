@@ -35,7 +35,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
   // Check dedicated output data first
   const od = outputData?.elevator_pitch;
+  console.log("[ElevatorPitch] outputData.elevator_pitch:", JSON.stringify(od)?.slice(0, 500));
   if (od?.elevatorPitch) return od.elevatorPitch;
+  if (od?.deliverable?.elevatorPitch) return od.deliverable.elevatorPitch;
+  // Handle case where od itself is the pitch data
+  if (od?.thirtySecond && od?.sixtySecond) return od as ElevatorPitchData;
 
   const d = output?.data || output?.supporting || {};
   const pitchScript = d.pitchScript;
