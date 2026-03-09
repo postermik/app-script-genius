@@ -77,6 +77,10 @@ export default {
         "fade-in": { from: { opacity: "0", transform: "translateY(8px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         "fade-in-slow": { from: { opacity: "0" }, to: { opacity: "1" } },
         "slide-up": { from: { opacity: "0", transform: "translateY(16px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        "tab-glow": {
+          "0%": { color: "hsl(var(--electric))", textShadow: "0 0 8px hsl(var(--electric) / 0.6)" },
+          "100%": { color: "hsl(var(--electric))", textShadow: "0 0 0px transparent" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -84,6 +88,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "fade-in-slow": "fade-in-slow 0.8s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
+        "tab-glow": "tab-glow 1s ease-out forwards",
       },
     },
   },
