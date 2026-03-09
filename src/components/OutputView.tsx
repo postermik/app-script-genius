@@ -24,6 +24,7 @@ import { Layout, RefreshCw } from "lucide-react";
 import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData, BoardMemoData, KeyMetricsSummaryData, StrategicMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
+import { findData } from "@/lib/findData";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
