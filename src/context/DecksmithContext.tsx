@@ -67,6 +67,7 @@ interface DecksmithContextType {
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
   completedOutputs: Set<string>;
+  generationOutputs: OutputDeliverable[];
   coreNarrative: CoreNarrativeData | null;
   outputData: Record<string, any>;
 }
