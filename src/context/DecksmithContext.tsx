@@ -557,6 +557,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const sectionHeadings = CORE_NARRATIVE_SECTIONS[purpose];
     
     const promptSuffix = `\n\n---\nGENERATION INSTRUCTIONS:
+STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
+
 Generate a complete narrative analysis. Return a JSON object with:
 1. "coreNarrative": An object with "sections" array. Each section must have "heading" and "content" (3-5 sentence paragraph). Use these exact headings: ${sectionHeadings.map(h => `"${h}"`).join(", ")}
 2. "supporting": Object with thesis, narrativeStructure, pitchScript, marketLogic, risks, whyNow fields
@@ -651,8 +653,8 @@ Return ONLY valid JSON, no markdown fences.`;
     };
 
     const prompt = outputPrompts[outputType] || "";
-    // Derivative outputs only need the Core Narrative — skip the original input to cut tokens
-    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    const noEmDash = `STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.\n`;
+    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
 
@@ -925,8 +927,9 @@ Return ONLY valid JSON, no markdown fences.`;
     try {
       const sourceObj = (output as any).supporting || output.data || {};
       const currentContent = getNestedValue(sourceObj, path);
+      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514" },
+        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       const refined = data.content;
@@ -1016,8 +1019,9 @@ Return ONLY valid JSON, no markdown fences.`;
         risks: narrativeData.risks || "",
         whyNow: narrativeData.whyNow || "",
       };
+      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514" },
+        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       let scoreContent = data.content;
