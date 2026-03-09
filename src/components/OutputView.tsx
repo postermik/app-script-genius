@@ -422,6 +422,12 @@ export function OutputView() {
                 <div className="min-h-[400px] animate-tab-enter" key={activeOutputTab}>
                   {renderOutputContent()}
                 </div>
+                <AllOutputsReadyCard
+                  selectedOutputs={selectedOutputs}
+                  completedOutputs={completedOutputs}
+                  isGenerating={isGenerating || false}
+                  onGoToScore={() => setActiveTab("score")}
+                />
               </>
             )}
 
