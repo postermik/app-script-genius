@@ -4,9 +4,9 @@ import { useDecksmith } from "@/context/DecksmithContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload } from "lucide-react";
+import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { OutputMode } from "@/types/narrative";
+import type { OutputMode, Project } from "@/types/narrative";
 import type { IntakeSelections } from "@/types/rhetoric";
 import { sortBySpeed } from "@/lib/outputOrder";
 import { formatDistanceToNow } from "date-fns";
@@ -159,35 +159,74 @@ export function ProductView() {
             {isGenerating && <GenerationStepper />}
           </div>
         </div>
-        {!isGenerating && !showIntake && projects.length > 0 && (
+        {!isGenerating && !showIntake && (
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {projects.slice(0, 6).map((project) => (
-                <div key={project.id} className="card-gradient border border-border rounded-sm p-5 group cursor-pointer hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all" onClick={() => openProject(project)}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5 line-clamp-2">
-                        {project.title}
-                        {project.detected_intent === "evaluate" && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0">Evaluation</span>
-                        )}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-1">{project.mode.replace("_", " ")} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}</p>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); duplicateProject(project.id); }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Duplicate"><Copy className="h-3 w-3" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete"><Trash2 className="h-3 w-3" /></button>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground group-hover:text-electric transition-colors">Open <ArrowRight className="h-3 w-3 ml-1" /></div>
-                </div>
-              ))}
-            </div>
+            {projects.length === 0 ? (
+              <div className="card-gradient border border-border rounded-sm p-10 flex flex-col items-center text-center">
+                <FileText className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                <p className="text-sm text-muted-foreground">No projects yet.</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Paste your narrative above to get started.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {projects.slice(0, 6).map((project) => (
+                  <RecentProjectTile key={project.id} project={project} onOpen={() => openProject(project)} onDelete={() => deleteProject(project.id)} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
       <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+    </div>
+  );
+}
+
+const MODE_LABELS: Record<string, string> = {
+  fundraising: "Fundraising",
+  board_update: "Board Meeting",
+  board_meeting: "Board Meeting",
+  strategy: "Strategy",
+};
+
+function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyPrompt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(project.raw_input || "");
+    setCopied(true);
+    toast.success("Prompt copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="card-gradient border border-border rounded-sm p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all">
+      <div className="flex items-start justify-between mb-1.5">
+        <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1 min-w-0">
+          {project.title}
+          {project.detected_intent === "evaluate" && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
+          )}
+        </h3>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+          <button onClick={copyPrompt} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+            {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+      </p>
+      <div className="mt-auto">
+        <button onClick={onOpen} className="flex items-center text-xs text-muted-foreground hover:text-electric transition-colors cursor-pointer">
+          Open <ArrowRight className="h-3 w-3 ml-1" />
+        </button>
+      </div>
     </div>
   );
 }
