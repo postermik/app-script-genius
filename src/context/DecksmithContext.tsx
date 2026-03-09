@@ -927,8 +927,9 @@ Return ONLY valid JSON, no markdown fences.`;
     try {
       const sourceObj = (output as any).supporting || output.data || {};
       const currentContent = getNestedValue(sourceObj, path);
+      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514" },
+        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       const refined = data.content;
