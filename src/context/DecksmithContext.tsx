@@ -857,7 +857,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
-      setCompletedOutputs(prev => new Set(prev).add(outputType));
+      // completedOutputs is derived from outputData — no manual set needed
       saveOutputIncremental(outputType, result);
 
       // Merge slides into output
