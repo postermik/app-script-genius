@@ -137,6 +137,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   coreNarrativeRef.current = coreNarrative;
   const intakeSelectionsRef = useRef(intakeSelections);
   intakeSelectionsRef.current = intakeSelections;
+  const setIntakeSelectionsWithRef = useCallback((s: IntakeSelections | null) => {
+    intakeSelectionsRef.current = s;
+    setIntakeSelections(s);
+  }, []);
 
   // Batch save removed — incremental saves handle output content.
   // Metadata-only save happens at end of generate() via saveQueueRef.
@@ -683,12 +687,12 @@ Return ONLY valid JSON, no markdown fences.`;
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    const currentIntake = intakeSelectionsRef.current;
+    const currentIntake = intakeSelectionsRef.current || intakeSelections;
     const purpose = currentIntake?.purpose || "fundraising";
     const selectedOutputs = currentIntake?.outputs || ["slide_framework"];
 
-    console.log("[Generation] intakeSelectionsRef.current:", JSON.stringify(currentIntake));
-    console.log(`[Generation] Starting generation for: ${selectedOutputs.join(", ")}`);
+    console.log("[Generation] currentIntake:", JSON.stringify(currentIntake));
+    console.log("[Generation] Selected outputs:", selectedOutputs);
 
     try {
       // Step 1: Generate Core Narrative (always first)
@@ -1275,7 +1279,7 @@ Return ONLY valid JSON, no markdown fences.`;
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
         activeAudience, setActiveAudience, audienceVariants, adaptForAudience, isAdapting,
         isStreaming, streamingText, stopGenerating,
-        intakeSelections, setIntakeSelections,
+        intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
         generateOutput,
         completedOutputs, coreNarrative, outputData,
