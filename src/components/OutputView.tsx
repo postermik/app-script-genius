@@ -173,8 +173,7 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
   );
 }
 
-
-  const {
+export function OutputView() {
     output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
