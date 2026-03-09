@@ -241,26 +241,31 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     loadProjects();
   }, [session, currentProjectId, rawInput, loadProjects, coreNarrative, outputData, intakeSelections, appliedSuggestions, dismissedSuggestions]);
 
-  // Incremental save: persist a single output to output_data column
-  const saveOutputIncremental = useCallback(async (outputType: string, result: any, projectId?: string) => {
-    const pid = projectId || currentProjectId;
-    if (!pid) {
-      console.warn(`[Persistence] No project ID for saving ${outputType}, skipping`);
-      return;
-    }
-    try {
-      // Fetch current output_data, merge the new output, and save back
-      const { data: project } = await supabase.from("projects").select("output_data").eq("id", pid).single();
-      const existing = (project?.output_data as any) || {};
-      const updated = { ...existing, [outputType]: result };
-      await supabase.from("projects").update({
-        output_data: updated as any,
-      }).eq("id", pid);
-      console.log(`[Persistence] Saved ${outputType} incrementally to project ${pid}`);
-      console.log("[Persistence] Saved to output_data:", JSON.stringify(updated).substring(0, 500));
-    } catch (e) {
-      console.warn(`[Persistence] Failed to save ${outputType} incrementally:`, e);
-    }
+  // Serialized save queue to prevent concurrent read-then-write races
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  // Incremental save: persist a single output to output_data column (serialized)
+  const saveOutputIncremental = useCallback((outputType: string, result: any, projectId?: string) => {
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      const pid = projectId || currentProjectId;
+      if (!pid) {
+        console.warn(`[Persistence] No project ID for saving ${outputType}, skipping`);
+        return;
+      }
+      try {
+        const { data: project } = await supabase.from("projects").select("output_data").eq("id", pid).single();
+        const existing = (project?.output_data as any) || {};
+        const updated = { ...existing, [outputType]: result };
+        await supabase.from("projects").update({
+          output_data: updated as any,
+        }).eq("id", pid);
+        console.log(`[Persistence] Saved ${outputType} incrementally to project ${pid}`);
+        console.log("[Persistence] Saved to output_data:", JSON.stringify(updated).substring(0, 500));
+      } catch (e) {
+        console.warn(`[Persistence] Failed to save ${outputType} incrementally:`, e);
+      }
+    });
+    return saveQueueRef.current;
   }, [currentProjectId]);
 
   const startLoadingPhases = useCallback(() => {
