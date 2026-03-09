@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
 import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
@@ -104,11 +104,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
-  const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
   const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+  const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
+
+  // Derive completedOutputs from actual data — no separate state to go stale
+  const completedOutputs = useMemo(() => {
+    const set = new Set<string>();
+    if (coreNarrative?.sections?.length) set.add("core_narrative");
+    for (const key of Object.keys(outputData)) {
+      if (!key.endsWith("_error") && !key.endsWith("_rawResponse")) {
+        set.add(key);
+      }
+    }
+    if (scoringComplete) set.add("_scoring");
+    return set;
+  }, [coreNarrative, outputData, scoringComplete]);
 
   useEffect(() => {
     if (!output) return;
@@ -685,7 +698,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setOutput(null);
     setCoreNarrative(null);
     setOutputData({});
-    setCompletedOutputs(new Set());
+    setScoringComplete(false);
     startLoadingPhases();
 
     const abortController = new AbortController();
@@ -706,7 +719,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setCoreNarrative(cn);
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
-      setCompletedOutputs(prev => new Set(prev).add("core_narrative"));
+      // completedOutputs is derived from coreNarrative — no manual set needed
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
@@ -753,7 +766,7 @@ Return ONLY valid JSON, no markdown fences.`;
           
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
-          setCompletedOutputs(prev => new Set(prev).add(outputType));
+          // completedOutputs is derived from outputData — no manual set needed
 
           // Save this output to DB immediately, passing the known project ID
           saveOutputIncremental(outputType, result, activeProjectId);
@@ -803,7 +816,7 @@ Return ONLY valid JSON, no markdown fences.`;
       }
 
       // Step 3: Mark scoring complete (score comes from core narrative generation)
-      setCompletedOutputs(prev => new Set(prev).add("_scoring"));
+      setScoringComplete(true);
 
       // Increment generation count (project already saved via incremental saves + initial create above)
       const newCount = generationCount + 1;
@@ -844,7 +857,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
-      setCompletedOutputs(prev => new Set(prev).add(outputType));
+      // completedOutputs is derived from outputData — no manual set needed
       saveOutputIncremental(outputType, result);
 
       // Merge slides into output
@@ -1092,7 +1105,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setDismissedSuggestions(new Set());
     setCoreNarrative(null);
     setOutputData({});
-    setCompletedOutputs(new Set());
+    setScoringComplete(false);
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
@@ -1172,10 +1185,10 @@ Return ONLY valid JSON, no markdown fences.`;
         completed.add(key);
       }
       completed.add("_scoring");
-      setCompletedOutputs(completed);
+      setScoringComplete(true);
     } else {
       setOutputData({});
-      setCompletedOutputs(new Set());
+      setScoringComplete(false);
     }
 
     // Restore intake selections
