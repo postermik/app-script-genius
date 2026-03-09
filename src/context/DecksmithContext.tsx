@@ -142,16 +142,21 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isGenerating && currentProjectId && coreNarrative && Object.keys(outputData).length > 0) {
       const timer = setTimeout(async () => {
+        // Read existing output_data first to merge with incremental saves
+        const { data: project } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+        const existing = (project?.output_data as any) || {};
         const persistPayload = {
-          core_narrative: coreNarrativeRef.current,
+          ...existing,
+          core_narrative: coreNarrativeRef.current || existing.core_narrative,
           ...outputDataRef.current,
           intake_selections: intakeSelectionsRef.current,
           applied_suggestions: Array.from(appliedSuggestions),
           dismissed_suggestions: Array.from(dismissedSuggestions),
-          tab_order: intakeSelectionsRef.current?.outputs || [],
+          tab_order: intakeSelectionsRef.current?.outputs || existing.tab_order || [],
         };
-        console.log("[Persistence] Saving all output data to database...");
-        console.log("[Persistence] Saved to output_data:", JSON.stringify(persistPayload).substring(0, 500));
+        console.log("[Persistence] Batch save merging with existing data...");
+        console.log("[Persistence] Existing keys:", Object.keys(existing));
+        console.log("[Persistence] Merged to output_data:", JSON.stringify(persistPayload).substring(0, 500));
         await supabase.from("projects").update({
           output_data: persistPayload as any,
         }).eq("id", currentProjectId);
