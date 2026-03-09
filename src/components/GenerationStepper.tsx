@@ -67,6 +67,8 @@ export function GenerationStepper() {
     return null;
   }, [steps, completedOutputs]);
 
+  console.log("[Stepper] completedOutputs:", Array.from(completedOutputs), "generationOutputs:", generationOutputs);
+
   if (collapsed) return null;
 
   return (
