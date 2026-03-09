@@ -104,7 +104,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
-  const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  // completedOutputs is now derived, not stored as state — see useMemo below
   const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
