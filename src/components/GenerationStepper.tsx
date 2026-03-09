@@ -1,10 +1,9 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { OutputDeliverable } from "@/types/rhetoric";
 
 interface OutputStep {
   key: string;
@@ -28,59 +27,62 @@ export function GenerationStepper() {
   const { isGenerating, isGeneratingSlides, intakeSelections, coreNarrative, outputData } = useDecksmith();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Derive selected outputs from intake selections or from what's actually in outputData
-  const selectedOutputs = useMemo(() => {
-    const fromIntake = intakeSelections?.outputs;
-    if (fromIntake && fromIntake.length > 0) return fromIntake;
-    const fromOutputData = Object.keys(outputData).filter(
+  // ── All derivations are inline — no useMemo, no stale closures ──
+
+  // 1. Which outputs are selected?
+  const fromIntake = intakeSelections?.outputs;
+  let selectedOutputs: string[];
+  if (fromIntake && fromIntake.length > 0) {
+    selectedOutputs = fromIntake;
+  } else {
+    const fromData = Object.keys(outputData).filter(
       k => !k.endsWith("_error") && !k.endsWith("_rawResponse") && OUTPUT_STEP_MAP[k]
     );
-    if (fromOutputData.length > 0) return fromOutputData;
-    return ["slide_framework"];
-  }, [intakeSelections, outputData]);
+    selectedOutputs = fromData.length > 0 ? fromData : ["slide_framework"];
+  }
 
-  // Derive completed outputs from actual data presence
-  const completedOutputs = useMemo(() => {
-    const completed = new Set<string>();
-    if (coreNarrative?.sections?.length) {
-      completed.add("core_narrative");
-      completed.add("_analyzing");
+  // 2. Which outputs are complete? (check actual data presence)
+  const completedKeys = new Set<string>();
+  const hasCoreNarrative = !!(coreNarrative?.sections?.length);
+  if (hasCoreNarrative) {
+    completedKeys.add("core_narrative");
+    completedKeys.add("_analyzing");
+  }
+  const outputDataKeys = Object.keys(outputData);
+  for (let i = 0; i < outputDataKeys.length; i++) {
+    const key = outputDataKeys[i];
+    if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && outputData[key]) {
+      completedKeys.add(key);
     }
-    for (const key of Object.keys(outputData)) {
-      if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && outputData[key]) {
-        completed.add(key);
-      }
-    }
-    // Mark scoring complete if we have core narrative (score comes with it)
-    if (coreNarrative?.sections?.length && !isGenerating) {
-      completed.add("_scoring");
-    }
-    return completed;
-  }, [coreNarrative, outputData, isGenerating]);
-
-  // Steps: Analyzing -> Core Narrative -> selected outputs -> Scoring
-  const steps = useMemo(() => {
-    const result: OutputStep[] = [
-      { key: "_analyzing", label: "Analyzing", icon: Search },
-      OUTPUT_STEP_MAP.core_narrative,
-    ];
-    selectedOutputs
-      .filter(o => o !== "core_narrative")
-      .forEach(o => { if (OUTPUT_STEP_MAP[o]) result.push(OUTPUT_STEP_MAP[o]); });
-    result.push({ key: "_scoring", label: "Scoring", icon: Target });
-    return result;
-  }, [selectedOutputs.join(",")]);
-
+  }
   const stillRunning = isGenerating || isGeneratingSlides;
+  if (hasCoreNarrative && !stillRunning) {
+    completedKeys.add("_scoring");
+  }
 
-  const isStepComplete = (step: OutputStep): boolean => {
-    if (step.key === "_analyzing") return completedOutputs.has("core_narrative");
-    return completedOutputs.has(step.key);
-  };
+  // 3. Build step list
+  const steps: OutputStep[] = [
+    { key: "_analyzing", label: "Analyzing", icon: Search },
+    OUTPUT_STEP_MAP.core_narrative,
+  ];
+  for (const o of selectedOutputs) {
+    if (o !== "core_narrative" && OUTPUT_STEP_MAP[o]) {
+      steps.push(OUTPUT_STEP_MAP[o]);
+    }
+  }
+  steps.push({ key: "_scoring", label: "Scoring", icon: Target });
 
-  const allDone = !stillRunning && completedOutputs.has("_scoring");
+  // 4. Derived booleans
+  const allDone = !stillRunning && completedKeys.has("_scoring");
 
-  // Auto-collapse 3s after all done
+  // Find first non-complete step
+  let activeStepKey: string | null = null;
+  for (const step of steps) {
+    const done = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
+    if (!done) { activeStepKey = step.key; break; }
+  }
+
+  // Auto-collapse after completion
   useEffect(() => {
     if (allDone) {
       const timer = setTimeout(() => setCollapsed(true), 3000);
@@ -89,13 +91,8 @@ export function GenerationStepper() {
     setCollapsed(false);
   }, [allDone]);
 
-  // First non-complete step = active (shows dots)
-  const activeStepKey = useMemo(() => {
-    for (const step of steps) {
-      if (!isStepComplete(step)) return step.key;
-    }
-    return null;
-  }, [steps, completedOutputs]);
+  // Debug — remove after confirming fix
+  console.log("[Stepper] outputData keys:", outputDataKeys, "completedKeys:", Array.from(completedKeys), "stillRunning:", stillRunning);
 
   if (collapsed) return null;
 
@@ -103,7 +100,7 @@ export function GenerationStepper() {
     <div className={`flex flex-col transition-opacity duration-500 ${allDone ? "opacity-60" : "animate-fade-in"}`}>
       <div className="space-y-0.5">
         {steps.map((step) => {
-          const complete = isStepComplete(step);
+          const complete = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
           const isActive = step.key === activeStepKey && stillRunning;
           const isPending = !complete && !isActive;
           const StepIcon = step.icon;
