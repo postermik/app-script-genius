@@ -772,6 +772,24 @@ Return ONLY valid JSON, no markdown fences.`;
 
       await Promise.allSettled(outputPromises);
 
+      // Save metadata only (suggestions, tab order, score) — output content already saved incrementally
+      if (activeProjectId) {
+        saveQueueRef.current = saveQueueRef.current.then(async () => {
+          const { data: project } = await supabase.from("projects").select("output_data").eq("id", activeProjectId).single();
+          const existing = (project?.output_data as any) || {};
+          const metadataUpdate = {
+            ...existing,
+            intake_selections: intakeSelections,
+            applied_suggestions: Array.from(appliedSuggestions),
+            dismissed_suggestions: Array.from(dismissedSuggestions),
+            tab_order: intakeSelections?.outputs || existing.tab_order || [],
+            score: (fullOutput as any)?.score || existing.score || null,
+          };
+          await supabase.from("projects").update({ output_data: metadataUpdate as any }).eq("id", activeProjectId);
+          console.log("[Persistence] Final metadata save complete. Keys:", Object.keys(metadataUpdate));
+        });
+      }
+
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setCompletedOutputs(prev => new Set(prev).add("_scoring"));
 
