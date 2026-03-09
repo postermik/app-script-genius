@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
@@ -27,8 +27,8 @@ const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
 export function GenerationStepper() {
   const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs } = useDecksmith();
   const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Build steps: Analyzing → Core Narrative → selected outputs (in stored order) → Scoring → Done
   const steps = useMemo(() => {
     const result: OutputStep[] = [
       { key: "_analyzing", label: "Analyzing", icon: Search },
@@ -38,53 +38,55 @@ export function GenerationStepper() {
       .filter(o => o !== "core_narrative")
       .forEach(o => { if (OUTPUT_STEP_MAP[o]) result.push(OUTPUT_STEP_MAP[o]); });
     result.push({ key: "_scoring", label: "Scoring", icon: Target });
-    result.push({ key: "_done", label: "Complete", icon: CheckCircle });
     return result;
   }, [selectedOutputs.join(",")]);
 
   const stillRunning = isGenerating || isGeneratingSlides;
 
-  // Derive completion per step directly from completedOutputs
   const isStepComplete = (step: OutputStep): boolean => {
     if (step.key === "_analyzing") return completedOutputs.has("core_narrative");
-    if (step.key === "_done") return !stillRunning && completedOutputs.has("_scoring");
     return completedOutputs.has(step.key);
   };
 
+  const allDone = !stillRunning && completedOutputs.has("_scoring");
+
+  // Auto-collapse 3s after all done
+  useEffect(() => {
+    if (allDone) {
+      const timer = setTimeout(() => setCollapsed(true), 3000);
+      return () => clearTimeout(timer);
+    }
+    setCollapsed(false);
+  }, [allDone]);
+
   // Find the first non-complete step to mark as active
   const activeStepKey = useMemo(() => {
-    if (!stillRunning && completedOutputs.size > 0) return "_done";
     for (const step of steps) {
       if (!isStepComplete(step)) return step.key;
     }
-    return "_done";
-  }, [steps, completedOutputs, stillRunning]);
+    return null;
+  }, [steps, completedOutputs]);
 
-  // Determine which steps to show
-  const allDone = !stillRunning && completedOutputs.has("_scoring");
+  if (collapsed) return null;
 
   return (
-    <div className="flex flex-col animate-fade-in">
+    <div className={`flex flex-col transition-opacity duration-500 ${allDone ? "opacity-60" : "animate-fade-in"}`}>
       <div className="space-y-0.5">
         {steps.map((step) => {
           const complete = isStepComplete(step);
           const isActive = step.key === activeStepKey && stillRunning;
-          const isDoneStep = step.key === "_done";
+          const isPending = !complete && !isActive;
           const StepIcon = step.icon;
 
-          // Hide the Done step unless generation finished
-          if (isDoneStep && !allDone) return null;
-          // Hide steps that haven't started yet and aren't the active step
-          if (!complete && !isActive && !isDoneStep) return null;
-
           return (
-            <div key={step.key} className="flex items-center gap-2 py-0.5 animate-fade-in">
+            <div key={step.key} className={`flex items-center gap-2 py-0.5 transition-all duration-300 ${isPending ? "opacity-40" : "animate-fade-in"}`}>
               <div className={`
                 flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-300
-                ${complete || isDoneStep ? "bg-emerald-500/20 text-emerald-400" : ""}
+                ${complete ? "bg-emerald-500/20 text-emerald-400" : ""}
                 ${isActive ? "bg-primary/15 text-primary" : ""}
+                ${isPending ? "bg-muted/30 text-muted-foreground" : ""}
               `}>
-                {complete || isDoneStep ? (
+                {complete ? (
                   <CheckCircle className="w-2.5 h-2.5" />
                 ) : (
                   <StepIcon className={`w-2.5 h-2.5 ${isActive ? "animate-pulse" : ""}`} />
@@ -92,9 +94,9 @@ export function GenerationStepper() {
               </div>
               <span className={`
                 text-[10px] leading-tight transition-all duration-300
-                ${complete || isDoneStep ? "text-emerald-400/80" : ""}
+                ${complete ? "text-emerald-400/80" : ""}
                 ${isActive ? "text-primary font-medium" : ""}
-                ${!complete && !isActive && !isDoneStep ? "text-muted-foreground" : ""}
+                ${isPending ? "text-muted-foreground" : ""}
               `}>
                 {step.label}
               </span>
@@ -108,6 +110,16 @@ export function GenerationStepper() {
             </div>
           );
         })}
+
+        {/* Final complete row */}
+        {allDone && (
+          <div className="flex items-center gap-2 py-0.5 animate-fade-in">
+            <div className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 bg-emerald-500/20 text-emerald-400">
+              <CheckCircle className="w-2.5 h-2.5" />
+            </div>
+            <span className="text-[10px] leading-tight text-emerald-400/80 font-medium">Complete</span>
+          </div>
+        )}
       </div>
     </div>
   );
