@@ -683,9 +683,11 @@ Return ONLY valid JSON, no markdown fences.`;
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    const purpose = intakeSelections?.purpose || "fundraising";
-    const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
+    const currentIntake = intakeSelectionsRef.current;
+    const purpose = currentIntake?.purpose || "fundraising";
+    const selectedOutputs = currentIntake?.outputs || ["slide_framework"];
 
+    console.log("[Generation] intakeSelectionsRef.current:", JSON.stringify(currentIntake));
     console.log(`[Generation] Starting generation for: ${selectedOutputs.join(", ")}`);
 
     try {
