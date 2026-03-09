@@ -557,6 +557,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const sectionHeadings = CORE_NARRATIVE_SECTIONS[purpose];
     
     const promptSuffix = `\n\n---\nGENERATION INSTRUCTIONS:
+STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
+
 Generate a complete narrative analysis. Return a JSON object with:
 1. "coreNarrative": An object with "sections" array. Each section must have "heading" and "content" (3-5 sentence paragraph). Use these exact headings: ${sectionHeadings.map(h => `"${h}"`).join(", ")}
 2. "supporting": Object with thesis, narrativeStructure, pitchScript, marketLogic, risks, whyNow fields
