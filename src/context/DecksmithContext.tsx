@@ -653,8 +653,8 @@ Return ONLY valid JSON, no markdown fences.`;
     };
 
     const prompt = outputPrompts[outputType] || "";
-    // Derivative outputs only need the Core Narrative — skip the original input to cut tokens
-    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    const noEmDash = `STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.\n`;
+    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
 
