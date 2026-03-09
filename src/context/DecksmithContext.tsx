@@ -694,6 +694,7 @@ Return ONLY valid JSON, no markdown fences.`;
     const currentIntake = intakeSelectionsRef.current || intakeSelections;
     const purpose = currentIntake?.purpose || "fundraising";
     const selectedOutputs = currentIntake?.outputs || ["slide_framework"];
+    setGenerationOutputs(selectedOutputs);
 
     console.log("[Generation] currentIntake:", JSON.stringify(currentIntake));
     console.log("[Generation] Selected outputs:", selectedOutputs);
