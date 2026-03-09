@@ -105,6 +105,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
