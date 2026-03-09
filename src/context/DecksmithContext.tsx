@@ -683,12 +683,12 @@ Return ONLY valid JSON, no markdown fences.`;
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    const currentIntake = intakeSelectionsRef.current;
+    const currentIntake = intakeSelectionsRef.current || intakeSelections;
     const purpose = currentIntake?.purpose || "fundraising";
     const selectedOutputs = currentIntake?.outputs || ["slide_framework"];
 
-    console.log("[Generation] intakeSelectionsRef.current:", JSON.stringify(currentIntake));
-    console.log(`[Generation] Starting generation for: ${selectedOutputs.join(", ")}`);
+    console.log("[Generation] currentIntake:", JSON.stringify(currentIntake));
+    console.log("[Generation] Selected outputs:", selectedOutputs);
 
     try {
       // Step 1: Generate Core Narrative (always first)
