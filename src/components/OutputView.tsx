@@ -1,5 +1,6 @@
 import { useDecksmith } from "@/context/DecksmithContext";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { ArrowRight } from "lucide-react";
 import { ProjectSidebar } from "@/components/project/ProjectSidebar";
 import { OriginalInputSection } from "@/components/project/OriginalInputSection";
 import { DeckView } from "@/components/deliverable/DeckView";
@@ -125,6 +126,52 @@ function synthesizeStrategicMemo(outputData: Record<string, any>): StrategicMemo
   return null;
 }
 
+function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, onGoToScore }: {
+  selectedOutputs: string[];
+  completedOutputs: Set<string>;
+  isGenerating: boolean;
+  onGoToScore: () => void;
+}) {
+  const [dismissed, setDismissed] = useState(false);
+  const [wasGenerating, setWasGenerating] = useState(false);
+
+  // Track that generation was happening
+  useEffect(() => {
+    if (isGenerating) setWasGenerating(true);
+  }, [isGenerating]);
+
+  const allDone = wasGenerating && !isGenerating && selectedOutputs.every(t => completedOutputs.has(t));
+
+  // Auto-dismiss after 10s
+  useEffect(() => {
+    if (allDone && !dismissed) {
+      const timer = setTimeout(() => setDismissed(true), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [allDone, dismissed]);
+
+  // Reset when new generation starts
+  useEffect(() => {
+    if (isGenerating) setDismissed(false);
+  }, [isGenerating]);
+
+  if (!allDone || dismissed) return null;
+
+  return (
+    <div className="mt-6 animate-fade-in">
+      <button
+        onClick={() => { onGoToScore(); setDismissed(true); }}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 hover:border-emerald/30 transition-colors group"
+      >
+        <p className="text-xs text-foreground/80">
+          <span className="font-medium text-emerald">All outputs ready.</span>{" "}
+          Check your Capital Readiness Score
+        </p>
+        <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
+      </button>
+    </div>
+  );
+}
 
 export function OutputView() {
   const {
@@ -421,6 +468,12 @@ export function OutputView() {
                 <div className="min-h-[400px] animate-tab-enter" key={activeOutputTab}>
                   {renderOutputContent()}
                 </div>
+                <AllOutputsReadyCard
+                  selectedOutputs={selectedOutputs}
+                  completedOutputs={completedOutputs}
+                  isGenerating={isGenerating || false}
+                  onGoToScore={() => setActiveTab("score")}
+                />
               </>
             )}
 

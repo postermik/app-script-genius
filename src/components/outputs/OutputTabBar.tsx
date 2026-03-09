@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Zap } from "lucide-react";
 import type { OutputDeliverable, IntakePurpose } from "@/types/rhetoric";
 import { OUTPUT_LABELS, sortBySpeed } from "@/lib/outputOrder";
@@ -17,8 +17,37 @@ interface Props {
 export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpose, completedOutputs, isGenerating }: Props) {
   const [showAddOptions, setShowAddOptions] = useState(false);
   const [pendingOutputs, setPendingOutputs] = useState<Set<OutputDeliverable>>(new Set());
+  const [glowingTabs, setGlowingTabs] = useState<Set<string>>(new Set());
+  const prevCompleted = useRef<Set<string>>(new Set());
 
-  // Available outputs depend on the current purpose
+  // Detect newly completed tabs and trigger glow
+  useEffect(() => {
+    if (!completedOutputs) return;
+    const newlyCompleted: string[] = [];
+    completedOutputs.forEach(tab => {
+      if (!prevCompleted.current.has(tab) && tab !== "_scoring" && tab !== "_analyzing") {
+        newlyCompleted.push(tab);
+      }
+    });
+    prevCompleted.current = new Set(completedOutputs);
+
+    if (newlyCompleted.length > 0) {
+      setGlowingTabs(prev => {
+        const next = new Set(prev);
+        newlyCompleted.forEach(t => next.add(t));
+        return next;
+      });
+      // Remove glow after 1s
+      setTimeout(() => {
+        setGlowingTabs(prev => {
+          const next = new Set(prev);
+          newlyCompleted.forEach(t => next.delete(t));
+          return next;
+        });
+      }, 1000);
+    }
+  }, [completedOutputs]);
+
   const allForPurpose = purpose ? INTENT_OUTPUTS[purpose].map(o => o.value) : [];
   const availableToAdd = allForPurpose.filter(o => !tabs.includes(o));
 
@@ -45,16 +74,19 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpos
           const active = activeTab === tab;
           const isCompleted = completedOutputs?.has(tab);
           const isLoading = isGenerating && !isCompleted && tab !== "core_narrative";
+          const isGlowing = glowingTabs.has(tab);
           return (
             <button
               key={tab}
               onClick={() => onTabChange(tab)}
               className={`relative px-4 py-3 text-xs font-medium transition-colors whitespace-nowrap ${
-                active
-                  ? "text-electric"
-                  : isLoading
-                    ? "text-muted-foreground/50"
-                    : "text-secondary-foreground hover:text-foreground"
+                isGlowing
+                  ? "animate-tab-glow"
+                  : active
+                    ? "text-electric"
+                    : isLoading
+                      ? "text-muted-foreground/50"
+                      : "text-secondary-foreground hover:text-foreground"
               }`}
             >
               {OUTPUT_LABELS[tab] || tab}

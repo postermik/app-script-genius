@@ -91,8 +91,23 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const improvements = score.improvements || [];
   const appliedCount = appliedSuggestions.size;
 
+  // Find lowest-scoring dimension
+  const lowestEntry = Object.entries(components).reduce<[string, number] | null>((min, [key, value]) => {
+    if (!min || value < min[1]) return [key, value];
+    return min;
+  }, null);
+
   return (
     <div className="space-y-4">
+      {/* Biggest opportunity callout */}
+      {lowestEntry && lowestEntry[1] < 80 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-yellow-400/20 bg-yellow-400/5 animate-fade-in">
+          <Lightbulb className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+          <p className="text-xs text-foreground/80 flex-1">
+            <span className="font-medium">Biggest opportunity:</span> {getLabel(lowestEntry[0])} ({lowestEntry[1]}). Apply a suggestion below to improve it.
+          </p>
+        </div>
+      )}
       {/* Applied suggestions re-score prompt */}
       {appliedCount > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5">
