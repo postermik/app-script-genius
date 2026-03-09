@@ -1289,7 +1289,7 @@ Return ONLY valid JSON, no markdown fences.`;
         intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
         generateOutput,
-        completedOutputs, coreNarrative, outputData,
+        completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));
           setOutput((prev: any) => {

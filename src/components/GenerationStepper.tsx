@@ -25,8 +25,8 @@ const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
 };
 
 export function GenerationStepper() {
-  const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs } = useDecksmith();
-  const selectedOutputs = intakeSelections?.outputs || ["slide_framework"];
+  const { isGenerating, isGeneratingSlides, generationOutputs, completedOutputs } = useDecksmith();
+  const selectedOutputs = generationOutputs.length > 0 ? generationOutputs : ["slide_framework"] as OutputDeliverable[];
   const [collapsed, setCollapsed] = useState(false);
 
   const steps = useMemo(() => {
