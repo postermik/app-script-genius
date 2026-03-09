@@ -104,11 +104,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
-  // completedOutputs is now derived, not stored as state — see useMemo below
   const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+  const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
+
+  // Derive completedOutputs from actual data — no separate state to go stale
+  const completedOutputs = useMemo(() => {
+    const set = new Set<string>();
+    if (coreNarrative?.sections?.length) set.add("core_narrative");
+    for (const key of Object.keys(outputData)) {
+      if (!key.endsWith("_error") && !key.endsWith("_rawResponse")) {
+        set.add(key);
+      }
+    }
+    if (scoringComplete) set.add("_scoring");
+    return set;
+  }, [coreNarrative, outputData, scoringComplete]);
 
   useEffect(() => {
     if (!output) return;
