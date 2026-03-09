@@ -1186,7 +1186,7 @@ Return ONLY valid JSON, no markdown fences.`;
         intent: persisted.intent || "create",
       };
       // Reconstruct deliverable from persisted slide_framework
-      const slideFw = restoredOutputData.slide_framework?.deckFramework;
+      const slideFw = restoredOutputData.slide_framework?.deckFramework || restoredOutputData.slide_framework?.deliverable?.deckFramework;
       if (slideFw?.length) {
         restoredOutput.deliverable = { type: "deck", deckFramework: slideFw };
       }
