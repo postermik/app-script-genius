@@ -182,3 +182,51 @@ export function ProductView() {
     </div>
   );
 }
+
+const MODE_LABELS: Record<string, string> = {
+  fundraising: "Fundraising",
+  board_update: "Board Meeting",
+  board_meeting: "Board Meeting",
+  strategy: "Strategy",
+};
+
+function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyPrompt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(project.raw_input || "");
+    setCopied(true);
+    toast.success("Prompt copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="card-gradient border border-border rounded-sm p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all">
+      <div className="flex items-start justify-between mb-1.5">
+        <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1 min-w-0">
+          {project.title}
+          {project.detected_intent === "evaluate" && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
+          )}
+        </h3>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+          <button onClick={copyPrompt} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+            {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+      </p>
+      <div className="mt-auto">
+        <button onClick={onOpen} className="flex items-center text-xs text-muted-foreground hover:text-electric transition-colors cursor-pointer">
+          Open <ArrowRight className="h-3 w-3 ml-1" />
+        </button>
+      </div>
+    </div>
+  );
+}
