@@ -1105,7 +1105,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setDismissedSuggestions(new Set());
     setCoreNarrative(null);
     setOutputData({});
-    setCompletedOutputs(new Set());
+    setScoringComplete(false);
   }, []);
 
   const adaptForAudience = useCallback(async (audience: AudienceType) => {
