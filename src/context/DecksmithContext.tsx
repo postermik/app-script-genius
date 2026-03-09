@@ -703,7 +703,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const thesis = extractThesis(fullOutput);
       const initialPayload = {
         core_narrative: cn,
-        intake_selections: intakeSelections,
+        intake_selections: intakeSelectionsRef.current,
         tab_order: selectedOutputs,
         score: (fullOutput as any).score || null,
         mode: fullOutput.mode,
