@@ -4,7 +4,6 @@ import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { OutputDeliverable } from "@/types/rhetoric";
 
 interface OutputStep {
   key: string;
@@ -12,7 +11,7 @@ interface OutputStep {
   icon: LucideIcon;
 }
 
-const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
+const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
   core_narrative: { key: "core_narrative", label: "Core Narrative", icon: Compass },
   elevator_pitch: { key: "elevator_pitch", label: "Elevator pitch", icon: Mic },
   pitch_email: { key: "pitch_email", label: "Pitch emails", icon: Mail },
@@ -25,9 +24,35 @@ const OUTPUT_STEP_MAP: Record<OutputDeliverable, OutputStep> = {
 };
 
 export function GenerationStepper() {
-  const { isGenerating, isGeneratingSlides, generationOutputs, completedOutputs } = useDecksmith();
-  const selectedOutputs = generationOutputs.length > 0 ? generationOutputs : ["slide_framework"] as OutputDeliverable[];
+  const { isGenerating, isGeneratingSlides, intakeSelections, coreNarrative, outputData } = useDecksmith();
   const [collapsed, setCollapsed] = useState(false);
+
+  const selectedOutputs = useMemo(() => {
+    const fromIntake = intakeSelections?.outputs;
+    if (fromIntake && fromIntake.length > 0) return fromIntake;
+    const fromOutputData = Object.keys(outputData).filter(
+      k => !k.endsWith("_error") && !k.endsWith("_rawResponse") && OUTPUT_STEP_MAP[k]
+    );
+    if (fromOutputData.length > 0) return fromOutputData;
+    return ["slide_framework"];
+  }, [intakeSelections, outputData]);
+
+  const completedOutputs = useMemo(() => {
+    const completed = new Set<string>();
+    if (coreNarrative?.sections?.length) {
+      completed.add("core_narrative");
+      completed.add("_analyzing");
+    }
+    for (const key of Object.keys(outputData)) {
+      if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && outputData[key]) {
+        completed.add(key);
+      }
+    }
+    if (coreNarrative?.sections?.length && !isGenerating) {
+      completed.add("_scoring");
+    }
+    return completed;
+  }, [coreNarrative, outputData, isGenerating]);
 
   const steps = useMemo(() => {
     const result: OutputStep[] = [
@@ -50,7 +75,6 @@ export function GenerationStepper() {
 
   const allDone = !stillRunning && completedOutputs.has("_scoring");
 
-  // Auto-collapse 3s after all done
   useEffect(() => {
     if (allDone) {
       const timer = setTimeout(() => setCollapsed(true), 3000);
@@ -59,7 +83,6 @@ export function GenerationStepper() {
     setCollapsed(false);
   }, [allDone]);
 
-  // Find the first non-complete step to mark as active
   const activeStepKey = useMemo(() => {
     for (const step of steps) {
       if (!isStepComplete(step)) return step.key;
@@ -111,7 +134,6 @@ export function GenerationStepper() {
           );
         })}
 
-        {/* Final complete row */}
         {allDone && (
           <div className="flex items-center gap-2 py-0.5 animate-fade-in">
             <div className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 bg-emerald-500/20 text-emerald-400">
