@@ -67,6 +67,7 @@ interface DecksmithContextType {
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
   completedOutputs: Set<string>;
+  generationOutputs: OutputDeliverable[];
   coreNarrative: CoreNarrativeData | null;
   outputData: Record<string, any>;
 }
@@ -104,6 +105,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
@@ -692,6 +694,7 @@ Return ONLY valid JSON, no markdown fences.`;
     const currentIntake = intakeSelectionsRef.current || intakeSelections;
     const purpose = currentIntake?.purpose || "fundraising";
     const selectedOutputs = currentIntake?.outputs || ["slide_framework"];
+    setGenerationOutputs(selectedOutputs);
 
     console.log("[Generation] currentIntake:", JSON.stringify(currentIntake));
     console.log("[Generation] Selected outputs:", selectedOutputs);
@@ -1286,7 +1289,7 @@ Return ONLY valid JSON, no markdown fences.`;
         intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
         generateOutput,
-        completedOutputs, coreNarrative, outputData,
+        completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));
           setOutput((prev: any) => {
