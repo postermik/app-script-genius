@@ -6,7 +6,7 @@ import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type { OutputMode } from "@/types/narrative";
+import type { OutputMode, Project } from "@/types/narrative";
 import type { IntakeSelections } from "@/types/rhetoric";
 import { sortBySpeed } from "@/lib/outputOrder";
 import { formatDistanceToNow } from "date-fns";
