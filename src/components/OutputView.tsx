@@ -531,7 +531,7 @@ export function OutputView() {
         return <BoardMemoView data={memo} />;
       }
       case "key_metrics_summary": {
-        if (isGenerating && !completedOutputs.has("key_metrics_summary")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("key_metrics_summary")) return <MemoShimmer />;
         const metrics = synthesizeKeyMetrics(outputData);
         if (!metrics) return <p className="text-sm text-muted-foreground text-center py-12">No metrics data available.</p>;
         return <KeyMetricsSummaryView data={metrics} />;
