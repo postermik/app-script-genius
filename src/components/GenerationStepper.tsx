@@ -77,12 +77,7 @@ export function GenerationStepper() {
   const stillRunning = isGenerating || isGeneratingSlides;
   const allDone = !stillRunning && completedKeys.has("_scoring");
 
-  // Find first non-complete step
-  let activeStepKey: string | null = null;
-  for (const step of steps) {
-    const done = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
-    if (!done) { activeStepKey = step.key; break; }
-  }
+  const coreNarrativeDone = completedKeys.has("core_narrative");
 
   // Auto-collapse 3s after all done
   useEffect(() => {
@@ -99,7 +94,7 @@ export function GenerationStepper() {
       <div className="space-y-0.5">
         {steps.map((step) => {
           const complete = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
-          const isActive = step.key === activeStepKey && stillRunning;
+          const isActive = !complete && stillRunning && (step.key === "_analyzing" ? !coreNarrativeDone : coreNarrativeDone);
           const isPending = !complete && !isActive;
           const StepIcon = step.icon;
 
