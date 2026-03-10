@@ -719,7 +719,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setCoreNarrative(cn);
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
-      // completedOutputs is derived from coreNarrative — no manual set needed
+      window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
