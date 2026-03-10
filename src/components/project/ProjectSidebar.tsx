@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GenerationStepper } from "@/components/GenerationStepper";
+import { useDecksmith } from "@/context/DecksmithContext";
 
 interface SidebarItem {
   key: OutputTabKey;
