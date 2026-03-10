@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GenerationStepper } from "@/components/GenerationStepper";
+import { useDecksmith } from "@/context/DecksmithContext";
 
 interface SidebarItem {
   key: OutputTabKey;
@@ -32,7 +33,9 @@ interface Props {
 export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Props) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { completedOutputs } = useDecksmith();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
+  const stepperVisible = isLoading || completedOutputs.size > 0;
 
   if (isMobile) {
     return (
@@ -100,15 +103,13 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
           })}
         </nav>
 
-        {/* Generation stepper in sidebar */}
-        {isLoading && (
-          <div className="mt-6 pt-4 border-t border-border">
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
-              Generating
-            </p>
-            <GenerationStepper />
-          </div>
-        )}
+        {/* Generation stepper — always mounted, visibility controlled by CSS */}
+        <div className={`mt-6 pt-4 border-t border-border transition-opacity duration-500 ${stepperVisible ? "block" : "hidden"}`}>
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
+            Generating
+          </p>
+          <GenerationStepper />
+        </div>
       </div>
       <div className="px-2.5 pb-5 pt-3 border-t border-border mt-auto">
         <button
