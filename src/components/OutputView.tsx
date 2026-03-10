@@ -519,7 +519,7 @@ export function OutputView() {
         return <PitchEmailView variants={emails} />;
       }
       case "investment_memo": {
-        if (isGenerating && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
         const memo = synthesizeInvestmentMemo(output, outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
         return <InvestmentMemoView data={memo} />;
