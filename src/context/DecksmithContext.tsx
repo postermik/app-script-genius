@@ -764,8 +764,8 @@ Return ONLY valid JSON, no markdown fences.`;
       ];
 
       const orderedSelected: typeof selectedOutputs = [
-        ...ORDERED_OUTPUTS.filter(o => selectedOutputs.includes(o as any)) as typeof selectedOutputs,
-        ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any)),
+        ...ORDERED_OUTPUTS.filter(o => selectedOutputs.includes(o as any) && o !== "core_narrative") as typeof selectedOutputs,
+        ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any) && o !== "core_narrative"),
       ];
 
       for (const outputType of orderedSelected) {
