@@ -525,7 +525,7 @@ export function OutputView() {
         return <InvestmentMemoView data={memo} />;
       }
       case "board_memo": {
-        if (isGenerating && !completedOutputs.has("board_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("board_memo")) return <MemoShimmer />;
         const memo = synthesizeBoardMemo(outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No board memo data available.</p>;
         return <BoardMemoView data={memo} />;
