@@ -711,6 +711,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setCoreNarrative(cn);
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
+      setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
       window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
       console.log("[Generation] Core Narrative complete");
 
