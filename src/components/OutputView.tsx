@@ -501,38 +501,45 @@ export function OutputView() {
       case "slide_framework":
         return renderSlideFramework();
       case "elevator_pitch": {
+        if (isGenerating && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
         const pitchData = synthesizeElevatorPitch(output, outputData);
-        if (!pitchData) return (isGenerating && !completedOutputs.has("elevator_pitch")) ? <PitchShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
+        if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
+        if (isGenerating && !completedOutputs.has("investor_qa")) return <QAShimmer />;
         const qaItems = synthesizeInvestorQA(output, outputData);
-        if (!qaItems) return (isGenerating && !completedOutputs.has("investor_qa")) ? <QAShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
+        if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
+        if (isGenerating && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
         const emails = synthesizePitchEmails(output, outputData);
-        if (!emails) return (isGenerating && !completedOutputs.has("pitch_email")) ? <EmailShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
+        if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
         return <PitchEmailView variants={emails} />;
       }
       case "investment_memo": {
+        if (isGenerating && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
         const memo = synthesizeInvestmentMemo(output, outputData);
-        if (!memo) return (isGenerating && !completedOutputs.has("investment_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
+        if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
         return <InvestmentMemoView data={memo} />;
       }
       case "board_memo": {
+        if (isGenerating && !completedOutputs.has("board_memo")) return <MemoShimmer />;
         const memo = synthesizeBoardMemo(outputData);
-        if (!memo) return (isGenerating && !completedOutputs.has("board_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No board memo data available.</p>;
+        if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No board memo data available.</p>;
         return <BoardMemoView data={memo} />;
       }
       case "key_metrics_summary": {
+        if (isGenerating && !completedOutputs.has("key_metrics_summary")) return <MemoShimmer />;
         const metrics = synthesizeKeyMetrics(outputData);
-        if (!metrics) return (isGenerating && !completedOutputs.has("key_metrics_summary")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No metrics data available.</p>;
+        if (!metrics) return <p className="text-sm text-muted-foreground text-center py-12">No metrics data available.</p>;
         return <KeyMetricsSummaryView data={metrics} />;
       }
       case "strategic_memo": {
+        if (isGenerating && !completedOutputs.has("strategic_memo")) return <MemoShimmer />;
         const memo = synthesizeStrategicMemo(outputData);
-        if (!memo) return (isGenerating && !completedOutputs.has("strategic_memo")) ? <MemoShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No strategic memo data available.</p>;
+        if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No strategic memo data available.</p>;
         return <StrategicMemoView data={memo} />;
       }
       default:
