@@ -719,7 +719,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setCoreNarrative(cn);
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
-      // completedOutputs is derived from coreNarrative — no manual set needed
+      window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
@@ -766,7 +766,7 @@ Return ONLY valid JSON, no markdown fences.`;
           
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
-          // completedOutputs is derived from outputData — no manual set needed
+          window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
           // Save this output to DB immediately, passing the known project ID
           saveOutputIncremental(outputType, result, activeProjectId);
@@ -832,6 +832,7 @@ Return ONLY valid JSON, no markdown fences.`;
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
+    window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: '_scoring' } }));
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
   // ── Generate a single output on demand (post-generation) ──
@@ -857,7 +858,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
-      // completedOutputs is derived from outputData — no manual set needed
+      window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
       saveOutputIncremental(outputType, result);
 
       // Merge slides into output
