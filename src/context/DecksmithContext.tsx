@@ -772,9 +772,9 @@ Return ONLY valid JSON, no markdown fences.`;
         "strategic_memo",
       ];
 
-      const orderedSelected = [
-        ...ORDERED_OUTPUTS.filter(o => selectedOutputs.includes(o)),
-        ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o)),
+      const orderedSelected: typeof selectedOutputs = [
+        ...ORDERED_OUTPUTS.filter(o => selectedOutputs.includes(o as any)) as typeof selectedOutputs,
+        ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any)),
       ];
 
       for (const outputType of orderedSelected) {
