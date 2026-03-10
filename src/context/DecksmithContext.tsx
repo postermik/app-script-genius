@@ -693,6 +693,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setOutputData({});
     setCompletedOutputs(new Set());
     setIsGeneratingOutputs(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setScoringComplete(false);
     startLoadingPhases();
 
