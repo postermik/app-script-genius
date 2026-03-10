@@ -24,32 +24,16 @@ const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
 };
 
 export function GenerationStepper() {
-  const { isGenerating, isGeneratingSlides, intakeSelections } = useDecksmith();
-  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
+  const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs } = useDecksmith();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Listen for custom events dispatched by the generate function
-  const handleOutputComplete = useCallback((e: Event) => {
-    const type = (e as CustomEvent).detail?.type;
-    if (!type) return;
-    console.log("[Stepper] output-complete event:", type);
-    setCompletedKeys(prev => {
-      const next = new Set(prev);
-      next.add(type);
-      if (type === "core_narrative") next.add("_analyzing");
-      return next;
-    });
-  }, []);
+  // Map context completedOutputs to stepper keys
+  const completedKeys = new Set<string>(completedOutputs);
+  if (completedOutputs.has("core_narrative")) completedKeys.add("_analyzing");
 
-  useEffect(() => {
-    window.addEventListener("output-complete", handleOutputComplete);
-    return () => window.removeEventListener("output-complete", handleOutputComplete);
-  }, [handleOutputComplete]);
-
-  // Reset when a new generation starts
+  // Reset collapsed when a new generation starts
   useEffect(() => {
     if (isGenerating) {
-      setCompletedKeys(new Set());
       setCollapsed(false);
     }
   }, [isGenerating]);

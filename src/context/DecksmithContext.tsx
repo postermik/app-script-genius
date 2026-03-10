@@ -827,6 +827,7 @@ Return ONLY valid JSON, no markdown fences.`;
 
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setScoringComplete(true);
+      setCompletedOutputs(prev => { const next = new Set(prev); next.add("_scoring"); return next; });
 
       // Increment generation count (project already saved via incremental saves + initial create above)
       const newCount = generationCount + 1;
