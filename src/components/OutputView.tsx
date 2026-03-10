@@ -280,7 +280,7 @@ export function OutputView() {
     output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData,
+    completedOutputs, coreNarrative, outputData, isGeneratingOutputs,
   } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
@@ -501,43 +501,43 @@ export function OutputView() {
       case "slide_framework":
         return renderSlideFramework();
       case "elevator_pitch": {
-        if (isGenerating && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
         const pitchData = synthesizeElevatorPitch(output, outputData);
         if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
-        if (isGenerating && !completedOutputs.has("investor_qa")) return <QAShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("investor_qa")) return <QAShimmer />;
         const qaItems = synthesizeInvestorQA(output, outputData);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
-        if (isGenerating && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
         const emails = synthesizePitchEmails(output, outputData);
         if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
         return <PitchEmailView variants={emails} />;
       }
       case "investment_memo": {
-        if (isGenerating && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
         const memo = synthesizeInvestmentMemo(output, outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
         return <InvestmentMemoView data={memo} />;
       }
       case "board_memo": {
-        if (isGenerating && !completedOutputs.has("board_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("board_memo")) return <MemoShimmer />;
         const memo = synthesizeBoardMemo(outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No board memo data available.</p>;
         return <BoardMemoView data={memo} />;
       }
       case "key_metrics_summary": {
-        if (isGenerating && !completedOutputs.has("key_metrics_summary")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("key_metrics_summary")) return <MemoShimmer />;
         const metrics = synthesizeKeyMetrics(outputData);
         if (!metrics) return <p className="text-sm text-muted-foreground text-center py-12">No metrics data available.</p>;
         return <KeyMetricsSummaryView data={metrics} />;
       }
       case "strategic_memo": {
-        if (isGenerating && !completedOutputs.has("strategic_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("strategic_memo")) return <MemoShimmer />;
         const memo = synthesizeStrategicMemo(outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No strategic memo data available.</p>;
         return <StrategicMemoView data={memo} />;

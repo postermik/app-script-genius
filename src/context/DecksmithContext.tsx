@@ -66,6 +66,7 @@ interface DecksmithContextType {
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
+  isGeneratingOutputs: boolean;
   completedOutputs: Set<string>;
   generationOutputs: OutputDeliverable[];
   coreNarrative: CoreNarrativeData | null;
@@ -111,6 +112,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  const [isGeneratingOutputs, setIsGeneratingOutputs] = useState(false);
 
   useEffect(() => {
     if (!output) return;
@@ -690,6 +692,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setCoreNarrative(null);
     setOutputData({});
     setCompletedOutputs(new Set());
+    setIsGeneratingOutputs(true);
     setScoringComplete(false);
     startLoadingPhases();
 
@@ -844,6 +847,7 @@ Return ONLY valid JSON, no markdown fences.`;
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
+    setIsGeneratingOutputs(false);
     window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: '_scoring' } }));
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
@@ -1315,6 +1319,7 @@ Return ONLY valid JSON, no markdown fences.`;
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
+        isGeneratingOutputs,
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
