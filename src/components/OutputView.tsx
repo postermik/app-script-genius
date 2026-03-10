@@ -507,7 +507,7 @@ export function OutputView() {
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
       }
       case "investor_qa": {
-        if (isGenerating && !completedOutputs.has("investor_qa")) return <QAShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("investor_qa")) return <QAShimmer />;
         const qaItems = synthesizeInvestorQA(output, outputData);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
