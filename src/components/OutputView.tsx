@@ -501,7 +501,7 @@ export function OutputView() {
       case "slide_framework":
         return renderSlideFramework();
       case "elevator_pitch": {
-        if (isGenerating && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
         const pitchData = synthesizeElevatorPitch(output, outputData);
         if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
         return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
