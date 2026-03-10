@@ -656,20 +656,22 @@ Return ONLY valid JSON, no markdown fences.`;
   ): Promise<any> => {
     console.log(`[Generation] Starting output: ${outputType} (model: ${model || SONNET_MODEL})`);
 
+    const noSlideWarning = "CRITICAL: Do NOT generate slides, deckFramework, or any slide-related content. Ignore any prior instructions about generating slides.";
     const outputPrompts: Record<string, string> = {
-      elevator_pitch: `Generate elevator pitch versions. Return JSON: { "elevatorPitch": { "thirtySecond": "...", "sixtySecond": "..." } }`,
-      pitch_email: `Generate 3 pitch email variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }`,
-      investor_qa: `Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }`,
-      investment_memo: `Generate an investment memo with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
-      board_memo: `Generate a board memo with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
-      key_metrics_summary: `Generate a key metrics summary organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }`,
-      strategic_memo: `Generate a strategic memo with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }`,
+      elevator_pitch: `${noSlideWarning} You are generating an ELEVATOR PITCH. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
+      pitch_email: `${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
+      investor_qa: `${noSlideWarning} You are generating INVESTOR Q&A. Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`,
+      investment_memo: `${noSlideWarning} You are generating an INVESTMENT MEMO with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the investmentMemo object.`,
+      board_memo: `${noSlideWarning} You are generating a BOARD MEMO with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the boardMemo object.`,
+      key_metrics_summary: `${noSlideWarning} You are generating a KEY METRICS SUMMARY organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }. Output MUST contain ONLY the keyMetrics object.`,
+      strategic_memo: `${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
       slide_framework: `Generate a complete slide framework (deckFramework). Each slide needs: categoryLabel, headline, subheadline, bodyContent (array), closingStatement, speakerNotes, suggestion, layoutRecommendation, metadata. Return JSON: { "deckFramework": [...] }`,
     };
 
     const prompt = outputPrompts[outputType] || "";
-    const noEmDash = `STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.\n`;
-    const fullInput = `CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    const noEmDash = "STYLE RULE: Never use em dashes anywhere in your output. Use commas, periods, colons, or semicolons instead.\n";
+    const overridePrefix = outputType !== "slide_framework" ? `IMPORTANT: This request is for "${outputType}" ONLY. Do NOT generate slides or deckFramework.\n\n` : "";
+    const fullInput = `${overridePrefix}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
 

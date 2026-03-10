@@ -479,16 +479,7 @@ export function OutputView() {
             Retry
           </button>
         </div>
-        {rawResponse && (
-          <details className="mt-4 border-t border-border pt-4">
-            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-              Show raw AI response
-            </summary>
-            <pre className="mt-2 text-[10px] text-muted-foreground bg-muted/30 rounded-sm p-3 overflow-x-auto whitespace-pre-wrap max-h-[400px] overflow-y-auto">
-              {rawResponse}
-            </pre>
-          </details>
-        )}
+        {rawResponse && (() => { console.log("[Debug] Raw AI response for failed output:", rawResponse); return null; })()}
       </div>
     );
   };
