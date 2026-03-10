@@ -1319,6 +1319,7 @@ Return ONLY valid JSON, no markdown fences.`;
         isStreaming, streamingText, stopGenerating,
         intakeSelections, setIntakeSelections: setIntakeSelectionsWithRef,
         generateSlides, isGeneratingSlides,
+        isGeneratingOutputs,
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {

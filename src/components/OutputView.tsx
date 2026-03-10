@@ -537,7 +537,7 @@ export function OutputView() {
         return <KeyMetricsSummaryView data={metrics} />;
       }
       case "strategic_memo": {
-        if (isGenerating && !completedOutputs.has("strategic_memo")) return <MemoShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("strategic_memo")) return <MemoShimmer />;
         const memo = synthesizeStrategicMemo(outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No strategic memo data available.</p>;
         return <StrategicMemoView data={memo} />;
