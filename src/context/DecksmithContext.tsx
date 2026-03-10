@@ -800,6 +800,7 @@ Return ONLY valid JSON, no markdown fences.`;
           if (e.name === "AbortError") return;
           console.error(`[Generation] ✗ FAILED: ${outputType}:`, e.message);
           setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
+          setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
           // Still dispatch so stepper doesn't hang
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
         }
