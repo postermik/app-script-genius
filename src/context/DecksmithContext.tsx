@@ -760,17 +760,33 @@ Return ONLY valid JSON, no markdown fences.`;
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
-      // Step 2: Fire all selected outputs in parallel (fast ones use Haiku, heavy ones use Sonnet)
-      const outputPromises = selectedOutputs.map(async (outputType) => {
+      // Step 2: Fire outputs sequentially so stepper and tabs update one at a time
+      const ORDERED_OUTPUTS = [
+        "elevator_pitch",
+        "pitch_email", 
+        "investor_qa",
+        "investment_memo",
+        "slide_framework",
+        "board_memo",
+        "key_metrics_summary",
+        "strategic_memo",
+      ];
+
+      const orderedSelected: typeof selectedOutputs = [
+        ...ORDERED_OUTPUTS.filter(o => selectedOutputs.includes(o as any)) as typeof selectedOutputs,
+        ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any)),
+      ];
+
+      for (const outputType of orderedSelected) {
         const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
           const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
-          
+
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
-          // Save this output to DB immediately, passing the known project ID
+          // Save this output to DB immediately
           saveOutputIncremental(outputType, result, activeProjectId);
 
           // Merge into main output for backward compatibility
@@ -782,7 +798,6 @@ Return ONLY valid JSON, no markdown fences.`;
                 const updated = { ...prev } as any;
                 if (!updated.deliverable) updated.deliverable = { type: "deck" };
                 updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
-                // no more supporting column
                 return updated;
               });
             }
@@ -793,10 +808,10 @@ Return ONLY valid JSON, no markdown fences.`;
           if (e.name === "AbortError") return;
           console.error(`[Generation] ✗ FAILED: ${outputType}:`, e.message);
           setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
+          // Still dispatch so stepper doesn't hang
+          window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
         }
-      });
-
-      await Promise.allSettled(outputPromises);
+      }
 
       // Save metadata only (suggestions, tab order, score) — output content already saved incrementally
       if (activeProjectId) {
