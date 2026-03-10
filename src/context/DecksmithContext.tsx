@@ -110,18 +110,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
-  // Derive completedOutputs from actual data — no separate state to go stale
-  const completedOutputs = useMemo(() => {
-    const set = new Set<string>();
-    if (coreNarrative?.sections?.length) set.add("core_narrative");
-    for (const key of Object.keys(outputData)) {
-      if (!key.endsWith("_error") && !key.endsWith("_rawResponse")) {
-        set.add(key);
-      }
-    }
-    if (scoringComplete) set.add("_scoring");
-    return set;
-  }, [coreNarrative, outputData, scoringComplete]);
+  const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!output) return;
@@ -700,6 +689,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setOutput(null);
     setCoreNarrative(null);
     setOutputData({});
+    setCompletedOutputs(new Set());
     setScoringComplete(false);
     startLoadingPhases();
 
@@ -721,6 +711,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setCoreNarrative(cn);
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
+      setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
       window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
       console.log("[Generation] Core Narrative complete");
 
@@ -784,6 +775,7 @@ Return ONLY valid JSON, no markdown fences.`;
 
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
+          setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
           // Save this output to DB immediately
@@ -808,6 +800,7 @@ Return ONLY valid JSON, no markdown fences.`;
           if (e.name === "AbortError") return;
           console.error(`[Generation] ✗ FAILED: ${outputType}:`, e.message);
           setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
+          setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
           // Still dispatch so stepper doesn't hang
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
         }
@@ -834,6 +827,7 @@ Return ONLY valid JSON, no markdown fences.`;
 
       // Step 3: Mark scoring complete (score comes from core narrative generation)
       setScoringComplete(true);
+      setCompletedOutputs(prev => { const next = new Set(prev); next.add("_scoring"); return next; });
 
       // Increment generation count (project already saved via incremental saves + initial create above)
       const newCount = generationCount + 1;
@@ -1203,6 +1197,7 @@ Return ONLY valid JSON, no markdown fences.`;
         completed.add(key);
       }
       completed.add("_scoring");
+      setCompletedOutputs(completed);
       setScoringComplete(true);
     } else {
       setOutputData({});
