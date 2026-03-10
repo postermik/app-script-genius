@@ -1197,6 +1197,7 @@ Return ONLY valid JSON, no markdown fences.`;
         completed.add(key);
       }
       completed.add("_scoring");
+      setCompletedOutputs(completed);
       setScoringComplete(true);
     } else {
       setOutputData({});
