@@ -101,15 +101,20 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
           })}
         </nav>
 
-        {/* Generation stepper in sidebar */}
-        {isLoading && (
-          <div className="mt-6 pt-4 border-t border-border">
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
-              Generating
-            </p>
-            <GenerationStepper />
-          </div>
-        )}
+        {/* Generation stepper — always mounted, visibility controlled by CSS */}
+        {(() => {
+          const { completedOutputs } = useDecksmith();
+          const hasCompleted = completedOutputs.size > 0;
+          const visible = isLoading || hasCompleted;
+          return (
+            <div className={`mt-6 pt-4 border-t border-border transition-opacity duration-500 ${visible ? "block" : "hidden"}`}>
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
+                Generating
+              </p>
+              <GenerationStepper />
+            </div>
+          );
+        })()}
       </div>
       <div className="px-2.5 pb-5 pt-3 border-t border-border mt-auto">
         <button
