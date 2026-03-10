@@ -692,6 +692,7 @@ Return ONLY valid JSON, no markdown fences.`;
     setCoreNarrative(null);
     setOutputData({});
     setCompletedOutputs(new Set());
+    setIsGeneratingOutputs(true);
     setScoringComplete(false);
     startLoadingPhases();
 
