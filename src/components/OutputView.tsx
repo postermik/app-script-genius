@@ -280,7 +280,7 @@ export function OutputView() {
     output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData,
+    completedOutputs, coreNarrative, outputData, isGeneratingOutputs,
   } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
