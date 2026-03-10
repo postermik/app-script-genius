@@ -776,6 +776,7 @@ Return ONLY valid JSON, no markdown fences.`;
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
+          if (outputType === "core_narrative") setCompletedOutputs(prev => { const next = new Set(prev); next.add("_analyzing"); return next; });
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
           // Save this output to DB immediately
