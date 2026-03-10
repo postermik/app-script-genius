@@ -766,7 +766,7 @@ Return ONLY valid JSON, no markdown fences.`;
           
           // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
-          // completedOutputs is derived from outputData — no manual set needed
+          window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
           // Save this output to DB immediately, passing the known project ID
           saveOutputIncremental(outputType, result, activeProjectId);
