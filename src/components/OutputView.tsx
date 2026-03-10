@@ -513,7 +513,7 @@ export function OutputView() {
         return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
       }
       case "pitch_email": {
-        if (isGenerating && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
         const emails = synthesizePitchEmails(output, outputData);
         if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
         return <PitchEmailView variants={emails} />;
