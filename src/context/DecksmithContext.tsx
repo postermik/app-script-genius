@@ -111,6 +111,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
+  const [isGeneratingOutputs, setIsGeneratingOutputs] = useState(false);
 
   useEffect(() => {
     if (!output) return;
