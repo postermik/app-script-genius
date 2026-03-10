@@ -33,7 +33,9 @@ interface Props {
 export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Props) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { completedOutputs } = useDecksmith();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
+  const stepperVisible = isLoading || completedOutputs.size > 0;
 
   if (isMobile) {
     return (
