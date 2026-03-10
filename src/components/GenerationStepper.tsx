@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
   Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
@@ -24,43 +24,45 @@ const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
 };
 
 export function GenerationStepper() {
-  const { isGenerating, isGeneratingSlides, intakeSelections, coreNarrative, outputData } = useDecksmith();
+  const { isGenerating, isGeneratingSlides, intakeSelections } = useDecksmith();
+  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState(false);
 
-  // ── All derivations are inline — no useMemo, no stale closures ──
+  // Listen for custom events dispatched by the generate function
+  const handleOutputComplete = useCallback((e: Event) => {
+    const type = (e as CustomEvent).detail?.type;
+    if (!type) return;
+    console.log("[Stepper] output-complete event:", type);
+    setCompletedKeys(prev => {
+      const next = new Set(prev);
+      next.add(type);
+      if (type === "core_narrative") next.add("_analyzing");
+      return next;
+    });
+  }, []);
 
-  // 1. Which outputs are selected?
+  useEffect(() => {
+    window.addEventListener("output-complete", handleOutputComplete);
+    return () => window.removeEventListener("output-complete", handleOutputComplete);
+  }, [handleOutputComplete]);
+
+  // Reset when a new generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      setCompletedKeys(new Set());
+      setCollapsed(false);
+    }
+  }, [isGenerating]);
+
+  // Build step list from intake selections
   const fromIntake = intakeSelections?.outputs;
   let selectedOutputs: string[];
   if (fromIntake && fromIntake.length > 0) {
     selectedOutputs = fromIntake;
   } else {
-    const fromData = Object.keys(outputData).filter(
-      k => !k.endsWith("_error") && !k.endsWith("_rawResponse") && OUTPUT_STEP_MAP[k]
-    );
-    selectedOutputs = fromData.length > 0 ? fromData : ["slide_framework"];
+    selectedOutputs = ["slide_framework"];
   }
 
-  // 2. Which outputs are complete? (check actual data presence)
-  const completedKeys = new Set<string>();
-  const hasCoreNarrative = !!(coreNarrative?.sections?.length);
-  if (hasCoreNarrative) {
-    completedKeys.add("core_narrative");
-    completedKeys.add("_analyzing");
-  }
-  const outputDataKeys = Object.keys(outputData);
-  for (let i = 0; i < outputDataKeys.length; i++) {
-    const key = outputDataKeys[i];
-    if (!key.endsWith("_error") && !key.endsWith("_rawResponse") && outputData[key]) {
-      completedKeys.add(key);
-    }
-  }
-  const stillRunning = isGenerating || isGeneratingSlides;
-  if (hasCoreNarrative && !stillRunning) {
-    completedKeys.add("_scoring");
-  }
-
-  // 3. Build step list
   const steps: OutputStep[] = [
     { key: "_analyzing", label: "Analyzing", icon: Search },
     OUTPUT_STEP_MAP.core_narrative,
@@ -72,7 +74,7 @@ export function GenerationStepper() {
   }
   steps.push({ key: "_scoring", label: "Scoring", icon: Target });
 
-  // 4. Derived booleans
+  const stillRunning = isGenerating || isGeneratingSlides;
   const allDone = !stillRunning && completedKeys.has("_scoring");
 
   // Find first non-complete step
@@ -82,17 +84,13 @@ export function GenerationStepper() {
     if (!done) { activeStepKey = step.key; break; }
   }
 
-  // Auto-collapse after completion
+  // Auto-collapse 3s after all done
   useEffect(() => {
     if (allDone) {
       const timer = setTimeout(() => setCollapsed(true), 3000);
       return () => clearTimeout(timer);
     }
-    setCollapsed(false);
   }, [allDone]);
-
-  // Debug — remove after confirming fix
-  console.log("[Stepper] outputData keys:", outputDataKeys, "completedKeys:", Array.from(completedKeys), "stillRunning:", stillRunning);
 
   if (collapsed) return null;
 
