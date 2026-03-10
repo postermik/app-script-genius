@@ -847,6 +847,7 @@ Return ONLY valid JSON, no markdown fences.`;
     abortControllerRef.current = null;
     stopLoadingPhases();
     setIsGenerating(false);
+    setIsGeneratingOutputs(false);
     window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: '_scoring' } }));
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
