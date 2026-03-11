@@ -78,7 +78,10 @@ export function GenerationStepper() {
       <div className="space-y-0.5">
         {steps.map((step) => {
           const complete = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
-          const isActive = !complete && stillRunning;
+          const completedStepKeys = steps.map(s => completedKeys.has(s.key));
+          const lastCompletedIndex = completedStepKeys.lastIndexOf(true);
+          const stepIndex = steps.indexOf(step);
+          const isActive = !complete && stillRunning && stepIndex === lastCompletedIndex + 1;
           const isPending = !complete && !isActive;
           const StepIcon = step.icon;
 
