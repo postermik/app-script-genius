@@ -497,7 +497,7 @@ export function OutputView() {
       case "core_narrative": {
         if (!coreNarrative) {
           if (isGenerating && !completedOutputs.has("core_narrative") && streamingText.length > 0) {
-            return <div className="prose prose-invert max-w-none p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground">{streamingText}</div>;
+            return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
           }
           return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
         }
