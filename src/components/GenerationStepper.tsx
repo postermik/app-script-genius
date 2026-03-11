@@ -29,7 +29,6 @@ export function GenerationStepper() {
 
   // Map context completedOutputs to stepper keys
   const completedKeys = new Set<string>(completedOutputs);
-  if (completedOutputs.has("core_narrative")) completedKeys.add("_analyzing");
 
   // Build step list from intake selections
   const fromIntake = intakeSelections?.outputs;
