@@ -40,7 +40,6 @@ export function GenerationStepper() {
   }
 
   const steps: OutputStep[] = [
-    { key: "_analyzing", label: "Analyzing", icon: Search },
     OUTPUT_STEP_MAP.core_narrative,
   ];
   for (const o of selectedOutputs) {
