@@ -735,26 +735,29 @@ Return ONLY valid JSON, no markdown fences.`;
         intent: (fullOutput as any).intent || "create",
       };
       
-      let activeProjectId = currentProjectId;
+      // Assign project ID client-side immediately — never await DB, never block step transition
+      const activeProjectId = currentProjectId || crypto.randomUUID();
+      if (!currentProjectId) setCurrentProjectId(activeProjectId);
+
       if (currentProjectId) {
-        await supabase.from("projects").update({
+        supabase.from("projects").update({
           title, mode: fullOutput.mode, raw_input: rawInput,
           output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
-        }).eq("id", currentProjectId);
-        console.log("[Persistence] Updated project with core narrative, id:", currentProjectId);
+        }).eq("id", currentProjectId).then(() => {
+          console.log("[Persistence] Updated project, id:", currentProjectId);
+          loadProjects();
+        });
       } else {
-        const { data: insertedProject } = await supabase.from("projects").insert({
+        supabase.from("projects").insert({
+          id: activeProjectId,
           user_id: session!.user.id, title, mode: fullOutput.mode, raw_input: rawInput,
           output_data: initialPayload as any, detected_intent: fullOutput.mode, current_thesis: thesis,
-        }).select("id").single();
-        if (insertedProject) {
-          activeProjectId = insertedProject.id;
-          setCurrentProjectId(insertedProject.id);
-          console.log("[Persistence] Created project with core narrative, id:", insertedProject.id);
-        }
+        }).then(() => {
+          console.log("[Persistence] Created project, id:", activeProjectId);
+          loadProjects();
+        });
       }
-      console.log("[Persistence] Saved to output_data:", JSON.stringify(initialPayload).substring(0, 500));
-      loadProjects(); // Refresh dashboard immediately
+      console.log("[Persistence] DB save fired (non-blocking), id:", activeProjectId);
 
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
