@@ -413,15 +413,34 @@ export function OutputView() {
     try { await rescoreNarrative(); } catch {}
     finally { setIsRescoring(false); }
   };
-
+const parsePartialCoreNarrative = (text: string): { sections: { heading: string; content: string }[] } | null => {
+    if (!text) return null;
+    try {
+      const clean = text.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      const parsed = JSON.parse(clean);
+      const s = parsed?.coreNarrative?.sections || parsed?.sections;
+      if (s?.length) return { sections: s };
+    } catch {}
+    const sections: { heading: string; content: string }[] = [];
+    const re = /"heading"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      sections.push({ heading: m[1], content: m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"') });
+    }
+    return sections.length > 0 ? { sections } : null;
+  };
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
       case "core_narrative": {
-      if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
-        return <CoreNarrativeShimmer />;
+        if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
+          const partial = parsePartialCoreNarrative(streamingText);
+          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+          return <CoreNarrativeShimmer />;
+        }
+        return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
       }
-      return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
-    }
+        return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+      }
       case "slide_framework": return <SlideShimmer />;
       case "elevator_pitch": return <PitchShimmer />;
       case "investor_qa": return <QAShimmer />;
@@ -487,7 +506,12 @@ export function OutputView() {
     switch (activeOutputTab) {
       case "core_narrative": {
         if (!coreNarrative) {
-          return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
+          if (isGenerating) {
+            const partial = parsePartialCoreNarrative(streamingText);
+            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+            return <CoreNarrativeShimmer />;
+          }
+          return <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
         }
         return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
       }
