@@ -413,7 +413,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           if (trimmed.startsWith("data: ")) {
             try {
               const parsed = JSON.parse(trimmed.slice(6));
-              if (parsed.text) fullText += parsed.text;
+              if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); }
             } catch {}
           }
         }
@@ -687,6 +687,7 @@ Return ONLY valid JSON, no markdown fences.`;
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
+    setStreamingText("");
     setIsEvaluation(false);
     setOutput(null);
     setCoreNarrative(null);

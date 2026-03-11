@@ -280,7 +280,7 @@ export function OutputView() {
     output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData, isGeneratingOutputs,
+    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText,
   } = useDecksmith();
   const navigate = useNavigate();
   const { subscribed } = useSubscription();
@@ -495,7 +495,12 @@ export function OutputView() {
 
     switch (activeOutputTab) {
       case "core_narrative": {
-        if (!coreNarrative) return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
+        if (!coreNarrative) {
+          if (isGenerating && !completedOutputs.has("core_narrative") && streamingText.length > 0) {
+            return <div className="prose prose-invert max-w-none p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground">{streamingText}</div>;
+          }
+          return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
+        }
         return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
       }
       case "slide_framework":
