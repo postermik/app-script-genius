@@ -32,13 +32,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// ââ Synthesize outputs from existing data ââ
+// ── Synthesize outputs from existing data ──
 
 function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
   const od = outputData?.elevator_pitch;
   console.log("[Render] elevator_pitch structure:", Object.keys(od || {}));
 
-  // Check all known paths for the pitch object
   const pitch = findData<ElevatorPitchData>(od,
     "elevatorPitch",
     "deliverable.elevatorPitch",
@@ -46,10 +45,8 @@ function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): 
   );
   if (pitch?.thirtySecond) return pitch;
 
-  // Maybe od itself IS the pitch data
   if (od?.thirtySecond && od?.sixtySecond) return od as ElevatorPitchData;
 
-  // Fallback: synthesize from legacy output shape
   const d = output?.data || output?.supporting || {};
   const pitchScript = d.pitchScript;
   const thesis = d.thesis?.content || d.thesis || d.vision || d.headline || "";
@@ -73,7 +70,6 @@ function synthesizeInvestorQA(output: any, outputData: Record<string, any>): Inv
   );
   if (items?.length) return items;
 
-  // Fallback: from analysis
   if (output?.analysis?.commonQuestions?.length) {
     return output.analysis.commonQuestions.map((q: any) => ({ question: q.question, answer: q.suggestedAnswer }));
   }
@@ -104,16 +100,15 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
   );
   if (emails?.length) return emails;
 
-  // Fallback: synthesize templates from legacy output
   const d = output?.data || output?.supporting || {};
   const thesis = d.thesis?.content || d.thesis || d.vision || "";
   const title = output?.title || "our company";
   if (!thesis) return null;
   const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
   return [
-    { label: "Direct Ask", subject: `{firm_name} + ${title} â Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
+    { label: "Direct Ask", subject: `{firm_name} + ${title} — Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
     { label: "Warm Intro Request", subject: `Intro request: ${title}`, body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]` },
-    { label: "Follow-Up", subject: `Re: ${title} â following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update â do you have 15 min this week?\n\nBest,\n[Your name]` },
+    { label: "Follow-Up", subject: `Re: ${title} — following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]` },
   ];
 }
 
@@ -121,7 +116,6 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
   const od = outputData?.investment_memo;
   console.log("[Render] investment_memo structure:", Object.keys(od || {}));
 
-  // Check all known paths for sections array
   const sections = findData<{ heading: string; content: string }[]>(od,
     "investmentMemo.sections",
     "deliverable.sections",
@@ -132,7 +126,6 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
   );
   if (sections?.length) return { sections };
 
-  // Check for the investmentMemo wrapper object itself
   const memoObj = findData<InvestmentMemoData>(od,
     "investmentMemo",
     "deliverable.investmentMemo",
@@ -140,7 +133,6 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
   );
   if (memoObj?.sections?.length) return memoObj;
 
-  // Fallback: synthesize from legacy output
   const d = output?.data || output?.supporting || {};
   const fallback: { heading: string; content: string }[] = [];
   const thesis = d.thesis?.content || d.thesis || "";
@@ -149,7 +141,7 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
   if (ns?.worldToday) fallback.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
   if (ns?.newModel) fallback.push({ heading: "Solution", content: ns.newModel });
   const market = d.marketLogic;
-  if (market) fallback.push({ heading: "Market", content: Array.isArray(market) ? market.join("\nâ¢ ") : market });
+  if (market) fallback.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
   if (ns?.whyThisWins) fallback.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
   if (d.risks) fallback.push({ heading: "Risks", content: d.risks });
   if (d.whyNow) fallback.push({ heading: "Why Now", content: d.whyNow });
@@ -236,7 +228,6 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
 }) {
   const [wasGenerating, setWasGenerating] = useState(false);
 
-  // Track that generation was happening
   useEffect(() => {
     if (isGenerating) setWasGenerating(true);
   }, [isGenerating]);
@@ -291,7 +282,6 @@ export function OutputView() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [refiningCoreIndex, setRefiningCoreIndex] = useState<number | null>(null);
 
-  // Build tabs: core_narrative always first, then outputs in their stored order (no re-sorting)
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
     ? ["core_narrative" as OutputDeliverable, ...intakeSelections.outputs]
     : ["core_narrative" as OutputDeliverable, "slide_framework"];
@@ -357,7 +347,6 @@ export function OutputView() {
       );
     }
 
-    // Check outputData for persisted slide framework
     const persistedSlides = outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework;
     if (persistedSlides?.length) {
       const persistedDeliverable = { type: "deck" as const, deckFramework: persistedSlides };
@@ -413,7 +402,8 @@ export function OutputView() {
     try { await rescoreNarrative(); } catch {}
     finally { setIsRescoring(false); }
   };
-const parsePartialCoreNarrative = (text: string): { sections: { heading: string; content: string }[] } | null => {
+
+  const parsePartialCoreNarrative = (text: string): { sections: { heading: string; content: string }[] } | null => {
     if (!text) return null;
     try {
       const clean = text.replace(/^```json\s*/, '').replace(/```\s*$/, '');
@@ -429,6 +419,7 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
     }
     return sections.length > 0 ? { sections } : null;
   };
+
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
       case "core_narrative": {
@@ -437,8 +428,6 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
           if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
           return <CoreNarrativeShimmer />;
         }
-        return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
-      }
         return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
       }
       case "slide_framework": return <SlideShimmer />;
@@ -454,7 +443,6 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
   };
 
   const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
-    // Append new outputs in selection order â do NOT re-sort existing tabs
     const currentOutputs = intakeSelections?.outputs || [];
     const updated = [...currentOutputs, ...newOutputs];
     if (intakeSelections) {
@@ -464,8 +452,6 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
     }
     setActiveOutputTab(newOutputs[0]);
     toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
-
-    // Generate each new output
     newOutputs.forEach(outputType => {
       generateOutput(outputType);
     });
@@ -479,10 +465,7 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
           <p className="text-sm text-destructive font-medium">{message}</p>
           <p className="text-xs text-muted-foreground">This output failed to generate. Click retry to try again.</p>
           <button
-            onClick={() => {
-              // Clear the error before retrying
-              generateOutput(tab);
-            }}
+            onClick={() => { generateOutput(tab); }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-foreground border border-border hover:border-muted-foreground/30 transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
@@ -497,7 +480,6 @@ const parsePartialCoreNarrative = (text: string): { sections: { heading: string;
   const renderOutputContent = () => {
     if (isLoading) return getShimmerForTab(activeOutputTab);
 
-    // Check for per-output errors
     const errorKey = `${activeOutputTab}_error`;
     if (outputData[errorKey]) {
       return renderErrorWithRetry(activeOutputTab, outputData[errorKey]);
