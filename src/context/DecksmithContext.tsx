@@ -854,6 +854,7 @@ Return ONLY valid JSON, no markdown fences.`;
       return;
     }
     inFlightOutputsRef.current.add(outputType);
+    setIsGeneratingOutputs(true);
     
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -868,6 +869,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
       const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
       setOutputData(prev => ({ ...prev, [outputType]: result }));
+      setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType as string); return next; });
       window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
       saveOutputIncremental(outputType, result);
 
@@ -897,6 +899,7 @@ Return ONLY valid JSON, no markdown fences.`;
       inFlightOutputsRef.current.delete(outputType);
       abortControllerRef.current = null;
       if (outputType === "slide_framework") setIsGeneratingSlides(false);
+      setIsGeneratingOutputs(false);
     }
   }, [rawInput, coreNarrative, intakeSelections, generateSingleOutput]);
 
