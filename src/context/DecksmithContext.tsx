@@ -759,8 +759,8 @@ Return ONLY valid JSON, no markdown fences.`;
       // Step 2: Fire outputs sequentially so stepper and tabs update one at a time
       const ORDERED_OUTPUTS = [
         "elevator_pitch",
-        "pitch_email", 
         "investor_qa",
+        "pitch_email",
         "investment_memo",
         "slide_framework",
         "board_memo",
