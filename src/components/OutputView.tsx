@@ -430,7 +430,15 @@ export function OutputView() {
 
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
-      case "core_narrative": return <CoreNarrativeShimmer />;
+      case "core_narrative": {
+      if (isGenerating && !completedOutputs.has('core_narrative') && streamingText && streamingText.length > 0) {
+        return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
+      }
+      if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
+        return <CoreNarrativeShimmer />;
+      }
+      return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+    }
       case "slide_framework": return <SlideShimmer />;
       case "elevator_pitch": return <PitchShimmer />;
       case "investor_qa": return <QAShimmer />;
