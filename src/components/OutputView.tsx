@@ -32,7 +32,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// ── Synthesize outputs from existing data ──
+// ââ Synthesize outputs from existing data ââ
 
 function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
   const od = outputData?.elevator_pitch;
@@ -111,9 +111,9 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
   if (!thesis) return null;
   const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
   return [
-    { label: "Direct Ask", subject: `{firm_name} + ${title} — Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
+    { label: "Direct Ask", subject: `{firm_name} + ${title} â Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
     { label: "Warm Intro Request", subject: `Intro request: ${title}`, body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]` },
-    { label: "Follow-Up", subject: `Re: ${title} — following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]` },
+    { label: "Follow-Up", subject: `Re: ${title} â following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update â do you have 15 min this week?\n\nBest,\n[Your name]` },
   ];
 }
 
@@ -149,7 +149,7 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
   if (ns?.worldToday) fallback.push({ heading: "Problem", content: ns.worldToday + (ns.breakingPoint ? `\n\n${ns.breakingPoint}` : "") });
   if (ns?.newModel) fallback.push({ heading: "Solution", content: ns.newModel });
   const market = d.marketLogic;
-  if (market) fallback.push({ heading: "Market", content: Array.isArray(market) ? market.join("\n• ") : market });
+  if (market) fallback.push({ heading: "Market", content: Array.isArray(market) ? market.join("\nâ¢ ") : market });
   if (ns?.whyThisWins) fallback.push({ heading: "Traction & Differentiation", content: ns.whyThisWins });
   if (d.risks) fallback.push({ heading: "Risks", content: d.risks });
   if (d.whyNow) fallback.push({ heading: "Why Now", content: d.whyNow });
@@ -234,7 +234,6 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
   isGenerating: boolean;
   onGoToScore: () => void;
 }) {
-  const [dismissed, setDismissed] = useState(false);
   const [wasGenerating, setWasGenerating] = useState(false);
 
   // Track that generation was happening
@@ -244,30 +243,17 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
 
   const allDone = wasGenerating && !isGenerating && selectedOutputs.every(t => completedOutputs.has(t));
 
-  // Auto-dismiss after 10s
-  useEffect(() => {
-    if (allDone && !dismissed) {
-      const timer = setTimeout(() => setDismissed(true), 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [allDone, dismissed]);
-
-  // Reset when new generation starts
-  useEffect(() => {
-    if (isGenerating) setDismissed(false);
-  }, [isGenerating]);
-
-  if (!allDone || dismissed) return null;
+  if (!allDone) return null;
 
   return (
     <div className="mt-6 animate-fade-in">
       <button
-        onClick={() => { onGoToScore(); setDismissed(true); }}
+        onClick={() => { onGoToScore(); }}
         className="w-full flex items-center justify-between px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 hover:border-emerald/30 transition-colors group"
       >
         <p className="text-xs text-foreground/80">
           <span className="font-medium text-emerald">All outputs ready.</span>{" "}
-          Check your Capital Readiness Score
+          Check your Investor Readiness Score
         </p>
         <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
       </button>
@@ -431,9 +417,6 @@ export function OutputView() {
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
       case "core_narrative": {
-      if (isGenerating && !completedOutputs.has('core_narrative') && streamingText && streamingText.length > 0) {
-        return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
-      }
       if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
         return <CoreNarrativeShimmer />;
       }
@@ -452,7 +435,7 @@ export function OutputView() {
   };
 
   const handleAddOutput = (newOutputs: OutputDeliverable[]) => {
-    // Append new outputs in selection order — do NOT re-sort existing tabs
+    // Append new outputs in selection order â do NOT re-sort existing tabs
     const currentOutputs = intakeSelections?.outputs || [];
     const updated = [...currentOutputs, ...newOutputs];
     if (intakeSelections) {
@@ -503,9 +486,6 @@ export function OutputView() {
 
     switch (activeOutputTab) {
       case "core_narrative": {
-        if (isGenerating && !completedOutputs.has('core_narrative') && streamingText && streamingText.length > 0) {
-          return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
-        }
         if (!coreNarrative) {
           return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
         }
