@@ -1098,17 +1098,16 @@ Components to score: clarity, marketFraming, differentiation, riskTransparency, 
 
 Return ONLY valid JSON. No markdown fences.`;
 
-      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output.";
+      // mode: "score" hits the dedicated scoring handler.
+      // We embed the scoringInstruction into the outputData so the score handler
+      // receives both the rubric context and the narrative content in one payload.
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: {
-          mode: "refine",
-          input: scoringInstruction + "\n\n" + JSON.stringify(narrativeSnapshot),
-          section: "score",
-          path: "score",
-          tone: "rescore",
-          currentContent: JSON.stringify(narrativeSnapshot),
-          model: "claude-sonnet-4-20250514",
-          styleRule: noEmDashRule,
+          mode: "score",
+          outputData: {
+            _scoringContext: scoringInstruction,
+            ...narrativeSnapshot,
+          },
         },
       });
       if (error) throw error;
