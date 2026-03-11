@@ -687,6 +687,7 @@ Return ONLY valid JSON, no markdown fences.`;
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
     setIsGenerating(true);
+    setStreamingText("");
     setIsEvaluation(false);
     setOutput(null);
     setCoreNarrative(null);
