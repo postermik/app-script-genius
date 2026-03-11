@@ -18,17 +18,54 @@ const STAGES: { value: IntakeStage; label: string }[] = [
 ];
 
 function detectFromInput(input: string): IntakeSelections {
-  const lower = input.toLowerCase();
+  // Board meeting requires STRONG, explicit signals.
+  // A single word "board" is not enough — the user may be describing their product.
+  const boardSignals = [
+    /board of directors/i,
+    /board meeting/i,
+    /board update/i,
+    /board deck/i,
+    /board presentation/i,
+    /reporting to (?:my |the )?board/i,
+    /presenting to (?:my |the )?board/i,
+    /preparing for (?:a |my |the )?board/i,
+    /upcoming board/i,
+    /next board/i,
+  ];
 
-  let purpose: IntakePurpose = "fundraising";
-  if (/board|director/.test(lower)) purpose = "board_meeting";
-  else if (/strateg/.test(lower)) purpose = "strategy";
+  const strategySignals = [
+    /strategic plan/i,
+    /strategy memo/i,
+    /strategic memo/i,
+    /go.to.market strategy/i,
+    /strategic initiative/i,
+    /annual plan/i,
+    /\bokr\b/i,
+  ];
 
-  // Pre-select outputs based on intent
+  const fundraisingSignals = [
+    /rais(ing|e)|fundrais|investor|pre.?seed|seed round|series\s*[abcde]|\bsafe\b|valuation|pitch deck|pitch email|\bcapital\b|\bventure\b|\bvc\b/i,
+  ];
+
+  const isBoardMeeting = boardSignals.some(re => re.test(input));
+  const isStrategy = !isBoardMeeting && strategySignals.some(re => re.test(input));
+  const isFundraising = fundraisingSignals.some(re => re.test(input));
+
+  let purpose: IntakePurpose;
+  if (isBoardMeeting) {
+    purpose = "board_meeting";
+  } else if (isStrategy && !isFundraising) {
+    purpose = "strategy";
+  } else {
+    // Default to fundraising — correct for the vast majority of users
+    purpose = "fundraising";
+  }
+
   const outputs: OutputDeliverable[] = INTENT_OUTPUTS[purpose]
     .filter(o => o.preSelected)
     .map(o => o.value);
 
+  const lower = input.toLowerCase();
   let stage: IntakeStage = "seed";
   if (/pre.?seed/.test(lower)) stage = "pre_seed";
   else if (/series\s*b/i.test(lower)) stage = "series_b";
@@ -51,7 +88,6 @@ export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
     setSelections(detectFromInput(rawInput));
   }, [rawInput]);
 
-  // When purpose changes, reset outputs to preselected for that intent
   const handlePurposeChange = (purpose: IntakePurpose) => {
     const preSelected = INTENT_OUTPUTS[purpose]
       .filter(o => o.preSelected)
@@ -115,9 +151,11 @@ export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
                     : "border-border bg-card/60 text-secondary-foreground hover:text-foreground hover:border-muted-foreground/30"
                 }`}
               >
-                <span className={`inline-block w-3 h-3 rounded-sm border transition-colors flex-shrink-0 ${
-                  checked ? "bg-electric border-electric" : "border-muted-foreground/40"
-                }`}>
+                <span
+                  className={`inline-block w-3 h-3 rounded-sm border transition-colors flex-shrink-0 ${
+                    checked ? "bg-electric border-electric" : "border-muted-foreground/40"
+                  }`}
+                >
                   {checked && (
                     <svg viewBox="0 0 12 12" className="w-3 h-3 text-primary-foreground">
                       <path d="M3 6l2 2 4-4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
