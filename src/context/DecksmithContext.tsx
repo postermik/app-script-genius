@@ -506,7 +506,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsStreaming(false);
-      // NOTE: Do NOT clear streamingText here — it stays visible until setCoreNarrative fires in generate()
+      // NOTE: Do NOT clear streamingText here — cleared in generate() after setCoreNarrative fires
 
       console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
       console.log(`[Generation] Stream raw (first 500):`, fullText.substring(0, 500));
@@ -715,7 +715,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
       
       setCoreNarrative(cn);
-      setStreamingText(""); // Clear streaming text now that coreNarrative is set
+      setStreamingText(""); // Clear now that coreNarrative is set — eliminates shimmer gap
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
       setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
@@ -754,7 +754,7 @@ Return ONLY valid JSON, no markdown fences.`;
         }
       }
       console.log("[Persistence] Saved to output_data:", JSON.stringify(initialPayload).substring(0, 500));
-      loadProjects(); // Refresh dashboard project list immediately after save
+      loadProjects(); // Refresh dashboard immediately
 
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
@@ -1041,21 +1041,72 @@ Return ONLY valid JSON, no markdown fences.`;
     if (!output) return;
     setRefiningSection("rescore");
     try {
-      const deliverable = (output as any).deliverable;
-      const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
-      const narrativeData = (output as any).supporting || output.data || {};
+      // Build snapshot from coreNarrative + outputData (new architecture)
+      // Fall back to output.supporting for backward compat with old projects
+      const cn = coreNarrativeRef.current;
+      const od = outputDataRef.current;
+      const stage = intakeSelectionsRef.current?.stage || "seed";
+      const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
+
+      const coreNarrativeText = cn?.sections?.length
+        ? cn.sections.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n")
+        : "";
+
+      const slideFw = od?.slide_framework?.deckFramework || od?.slide_framework?.deliverable?.deckFramework
+        || (output as any).deliverable?.deckFramework || (output as any).data?.deckFramework || [];
+
+      const pitchEmails = od?.pitch_email?.pitchEmails || [];
+      const investorQA = od?.investor_qa?.investorQA || [];
+
+      // Collect previous gaps to avoid repetition
+      const previousScore = (output as any).score;
+      const previousGaps: string[] = previousScore?.gaps || [];
+
       const narrativeSnapshot = {
-        deckFramework: deckFramework.map((slide: any) => ({ headline: slide.headline || slide, content: slide.body || slide.content || "" })),
-        thesis: narrativeData.thesis?.content || narrativeData.thesis || "",
-        narrativeStructure: narrativeData.narrativeStructure || {},
-        pitchScript: narrativeData.pitchScript || "",
-        marketLogic: narrativeData.marketLogic || [],
-        risks: narrativeData.risks || "",
-        whyNow: narrativeData.whyNow || "",
+        stage,
+        purpose,
+        coreNarrative: coreNarrativeText,
+        slideFramework: slideFw.map((s: any) => ({
+          headline: s.headline || "",
+          bodyContent: s.bodyContent || [],
+        })),
+        pitchEmailCount: pitchEmails.length,
+        investorQACount: investorQA.length,
+        rawInput,
+        previousGaps,
       };
-      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
+
+      const scoringInstruction = `You are re-scoring a ${purpose} narrative for a ${stage.replace("_", "-")} stage company.
+
+IMPORTANT — Stage calibration: Score relative to what is realistic and expected at the ${stage.replace("_", "-")} stage. A pre-seed company should NOT be penalized for lacking revenue metrics, named customer logos, or detailed unit economics — these are NOT expected at this stage. Score on narrative quality, market framing, clarity, and founder credibility instead.
+
+IMPORTANT — Avoid repetition: The previous scoring session already identified these gaps. Do NOT repeat or rephrase them: ${previousGaps.length > 0 ? previousGaps.map((g, i) => `${i + 1}. ${g}`).join("; ") : "none"}.
+
+Evaluate the narrative snapshot provided. Return ONLY a valid JSON object with this exact shape:
+{
+  "overall": <number 0-100>,
+  "components": { <key>: <number 0-100>, ... },
+  "strengths": [<string>, ...],
+  "gaps": [<string>, ...],
+  "improvements": [<string matching each gap>, ...]
+}
+
+Components to score: clarity, marketFraming, differentiation, riskTransparency, persuasiveStructure, metricCompleteness, narrativeCoherence, momentumSignal.
+
+Return ONLY valid JSON. No markdown fences.`;
+
+      const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: "score", path: "score", tone: "rescore", currentContent: JSON.stringify(narrativeSnapshot), model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
+        body: {
+          mode: "refine",
+          input: scoringInstruction + "\n\n" + JSON.stringify(narrativeSnapshot),
+          section: "score",
+          path: "score",
+          tone: "rescore",
+          currentContent: JSON.stringify(narrativeSnapshot),
+          model: "claude-sonnet-4-20250514",
+          styleRule: noEmDashRule,
+        },
       });
       if (error) throw error;
       let scoreContent = data.content;
