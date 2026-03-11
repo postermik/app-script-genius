@@ -425,7 +425,7 @@ export function OutputView() {
       case "core_narrative": {
         if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
           const partial = parsePartialCoreNarrative(streamingText);
-          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
           return <CoreNarrativeShimmer />;
         }
         return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
@@ -490,7 +490,7 @@ export function OutputView() {
         if (!coreNarrative) {
           if (isGenerating) {
             const partial = parsePartialCoreNarrative(streamingText);
-            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
             return <CoreNarrativeShimmer />;
           }
           return <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
