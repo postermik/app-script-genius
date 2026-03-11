@@ -14,8 +14,8 @@ interface OutputStep {
 const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
   core_narrative: { key: "core_narrative", label: "Core Narrative", icon: Compass },
   elevator_pitch: { key: "elevator_pitch", label: "Elevator pitch", icon: Mic },
-  pitch_email: { key: "pitch_email", label: "Pitch emails", icon: Mail },
   investor_qa: { key: "investor_qa", label: "Investor Q&A", icon: HelpCircle },
+  pitch_email: { key: "pitch_email", label: "Pitch emails", icon: Mail },
   investment_memo: { key: "investment_memo", label: "Investment memo", icon: FileText },
   slide_framework: { key: "slide_framework", label: "Slide framework", icon: Layout },
   board_memo: { key: "board_memo", label: "Board memo", icon: BookOpen },

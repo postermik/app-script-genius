@@ -4,13 +4,13 @@ import type { OutputDeliverable } from "@/types/rhetoric";
 export const OUTPUT_SPEED_ORDER: OutputDeliverable[] = [
   "core_narrative",
   "elevator_pitch",
-  "pitch_email",
-  "board_memo",
-  "strategic_memo",
-  "key_metrics_summary",
   "investor_qa",
+  "pitch_email",
   "investment_memo",
   "slide_framework",
+  "board_memo",
+  "key_metrics_summary",
+  "strategic_memo",
 ];
 
 export const OUTPUT_LABELS: Record<OutputDeliverable, string> = {
