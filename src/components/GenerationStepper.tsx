@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
-  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
+  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -29,7 +29,6 @@ export function GenerationStepper() {
 
   // Map context completedOutputs to stepper keys
   const completedKeys = new Set<string>(completedOutputs);
-  if (completedOutputs.has("core_narrative")) completedKeys.add("_analyzing");
 
   // Build step list from intake selections
   const fromIntake = intakeSelections?.outputs;
@@ -41,7 +40,6 @@ export function GenerationStepper() {
   }
 
   const steps: OutputStep[] = [
-    { key: "_analyzing", label: "Analyzing", icon: Search },
     OUTPUT_STEP_MAP.core_narrative,
   ];
   for (const o of selectedOutputs) {
