@@ -332,7 +332,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Non-streaming API call (for individual outputs) ──
-  const callEdgeFunction = useCallback(async (body: Record<string, any>, signal?: AbortSignal): Promise<any> => {
+  const callEdgeFunction = useCallback(async (body: Record<string, any>, signal?: AbortSignal, outputType?: string): Promise<any> => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (!currentSession) throw new Error("Not authenticated");
 
@@ -676,7 +676,8 @@ Return ONLY valid JSON, no markdown fences.`;
         max_tokens: maxTokens,
         model: model || SONNET_MODEL,
       },
-      signal
+      signal,
+      outputType
     );
 
     console.log(`[Generation] Output complete: ${outputType}`);
