@@ -772,15 +772,12 @@ Return ONLY valid JSON, no markdown fences.`;
         ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any) && o !== "core_narrative"),
       ];
 
-      for (const outputType of orderedSelected) {
+      await Promise.all(orderedSelected.map(async (outputType) => {
         const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
           const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
-
-          // Store the result
           setOutputData(prev => ({ ...prev, [outputType]: result }));
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
-          if (outputType === "core_narrative") setCompletedOutputs(prev => { const next = new Set(prev); next.add("_analyzing"); return next; });
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
           // Save this output to DB immediately
@@ -801,15 +798,11 @@ Return ONLY valid JSON, no markdown fences.`;
           }
 
           console.log(`[Generation] ✓ Complete: ${outputType}`);
-        } catch (e: any) {
-          if (e.name === "AbortError") return;
-          console.error(`[Generation] ✗ FAILED: ${outputType}:`, e.message);
-          setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
+        } catch (err) {
+          console.error(`[Generation] Failed: ${outputType}`, err);
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
-          // Still dispatch so stepper doesn't hang
-          window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
         }
-      }
+      }));
 
       // Save metadata only (suggestions, tab order, score) — output content already saved incrementally
       if (activeProjectId) {
