@@ -413,7 +413,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           if (trimmed.startsWith("data: ")) {
             try {
               const parsed = JSON.parse(trimmed.slice(6));
-              if (parsed.text) fullText += parsed.text;
+              if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); }
             } catch {}
           }
         }
