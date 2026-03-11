@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
-  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
+  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
