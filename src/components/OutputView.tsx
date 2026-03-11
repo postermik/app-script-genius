@@ -495,10 +495,10 @@ export function OutputView() {
 
     switch (activeOutputTab) {
       case "core_narrative": {
+        if (isGenerating && !completedOutputs.has('core_narrative') && streamingText && streamingText.length > 0) {
+          return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
+        }
         if (!coreNarrative) {
-          if (isGenerating && !completedOutputs.has("core_narrative") && streamingText.length > 0) {
-            return <div className="p-6 whitespace-pre-wrap font-mono text-sm text-muted-foreground leading-relaxed">{streamingText}</div>;
-          }
           return isGenerating ? <CoreNarrativeShimmer /> : <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
         }
         return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
