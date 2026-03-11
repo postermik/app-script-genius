@@ -35,7 +35,7 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
   const isMobile = useIsMobile();
   const { completedOutputs, isGeneratingOutputs } = useDecksmith();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
-  const stepperVisible = isLoading || isGeneratingOutputs;
+  const stepperVisible = isLoading || isGeneratingOutputs || completedOutputs.size > 0;
 
   if (isMobile) {
     return (

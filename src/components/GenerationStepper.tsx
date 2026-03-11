@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
 import {
-  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass,
+  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText, Search, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,13 +31,6 @@ export function GenerationStepper() {
   const completedKeys = new Set<string>(completedOutputs);
   if (completedOutputs.has("core_narrative")) completedKeys.add("_analyzing");
 
-  // Reset collapsed when a new generation starts
-  useEffect(() => {
-    if (isGenerating) {
-      setCollapsed(false);
-    }
-  }, [isGenerating]);
-
   // Build step list from intake selections
   const fromIntake = intakeSelections?.outputs;
   let selectedOutputs: string[];
@@ -61,72 +54,84 @@ export function GenerationStepper() {
   const stillRunning = isGenerating || isGeneratingSlides;
   const allDone = !stillRunning && completedKeys.has("_scoring");
 
-  const coreNarrativeDone = completedKeys.has("core_narrative");
+  // Reset collapsed when a new generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      setCollapsed(false);
+    }
+  }, [isGenerating]);
 
-  // Auto-collapse 3s after all done
+  // Default to collapsed when allDone becomes true
   useEffect(() => {
     if (allDone) {
-      const timer = setTimeout(() => setCollapsed(true), 3000);
-      return () => clearTimeout(timer);
+      setCollapsed(true);
     }
   }, [allDone]);
 
-  if (collapsed) return null;
-
   return (
     <div className={`flex flex-col transition-opacity duration-500 ${allDone ? "opacity-60" : "animate-fade-in"}`}>
-      <div className="space-y-0.5">
-        {steps.map((step) => {
-          const complete = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
-          const completedStepKeys = steps.map(s => completedKeys.has(s.key));
-          const lastCompletedIndex = completedStepKeys.lastIndexOf(true);
-          const stepIndex = steps.indexOf(step);
-          const isActive = !complete && stillRunning && stepIndex === lastCompletedIndex + 1;
-          const isPending = !complete && !isActive;
-          const StepIcon = step.icon;
+      {/* Summary row when all done */}
+      {allDone && (
+        <button
+          onClick={() => setCollapsed(prev => !prev)}
+          className="flex items-center gap-2 py-1 mb-1 w-full text-left group"
+        >
+          <div className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 bg-emerald-500/20 text-emerald-400">
+            <CheckCircle className="w-2.5 h-2.5" />
+          </div>
+          <span className="text-[10px] leading-tight text-emerald-400/80 font-medium flex-1">
+            All outputs ready
+          </span>
+          <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
+        </button>
+      )}
 
-          return (
-            <div key={step.key} className={`flex items-center gap-2 py-0.5 transition-all duration-300 ${isPending ? "opacity-40" : "animate-fade-in"}`}>
-              <div className={`
-                flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-300
-                ${complete ? "bg-emerald-500/20 text-emerald-400" : ""}
-                ${isActive ? "bg-primary/15 text-primary" : ""}
-                ${isPending ? "bg-muted/30 text-muted-foreground" : ""}
-              `}>
-                {complete ? (
-                  <CheckCircle className="w-2.5 h-2.5" />
-                ) : (
-                  <StepIcon className={`w-2.5 h-2.5 ${isActive ? "animate-pulse" : ""}`} />
+      {/* Step list — hidden when collapsed */}
+      {!collapsed && (
+        <div className="space-y-0.5">
+          {steps.map((step) => {
+            const complete = step.key === "_analyzing" ? completedKeys.has("core_narrative") : completedKeys.has(step.key);
+            const completedStepKeys = steps.map(s => completedKeys.has(s.key));
+            const lastCompletedIndex = completedStepKeys.lastIndexOf(true);
+            const stepIndex = steps.indexOf(step);
+            const isActive = !complete && stillRunning && stepIndex === lastCompletedIndex + 1;
+            const isPending = !complete && !isActive;
+            const StepIcon = step.icon;
+
+            return (
+              <div key={step.key} className={`flex items-center gap-2 py-0.5 transition-all duration-300 ${isPending ? "opacity-40" : "animate-fade-in"}`}>
+                <div className={`
+                  flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-300
+                  ${complete ? "bg-emerald-500/20 text-emerald-400" : ""}
+                  ${isActive ? "bg-primary/15 text-primary" : ""}
+                  ${isPending ? "bg-muted/30 text-muted-foreground" : ""}
+                `}>
+                  {complete ? (
+                    <CheckCircle className="w-2.5 h-2.5" />
+                  ) : (
+                    <StepIcon className={`w-2.5 h-2.5 ${isActive ? "animate-pulse" : ""}`} />
+                  )}
+                </div>
+                <span className={`
+                  text-[10px] leading-tight transition-all duration-300
+                  ${complete ? "text-emerald-400/80" : ""}
+                  ${isActive ? "text-primary font-medium" : ""}
+                  ${isPending ? "text-muted-foreground" : ""}
+                `}>
+                  {step.label}
+                </span>
+                {isActive && stillRunning && (
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
                 )}
               </div>
-              <span className={`
-                text-[10px] leading-tight transition-all duration-300
-                ${complete ? "text-emerald-400/80" : ""}
-                ${isActive ? "text-primary font-medium" : ""}
-                ${isPending ? "text-muted-foreground" : ""}
-              `}>
-                {step.label}
-              </span>
-              {isActive && stillRunning && (
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {allDone && (
-          <div className="flex items-center gap-2 py-0.5 animate-fade-in">
-            <div className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 bg-emerald-500/20 text-emerald-400">
-              <CheckCircle className="w-2.5 h-2.5" />
-            </div>
-            <span className="text-[10px] leading-tight text-emerald-400/80 font-medium">Complete</span>
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
