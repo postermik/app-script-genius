@@ -23,7 +23,9 @@ function detectFromInput(input: string): IntakeSelections {
   const boardSignals = [
     /board of directors/i,
     /board meeting/i,
-    /board update/i,
+    /preparing (?:a |my |the |an )?board update/i,
+    /writing (?:a |my |the |an )?board update/i,
+    /\bboard update for (?:the |our )?board/i,
     /board deck/i,
     /board presentation/i,
     /reporting to (?:my |the )?board/i,
