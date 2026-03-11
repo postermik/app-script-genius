@@ -28,17 +28,18 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
 
 export function CoreNarrativeView({ data, onRefineSection, refiningIndex, isStreaming }: Props) {
   const fullText = data.sections.map(s => `## ${s.heading}\n\n${s.content}`).join("\n\n---\n\n");
-  const bottomRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(data.sections.length);
 
-  // Auto-scroll when a new section appears during streaming
+  // Scroll window to bottom when a new section appears during streaming.
+  // The page scrolls on window — no custom scroll container.
   useEffect(() => {
     if (!isStreaming) return;
     if (data.sections.length > prevCountRef.current) {
       prevCountRef.current = data.sections.length;
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 80);
+      // Wait one frame for the new section to render, then scroll
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      });
     }
   }, [data.sections.length, isStreaming]);
 
@@ -75,9 +76,6 @@ export function CoreNarrativeView({ data, onRefineSection, refiningIndex, isStre
           </div>
         ))}
       </div>
-
-      {/* Scroll anchor — sits below the last section, scrolled into view when a new section appears */}
-      <div ref={bottomRef} />
     </div>
   );
 }
