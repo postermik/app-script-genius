@@ -506,7 +506,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsStreaming(false);
-      setStreamingText("");
+      // NOTE: Do NOT clear streamingText here — it stays visible until setCoreNarrative fires in generate()
 
       console.log(`[Generation] Stream complete, total length: ${fullText.length}`);
       console.log(`[Generation] Stream raw (first 500):`, fullText.substring(0, 500));
@@ -715,6 +715,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
       
       setCoreNarrative(cn);
+      setStreamingText(""); // Clear streaming text now that coreNarrative is set
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
       setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
@@ -753,6 +754,7 @@ Return ONLY valid JSON, no markdown fences.`;
         }
       }
       console.log("[Persistence] Saved to output_data:", JSON.stringify(initialPayload).substring(0, 500));
+      loadProjects(); // Refresh dashboard project list immediately after save
 
       // Build core narrative text for downstream outputs
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
