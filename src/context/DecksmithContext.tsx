@@ -356,7 +356,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("text/event-stream")) {
-      return await readStream(response);
+      return await readStream(response, outputType === "core_narrative" ? setStreamingText : undefined);
     } else {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -396,7 +396,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const readStream = async (response: Response): Promise<any> => {
+  const readStream = async (response: Response, onChunk?: (text: string) => void): Promise<any> => {
     const reader = response.body?.getReader();
     if (!reader) throw new Error("Failed to read stream");
     const decoder = new TextDecoder();
@@ -413,7 +413,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
           if (trimmed.startsWith("data: ")) {
             try {
               const parsed = JSON.parse(trimmed.slice(6));
-              if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); }
+              if (parsed.text) { fullText += parsed.text; if (onChunk) onChunk(fullText); }
             } catch {}
           }
         }
