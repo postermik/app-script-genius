@@ -13,14 +13,23 @@ const READINESS_TITLES: Record<string, string> = {
 };
 
 const SCORE_LABELS: Record<string, string> = {
-  clarity: "Clarity", marketFraming: "Market Framing", differentiation: "Differentiation",
-  riskTransparency: "Risk Transparency", persuasiveStructure: "Persuasive Structure",
-  metricCompleteness: "Metric Completeness", strategicAlignment: "Strategic Alignment",
-  actionability: "Actionability", marketInsight: "Market Insight",
-  competitivePositioning: "Competitive Positioning", feasibility: "Feasibility",
-  userInsight: "User Insight", solutionFit: "Solution Fit",
-  narrativeCoherence: "Narrative Coherence", transparency: "Transparency",
-  momentumSignal: "Momentum Signal", brevity: "Brevity",
+  clarity: "Clarity",
+  marketFraming: "Market Framing",
+  differentiation: "Differentiation",
+  riskTransparency: "Risk Transparency",
+  persuasiveStructure: "Persuasive Structure",
+  metricCompleteness: "Metric Completeness",
+  strategicAlignment: "Strategic Alignment",
+  actionability: "Actionability",
+  marketInsight: "Market Insight",
+  competitivePositioning: "Competitive Positioning",
+  feasibility: "Feasibility",
+  userInsight: "User Insight",
+  solutionFit: "Solution Fit",
+  narrativeCoherence: "Narrative Coherence",
+  transparency: "Transparency",
+  momentumSignal: "Momentum Signal",
+  brevity: "Brevity",
 };
 
 function getScoreColor(value: number) {
@@ -34,18 +43,35 @@ function getLabel(key: string) {
   return SCORE_LABELS[key] || key;
 }
 
+// Detect whether a suggestion targets the slide deck vs the narrative
+function getApplyButtonLabel(gap: string, howToFix: string): string {
+  const deckKeywords = /\b(slide|deck|body content|bodyContent|headline|speaker note|layout|slide framework)\b/i;
+  const combined = `${gap} ${howToFix}`;
+  if (deckKeywords.test(combined)) return "Edit slide framework";
+  return "Apply to narrative";
+}
+
 function CircularGauge({ value, label }: { value: number; label: string }) {
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (value / 100) * circumference;
-  const strokeColor = value >= 80 ? "hsl(155 60% 45%)" : value >= 60 ? "hsl(217 91% 60%)" : value >= 40 ? "hsl(48 96% 53%)" : "hsl(0 65% 48%)";
-  const levelColor = value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-muted-foreground";
+  const strokeColor =
+    value >= 80 ? "hsl(155 60% 45%)" :
+    value >= 60 ? "hsl(217 91% 60%)" :
+    value >= 40 ? "hsl(48 96% 53%)" :
+    "hsl(0 65% 48%)";
+  const levelColor =
+    value >= 80 ? "text-emerald" :
+    value >= 60 ? "text-electric" :
+    "text-muted-foreground";
+
   return (
     <div className="flex flex-col items-center gap-1.5">
       <svg width="90" height="90" viewBox="0 0 90 90" className="drop-shadow-lg">
         <circle cx="45" cy="45" r={radius} fill="none" stroke="hsl(222 16% 16%)" strokeWidth="6" />
-        <circle cx="45" cy="45" r={radius} fill="none" stroke={strokeColor} strokeWidth="6" strokeLinecap="round"
-          strokeDasharray={circumference} strokeDashoffset={offset} transform="rotate(-90 45 45)" className="animate-gauge" />
+        <circle cx="45" cy="45" r={radius} fill="none" stroke={strokeColor} strokeWidth="6"
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
+          transform="rotate(-90 45 45)" className="animate-gauge" />
         <text x="45" y="42" textAnchor="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
         <text x="45" y="58" textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: "11px" }}>/100</text>
       </svg>
@@ -67,7 +93,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection } = useDecksmith();
-  useEffect(() => { const t = setTimeout(() => setAnimated(true), 100); return () => clearTimeout(t); }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleApply = async (index: number, gap: string, howToFix: string) => {
     setApplyingIndex(index);
@@ -85,13 +115,15 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const overall = score.overall;
   const components = score.components;
   const readinessTitle = READINESS_TITLES[mode] || "NARRATIVE READINESS";
-  const levelLabel = overall >= 85 ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready") : overall >= 70 ? "Solid" : "Developing";
+  const levelLabel =
+    overall >= 85 ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready") :
+    overall >= 70 ? "Solid" :
+    "Developing";
 
   const gaps = score.gaps || [];
   const improvements = score.improvements || [];
   const appliedCount = appliedSuggestions.size;
 
-  // Find lowest-scoring dimension
   const lowestEntry = Object.entries(components).reduce<[string, number] | null>((min, [key, value]) => {
     if (!min || value < min[1]) return [key, value];
     return min;
@@ -104,10 +136,12 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-yellow-400/20 bg-yellow-400/5 animate-fade-in">
           <Lightbulb className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
           <p className="text-xs text-foreground/80 flex-1">
-            <span className="font-medium">Biggest opportunity:</span> {getLabel(lowestEntry[0])} ({lowestEntry[1]}). Apply a suggestion below to improve it.
+            <span className="font-medium">Biggest opportunity:</span>{" "}
+            {getLabel(lowestEntry[0])} ({lowestEntry[1]}). Apply a suggestion below to improve it.
           </p>
         </div>
       )}
+
       {/* Applied suggestions re-score prompt */}
       {appliedCount > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5">
@@ -115,7 +149,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
           <p className="text-xs text-foreground/80 flex-1">
             {appliedCount} suggestion{appliedCount > 1 ? "s" : ""} applied since last score.
           </p>
-          <button onClick={onRescore} disabled={isRescoring} className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50">
+          <button
+            onClick={onRescore}
+            disabled={isRescoring}
+            className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50"
+          >
             {isRescoring ? "Re-scoring…" : "Re-score"}
           </button>
         </div>
@@ -126,7 +164,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
           <RefreshCw className={`h-3.5 w-3.5 text-electric shrink-0 ${isRescoring ? "animate-spin" : ""}`} />
           <p className="text-xs text-foreground/80 flex-1">Your outputs have changed.</p>
-          <button onClick={onRescore} disabled={isRescoring} className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50">
+          <button
+            onClick={onRescore}
+            disabled={isRescoring}
+            className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50"
+          >
             {isRescoring ? "Re-scoring…" : "Re-score?"}
           </button>
         </div>
@@ -158,7 +200,10 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <div key={key} className="flex items-center gap-3">
               <span className="text-xs text-foreground/80 w-36 shrink-0 font-medium">{getLabel(key)}</span>
               <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${getScoreColor(value)} ${animated ? "animate-score-fill" : ""}`} style={{ width: `${value}%` }} />
+                <div
+                  className={`h-full rounded-full ${getScoreColor(value)} ${animated ? "animate-score-fill" : ""}`}
+                  style={{ width: `${value}%` }}
+                />
               </div>
               <span className={`text-xs font-semibold tabular-nums w-7 text-right ${value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/70"}`}>{value}</span>
             </div>
@@ -180,18 +225,19 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
         </div>
       )}
 
-      {/* Areas to Improve (merged coaching) */}
+      {/* Areas to Improve */}
       {(gaps.length > 0 || improvements.length > 0) && (
         <div className="card-gradient rounded-sm border border-border p-5">
           <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-4 flex items-center gap-1.5">
-            <Lightbulb className="h-3 w-3" />
-            Areas to Improve
+            <Lightbulb className="h-3 w-3" /> Areas to Improve
           </h3>
           <div className="space-y-2">
             {gaps.map((gap, i) => {
               const howToFix = improvements[i];
               const expanded = expandedImprovement === i;
               const isApplied = appliedSuggestions.has(`score-${i}`);
+              const applyLabel = howToFix ? getApplyButtonLabel(gap, howToFix) : "Apply to narrative";
+
               return isApplied ? (
                 <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
                   <Check className="h-3 w-3 text-emerald shrink-0" />
@@ -231,7 +277,9 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                           disabled={applyingIndex === i}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                         >
-                          {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</> : "Apply to narrative"}
+                          {applyingIndex === i
+                            ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
+                            : applyLabel}
                         </button>
                       </div>
                     </div>
@@ -239,7 +287,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 </div>
               );
             })}
-            {/* Show remaining improvements that don't have a matching gap */}
+
+            {/* Remaining improvements without a matching gap */}
             {improvements.slice(gaps.length).map((imp, i) => (
               <div key={`extra-${i}`} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
                 <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
