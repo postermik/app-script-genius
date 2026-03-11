@@ -220,11 +220,13 @@ function synthesizeStrategicMemo(outputData: Record<string, any>): StrategicMemo
   return null;
 }
 
-function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, onGoToScore }: {
+function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, onGoToScore, purpose, onGoToRaise }: {
   selectedOutputs: string[];
   completedOutputs: Set<string>;
   isGenerating: boolean;
   onGoToScore: () => void;
+  purpose?: string;
+  onGoToRaise: () => void;
 }) {
   const [wasGenerating, setWasGenerating] = useState(false);
 
@@ -236,10 +238,13 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
 
   if (!allDone) return null;
 
+  const isFundraising = purpose === "fundraising" || !purpose;
+
   return (
-    <div className="mt-6 animate-fade-in">
+    <div className="mt-8 animate-fade-in space-y-3">
+      {/* Score CTA — always shown */}
       <button
-        onClick={() => { onGoToScore(); }}
+        onClick={onGoToScore}
         className="w-full flex items-center justify-between px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 hover:border-emerald/30 transition-colors group"
       >
         <p className="text-xs text-foreground/80">
@@ -248,6 +253,23 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
         </p>
         <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
       </button>
+
+      {/* Raise CTA — fundraising only */}
+      {isFundraising && (
+        <button
+          onClick={onGoToRaise}
+          className="w-full flex items-center justify-between px-5 py-4 rounded-sm border border-electric/30 bg-electric/5 hover:bg-electric/10 hover:border-electric/50 transition-all group"
+        >
+          <div className="flex flex-col items-start gap-0.5">
+            <p className="text-xs font-semibold text-foreground">Put your materials to work</p>
+            <p className="text-[11px] text-foreground/60">Find investors, send outreach, and track your raise in Raise.</p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 ml-4">
+            <span className="text-[11px] font-semibold text-electric">Go to Raise</span>
+            <ArrowRight className="h-3.5 w-3.5 text-electric group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </button>
+      )}
     </div>
   );
 }
@@ -425,7 +447,7 @@ export function OutputView() {
       case "core_narrative": {
         if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
           const partial = parsePartialCoreNarrative(streamingText);
-          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
+          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
           return <CoreNarrativeShimmer />;
         }
         return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
@@ -490,7 +512,7 @@ export function OutputView() {
         if (!coreNarrative) {
           if (isGenerating) {
             const partial = parsePartialCoreNarrative(streamingText);
-            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
+            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
             return <CoreNarrativeShimmer />;
           }
           return <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
@@ -572,6 +594,8 @@ export function OutputView() {
                   completedOutputs={completedOutputs}
                   isGenerating={isGenerating || false}
                   onGoToScore={() => setActiveTab("score")}
+                  purpose={intakeSelections?.purpose}
+                  onGoToRaise={() => navigate("/raise/investors")}
                 />
               </>
             )}
