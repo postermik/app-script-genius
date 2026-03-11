@@ -720,6 +720,7 @@ Return ONLY valid JSON, no markdown fences.`;
       setDetectedMode(fullOutput.mode);
       setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
       window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
+      stopLoadingPhases(); // Step 1 done — advance stepper immediately, don't wait for phase timers
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
