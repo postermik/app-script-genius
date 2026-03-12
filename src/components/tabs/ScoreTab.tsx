@@ -199,8 +199,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 strokeDashoffset={String(2 * Math.PI * 34 * (1 - overall / 100))}
                 transform="rotate(-90 40 40)"
               />
-              <text x="40" y="37" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
-              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px"}}>/100</text>
+              <text x="40" y="39" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
+              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px",opacity:"0.6"}}>/100</text>
             </svg>
           </div>
           <div className="flex-1 min-w-0">
@@ -208,7 +208,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <p className={"text-lg font-bold " + (isInvestorReady ? "text-emerald" : overall >= 70 ? "text-electric" : "text-yellow-400")}>
               {levelLabel}
             </p>
-            <p className="text-xs text-foreground/70 mt-1 leading-relaxed">
+            <p className="text-xs text-foreground/75 mt-1.5 leading-relaxed">
               {isInvestorReady
                 ? (gaps.length > 0
                   ? gaps.length + " refinement" + (gaps.length > 1 ? "s" : "") + " available"
@@ -222,7 +222,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <button
               onClick={onRescore}
               disabled={isRescoring}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/15 rounded-sm hover:bg-electric/25 transition-colors disabled:opacity-50"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
               {isRescoring ? "Scoring…" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
@@ -253,6 +253,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                     <Check className="h-3 w-3 text-emerald shrink-0" />
                     <span className="text-xs text-foreground/60 flex-1">{gapText}</span>
                     <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">Applied</Badge>
+                    <div className="w-4" />
                   </div>
                 ) : (
                   <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
@@ -268,9 +269,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                         <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
                           {styles.label}
                         </span>
-                        {howToFix && (expanded
-                          ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                          : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
+                        <div className="w-4 flex justify-center">
+                          {howToFix && (expanded
+                            ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                            : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
+                        </div>
                       </div>
                     </button>
                     {expanded && howToFix && (
@@ -328,7 +331,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
           onClick={() => setShowDetails(prev => !prev)}
           className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/10 transition-colors text-left"
         >
-          <span className="text-sm font-medium text-foreground/70">
+          <span className="text-sm font-medium text-foreground/80">
             {showDetails ? "Hide breakdown" : "Show breakdown"}
           </span>
           {showDetails
@@ -368,7 +371,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       <div className="grid grid-cols-2 gap-2 pt-1">
         <a
           href="/raise/investors"
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/20 rounded-sm hover:bg-muted/10 hover:border-foreground/40 transition-colors text-foreground/80"
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/30 rounded-sm hover:bg-muted/10 hover:border-foreground/50 transition-colors text-foreground"
         >
           <TrendingUp className="h-3.5 w-3.5" />
           Go to Raise
