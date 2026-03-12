@@ -274,6 +274,18 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setLoadingPhase("idle");
   }, []);
 
+  // Deep-replace em dashes in all string values of any parsed object
+  const sanitizeEmDash = (val) => {
+    if (typeof val === 'string') return val.replace(/—/g, ',').replace(/–/g, ',').replace(/—/g, ',').replace(/–/g, ',');
+    if (Array.isArray(val)) return val.map(sanitizeEmDash);
+    if (val && typeof val === 'object') {
+      const out = {};
+      for (const [k, v] of Object.entries(val)) out[k] = sanitizeEmDash(v);
+      return out;
+    }
+    return val;
+  };
+
   // ── JSON parsing / repair ──
   const stripFences = (text: string): string => {
     // Strip markdown code fences aggressively
@@ -749,7 +761,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
       unsubscribeStreamWatch();
       
-      setCoreNarrative(cn);
+      setCoreNarrative(sanitizeEmDash(cn));
       setStreamingText(""); // Clear now that coreNarrative is set — eliminates shimmer gap
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
@@ -822,7 +834,7 @@ Return ONLY valid JSON, no markdown fences.`;
         const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
           const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
-          setOutputData(prev => ({ ...prev, [outputType]: result }));
+          setOutputData(prev => ({ ...prev, [outputType]: sanitizeEmDash(result) }));
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
