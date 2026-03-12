@@ -445,12 +445,10 @@ export function OutputView() {
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
       case "core_narrative": {
-        if (isGeneratingOutputs && !completedOutputs.has('core_narrative')) {
-          const partial = parsePartialCoreNarrative(streamingText);
-          if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
-          return <CoreNarrativeShimmer />;
-        }
-        return <CoreNarrativeView data={coreNarrative!} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+        if (coreNarrative) return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+        const partial = parsePartialCoreNarrative(streamingText);
+        if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
+        return <CoreNarrativeShimmer />;
       }
       case "slide_framework": return <SlideShimmer />;
       case "elevator_pitch": return <PitchShimmer />;
@@ -512,7 +510,7 @@ export function OutputView() {
         if (!coreNarrative) {
           if (isGenerating) {
             const partial = parsePartialCoreNarrative(streamingText);
-            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+            if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
             return <CoreNarrativeShimmer />;
           }
           return <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
