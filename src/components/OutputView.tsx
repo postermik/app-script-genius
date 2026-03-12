@@ -233,7 +233,7 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
     if (isGenerating) setWasGenerating(true);
   }, [isGenerating]);
 
-  const allDone = wasGenerating && !isGenerating && selectedOutputs.every(t => completedOutputs.has(t));
+  const allDone = wasGenerating && !isGenerating && completedOutputs.has("_scoring") && selectedOutputs.every(t => completedOutputs.has(t));
 
   if (!allDone) return null;
 
