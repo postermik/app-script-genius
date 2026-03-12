@@ -5,6 +5,7 @@ import {
   FileText, BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+// stepper v2
 
 interface OutputStep {
   key: string;
