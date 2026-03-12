@@ -1134,18 +1134,24 @@ Return ONLY valid JSON, no markdown fences.`;
 
 IMPORTANT — Stage calibration: Score relative to what is realistic and expected at the ${stage.replace("_", "-")} stage. A pre-seed company should NOT be penalized for lacking revenue metrics, named customer logos, or detailed unit economics — these are NOT expected at this stage. Score on narrative quality, market framing, clarity, and founder credibility instead.
 
-IMPORTANT — Avoid repetition: The previous scoring session already identified these gaps. Do NOT repeat or rephrase them: ${previousGaps.length > 0 ? previousGaps.map((g, i) => `${i + 1}. ${g}`).join("; ") : "none"}.
+CONSISTENCY: Re-evaluate each gap from scratch. If a weakness still exists in the narrative, include it again. Only omit a gap if the narrative genuinely addressed it.
 
 Evaluate the narrative snapshot provided. Return ONLY a valid JSON object with this exact shape:
 {
   "overall": <number 0-100>,
   "components": { <key>: <number 0-100>, ... },
   "strengths": [<string>, ...],
-  "gaps": [<string>, ...],
+  "gaps": [{ "text": <string>, "tier": "primary"|"secondary"|"minor" }, ...],
   "improvements": [<string matching each gap>, ...]
 }
 
 Components to score: clarity, marketFraming, differentiation, riskTransparency, persuasiveStructure, metricCompleteness, narrativeCoherence, momentumSignal.
+
+GAP RULES:
+1. Gaps describe NARRATIVE weaknesses, not output-specific issues. Write "market sizing lacks a credible SAM/SOM" not "the market sizing slide lacks...".
+2. Tier: "primary" = investor would pause/pass, surface ALL. "secondary" = strengthens narrative, cap at 2. "minor" = polish, cap at 1.
+3. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
+4. SCORE STABILITY: Score the narrative as presented. If the founder addressed a gap, that component score must rise. Never score a revised narrative lower unless content regressed.
 
 Return ONLY valid JSON. No markdown fences.`;
 
