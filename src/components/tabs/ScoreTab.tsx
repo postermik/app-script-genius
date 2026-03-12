@@ -199,8 +199,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 strokeDashoffset={String(2 * Math.PI * 34 * (1 - overall / 100))}
                 transform="rotate(-90 40 40)"
               />
-              <text x="40" y="36" textAnchor="middle" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
-              <text x="40" y="50" textAnchor="middle" className="fill-muted-foreground" style={{fontSize:"10px"}}>/100</text>
+              <text x="40" y="44" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{fontSize:"19px"}}>{overall}</text>
+              <text x="40" y="57" textAnchor="middle" className="fill-muted-foreground" style={{fontSize:"9px"}}>/100</text>
             </svg>
           </div>
           <div className="flex-1 min-w-0">
@@ -208,7 +208,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <p className={"text-lg font-bold " + (isInvestorReady ? "text-emerald" : overall >= 70 ? "text-electric" : "text-yellow-400")}>
               {levelLabel}
             </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            <p className="text-xs text-foreground/60 mt-1 leading-relaxed">
               {isInvestorReady
                 ? (gaps.length > 0
                   ? gaps.length + " refinement" + (gaps.length > 1 ? "s" : "") + " available"
@@ -222,7 +222,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <button
               onClick={onRescore}
               disabled={isRescoring}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-electric border border-electric/20 rounded-sm hover:border-electric/40 transition-colors disabled:opacity-50"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric border border-electric/40 bg-electric/8 rounded-sm hover:bg-electric/15 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
               {isRescoring ? "Scoring…" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
@@ -233,7 +233,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
 
       {/* GAPS */}
       {hasGaps && (
-        <div className="relative card-gradient rounded-sm border border-border p-5">
+        <div className="relative card-gradient rounded-sm border border-border p-5 pb-6">
           <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3">
             {isInvestorReady ? "Refinements" : "Gaps to address"}
           </h3>
@@ -249,7 +249,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 const isApplied = appliedSuggestions.has("score-" + i);
                 const applyLabel = howToFix ? getApplyButtonLabel(gapText, howToFix) : "Apply to narrative";
                 return isApplied ? (
-                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-2.5 flex items-center gap-2">
+                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-start gap-2">
                     <Check className="h-3 w-3 text-emerald shrink-0" />
                     <span className="text-xs text-foreground/60 flex-1">{gapText}</span>
                     <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">Applied</Badge>
@@ -258,13 +258,13 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                   <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
                     <button
                       onClick={() => setExpandedImprovement(expanded ? null : i)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-muted/20 transition-colors"
+                      className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"
                     >
                       <div className="flex items-start gap-2 flex-1 min-w-0">
                         <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
                         <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
                       </div>
-                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                      <div className="flex items-start gap-2 ml-3 shrink-0 pt-0.5">
                         <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
                           {styles.label}
                         </span>
@@ -326,9 +326,9 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       <div className="rounded-sm border border-border overflow-hidden">
         <button
           onClick={() => setShowDetails(prev => !prev)}
-          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/10 transition-colors text-left"
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors text-left"
         >
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-foreground/50">
             {showDetails ? "Hide breakdown" : "Show breakdown"}
           </span>
           {showDetails
@@ -337,7 +337,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
         </button>
         {showDetails && (
           <div className="border-t border-border p-5 space-y-5">
-            <div className="space-y-2.5">
+            <div className="space-y-3.5">
               {Object.entries(components).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
                   <span className="text-xs text-foreground/70 w-36 shrink-0">{getLabel(key)}</span>
@@ -351,7 +351,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             {score.strengths.length > 0 && (
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-2">Strengths</p>
-                <ul className="space-y-1.5">
+                <ul className="space-y-2.5">
                   {score.strengths.map((str, i) => (
                     <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
                       <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{str}
@@ -365,17 +365,17 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       </div>
 
       {/* CTAs */}
-      <div className="flex gap-2 pt-1">
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <a
           href="/raise/investors"
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-border rounded-sm hover:border-muted-foreground/30 transition-colors text-muted-foreground whitespace-nowrap"
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border rounded-sm hover:bg-muted/10 transition-colors text-foreground/70"
         >
           <TrendingUp className="h-3.5 w-3.5" />
-          Raise
+          Go to Raise
         </a>
         <button
           onClick={() => document.querySelector('[data-export-trigger]')?.click()}
-          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
         >
           Export Materials
         </button>
