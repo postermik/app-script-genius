@@ -252,17 +252,13 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       {/* Top row: gauge + badges */}
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center gap-6 flex-wrap">
-          <CircularGauge value={overall} label={levelLabel} />
+          <div className="flex flex-col items-center justify-center w-[72px] h-[72px] rounded-full border-2 border-electric/30 bg-electric/5 shrink-0">
+              <span className="text-xl font-bold text-foreground tabular-nums leading-none">{overall}</span>
+              <span className="text-[9px] text-muted-foreground mt-0.5">/100</span>
+            </div>
           <div className="flex-1 min-w-0 space-y-2.5">
             <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-electric">{readinessTitle}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(components).map(([key, value]) => {
-                const label = getLabel(key);
-                if (value >= 80) return <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald/15 text-emerald"><Check className="h-2.5 w-2.5" />{label}</span>;
-                if (value >= 65) return <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-yellow-400/15 text-yellow-400"><AlertTriangle className="h-2.5 w-2.5" />{label} ({value})</span>;
-                return <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive/15 text-destructive"><X className="h-2.5 w-2.5" />{label} ({value})</span>;
-              })}
-            </div>
+            
           </div>
         </div>
       </div>
@@ -410,6 +406,22 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
           )}
         </div>
       )}
+      {/* CTAs */}
+      <div className="flex gap-3 pt-2">
+        <a
+          href="/raise/investors"
+          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border rounded-sm hover:border-muted-foreground/30 transition-colors text-foreground/80"
+        >
+          <TrendingUp className="h-3.5 w-3.5" />
+          Go to Raise
+        </a>
+        <button
+          onClick={() => document.querySelector('[data-export-trigger]')?.click()}
+          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+        >
+          Export Materials
+        </button>
+      </div>
     </div>
   );
 }
