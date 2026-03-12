@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2 } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
@@ -92,7 +92,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
-  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection } = useDecksmith();
+  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree } = useDecksmith();
 
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 100);
@@ -225,77 +225,106 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
         </div>
       )}
 
-      {/* Areas to Improve */}
+      {/* Areas to Improve — gated for free users */}
       {(gaps.length > 0 || improvements.length > 0) && (
-        <div className="card-gradient rounded-sm border border-border p-5">
+        <div className="relative card-gradient rounded-sm border border-border p-5">
           <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-4 flex items-center gap-1.5">
             <Lightbulb className="h-3 w-3" /> Areas to Improve
+            {isFree && (
+              <span className="ml-1 text-[10px] text-muted-foreground font-normal normal-case tracking-normal">
+                ({gaps.length} {gaps.length === 1 ? "area" : "areas"})
+              </span>
+            )}
           </h3>
-          <div className="space-y-2">
-            {gaps.map((gap, i) => {
-              const howToFix = improvements[i];
-              const expanded = expandedImprovement === i;
-              const isApplied = appliedSuggestions.has(`score-${i}`);
-              const applyLabel = howToFix ? getApplyButtonLabel(gap, howToFix) : "Apply to narrative";
 
-              return isApplied ? (
-                <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
-                  <Check className="h-3 w-3 text-emerald shrink-0" />
-                  <span className="text-xs leading-relaxed text-foreground/60 flex-1 min-w-0">{gap}</span>
-                  <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">
-                    Applied
-                  </Badge>
-                </div>
-              ) : (
-                <div key={i} className="rounded-sm border border-border bg-muted/30 overflow-hidden">
-                  <button
-                    onClick={() => setExpandedImprovement(expanded ? null : i)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                      <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
-                      <span className="text-xs text-foreground/90 leading-relaxed">{gap}</span>
-                    </div>
-                    {howToFix && (
-                      expanded
-                        ? <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
-                        : <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
-                    )}
-                  </button>
-                  {expanded && howToFix && (
-                    <div className="px-4 pb-3 border-t border-border pt-3 animate-fade-in">
-                      <div className="flex items-start gap-2">
-                        <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
-                          <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
+          {/* Content — blurred for free users */}
+          <div
+            className={isFree ? "pointer-events-none select-none" : ""}
+            style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}
+          >
+            <div className="space-y-2">
+              {gaps.map((gap, i) => {
+                const howToFix = improvements[i];
+                const expanded = expandedImprovement === i;
+                const isApplied = appliedSuggestions.has(`score-${i}`);
+                const applyLabel = howToFix ? getApplyButtonLabel(gap, howToFix) : "Apply to narrative";
+
+                return isApplied ? (
+                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
+                    <Check className="h-3 w-3 text-emerald shrink-0" />
+                    <span className="text-xs leading-relaxed text-foreground/60 flex-1 min-w-0">{gap}</span>
+                    <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">
+                      Applied
+                    </Badge>
+                  </div>
+                ) : (
+                  <div key={i} className="rounded-sm border border-border bg-muted/30 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedImprovement(expanded ? null : i)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
+                        <span className="text-xs text-foreground/90 leading-relaxed">{gap}</span>
+                      </div>
+                      {howToFix && (
+                        expanded
+                          ? <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
+                          : <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
+                      )}
+                    </button>
+                    {expanded && howToFix && (
+                      <div className="px-4 pb-3 border-t border-border pt-3 animate-fade-in">
+                        <div className="flex items-start gap-2">
+                          <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
+                            <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            onClick={() => handleApply(i, gap, howToFix)}
+                            disabled={applyingIndex === i}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
+                          >
+                            {applyingIndex === i
+                              ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
+                              : applyLabel}
+                          </button>
                         </div>
                       </div>
-                      <div className="mt-2 flex justify-end">
-                        <button
-                          onClick={() => handleApply(i, gap, howToFix)}
-                          disabled={applyingIndex === i}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
-                        >
-                          {applyingIndex === i
-                            ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                            : applyLabel}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
 
-            {/* Remaining improvements without a matching gap */}
-            {improvements.slice(gaps.length).map((imp, i) => (
-              <div key={`extra-${i}`} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
-                <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
-                <p className="text-xs text-foreground/90 leading-relaxed">{imp}</p>
-              </div>
-            ))}
+              {/* Remaining improvements without a matching gap */}
+              {improvements.slice(gaps.length).map((imp, i) => (
+                <div key={`extra-${i}`} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
+                  <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
+                  <p className="text-xs text-foreground/90 leading-relaxed">{imp}</p>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Upgrade overlay — free users only */}
+          {isFree && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
+              <Lock className="h-5 w-5 text-electric mb-2.5" />
+              <p className="text-sm font-semibold text-foreground mb-1">Upgrade to see what's holding your score back</p>
+              <p className="text-xs text-muted-foreground mb-4 text-center px-6">
+                {gaps.length} specific {gaps.length === 1 ? "area" : "areas"} identified, each with a fix
+              </p>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required'))}
+                className="px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity glow-blue"
+              >
+                Upgrade to Hobby
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
