@@ -406,9 +406,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         return repaired;
       } catch (e) {
         console.error(`[Generation] Parse failed. Full raw response:`, rawContent);
-        const err = new Error("AI response could not be parsed. Please retry.");
-        (err as any).rawResponse = rawContent;
-        throw err;
+        toast.error("Generation failed — couldn't parse AI response. Please try again.", { duration: 6000 });
+        setIsGenerating(false);
+        return;
       }
     }
   }, []);
@@ -580,7 +580,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const sectionHeadings = CORE_NARRATIVE_SECTIONS[purpose];
     
     const promptSuffix = `\n\n---\nGENERATION INSTRUCTIONS:
-STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
+FORMAT RULE: pitchScript must always be a plain string value. Never emit arrays, bullet points, or extra keys inside the pitchScript field.\n\nSTYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
 
 Generate a complete narrative analysis. Return a JSON object with:
 1. "coreNarrative": An object with "sections" array. Each section must have "heading" and "content" (3-5 sentence paragraph). Use these exact headings: ${sectionHeadings.map(h => `"${h}"`).join(", ")}
