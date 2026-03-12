@@ -30,7 +30,7 @@ export const TIERS = {
     annualYearlyPrice: 192,
     name: "Hobby",
     description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Export to PPT, DOCX & PDF", "Deck theme customization"],
+    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Score breakdown & gap analysis", "Export to PPT, DOCX & PDF"],
   },
   pro: {
     price_id: "price_1T6JwNDqdQWdRyBVnIXQc9Jn",
@@ -41,7 +41,7 @@ export const TIERS = {
     annualYearlyPrice: 960,
     name: "Pro",
     description: "Everything you need to raise.",
-    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room with view analytics", "All export formats incl. DOCX", "Priority support"],
+    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room", "Priority support"],
   },
 } as const;
 

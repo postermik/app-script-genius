@@ -184,55 +184,20 @@ export default function Outreach() {
 
       {/* Views */}
       {view === "list" && (
-        <div>
-          {/* Compose button */}
-          <button
-            onClick={() => { setView("compose"); setEditingCampaign(null); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity mb-6"
-          >
-            <Plus className="h-4 w-4" />
-            {subTab === "updates" ? "New Investor Update" : "New Cold Outreach"}
-          </button>
-
-          {/* Drafts */}
-          {drafts.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                <FileText className="h-3.5 w-3.5" /> Drafts
-                <span className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{drafts.length}</span>
-              </h3>
-              <div className="space-y-2">
-                {drafts.map(c => (
-                  <CampaignRow key={c.id} campaign={c}
-                    onEdit={() => { setEditingCampaign(c); setView("compose"); }}
-                    onDelete={() => handleDelete(c.id)} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sent */}
-          <div>
-            <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 flex items-center gap-2">
-              <Send className="h-3.5 w-3.5" /> Sent
-              <span className="text-[10px] bg-muted/40 px-1.5 py-0.5 rounded-sm font-bold">{sent.length}</span>
-            </h3>
-            {sent.length === 0 ? (
-              <div className="text-center py-12 border border-border rounded-sm card-gradient">
-                <Mail className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No {subTab === "updates" ? "updates" : "outreach"} sent yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Compose your first {subTab === "updates" ? "investor update" : "cold outreach"} to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {sent.map(c => (
-                  <CampaignRow key={c.id} campaign={c}
-                    onClick={() => { setViewingCampaignId(c.id); setView("detail"); }}
-                    onDelete={() => handleDelete(c.id)} />
-                ))}
-              </div>
-            )}
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted/30 border border-border flex items-center justify-center mb-4">
+            {subTab === "updates"
+              ? <Mail className="h-5 w-5 text-muted-foreground" />
+              : <Send className="h-5 w-5 text-muted-foreground" />}
           </div>
+          <p className="text-sm font-medium text-foreground mb-1">
+            {subTab === "updates" ? "Investor Updates" : "Cold Outreach"} coming soon
+          </p>
+          <p className="text-xs text-muted-foreground max-w-[320px] leading-relaxed">
+            {subTab === "updates"
+              ? "Send portfolio updates directly to your investors from Rhetoric. Until then, use your pitch email from the Outputs tab."
+              : "Send personalized cold outreach to investors at scale. Until then, copy your pitch email from the Outputs tab and send it yourself."}
+          </p>
         </div>
       )}
 
