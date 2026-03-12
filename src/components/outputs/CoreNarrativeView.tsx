@@ -28,7 +28,9 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
 
 export function CoreNarrativeView({ data, onRefineSection, refiningIndex, isStreaming }: Props) {
   const fullText = data.sections.map(s => `## ${s.heading}\n\n${s.content}`).join("\n\n---\n\n");
-  const prevCountRef = useRef(data.sections.length);
+  // Start at 0 so any new section triggers scroll — do NOT init to data.sections.length
+  // because the component remounts on each streaming re-render, resetting the ref
+  const prevCountRef = useRef(0);
 
   // Scroll window to bottom when a new section appears during streaming.
   // The page scrolls on window — no custom scroll container.
