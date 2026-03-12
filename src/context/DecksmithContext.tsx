@@ -665,14 +665,31 @@ Return ONLY valid JSON, no markdown fences.`;
     console.log(`[Generation] Starting output: ${outputType} (model: ${model || SONNET_MODEL})`);
 
     const noSlideWarning = "CRITICAL: Do NOT generate slides, deckFramework, or any slide-related content. Ignore any prior instructions about generating slides.";
+
+    // ── GAP PULL-THROUGH: inject active score gaps into every output prompt ──
+    const od = outputDataRef.current;
+    const activeGaps: string[] = od?.score?.gaps
+      ? (od.score.gaps as any[])
+          .filter((g: any) => {
+            const tier = typeof g === 'object' ? g.tier : null;
+            return tier === 'primary' || tier === 'secondary';
+          })
+          .map((g: any) => typeof g === 'object' ? g.text : String(g))
+          .slice(0, 5)
+      : [];
+    const gapContext = activeGaps.length > 0
+      ? "NARRATIVE GAPS TO ADDRESS: The following weaknesses were identified in a prior scoring session. Proactively fix these in the output you generate — do not reference this list explicitly, just ensure the output addresses them:\n" +
+        activeGaps.map((g, i) => (i + 1) + ". " + g).join("\n") + "\n\n"
+      : "";
+
     const outputPrompts: Record<string, string> = {
-      elevator_pitch: `${noSlideWarning} You are generating an ELEVATOR PITCH. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
-      pitch_email: `${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
-      investor_qa: `${noSlideWarning} You are generating INVESTOR Q&A. Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`,
-      investment_memo: `${noSlideWarning} You are generating an INVESTMENT MEMO with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the investmentMemo object.`,
-      board_memo: `${noSlideWarning} You are generating a BOARD MEMO with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the boardMemo object.`,
-      key_metrics_summary: `${noSlideWarning} You are generating a KEY METRICS SUMMARY organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }. Output MUST contain ONLY the keyMetrics object.`,
-      strategic_memo: `${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
+      elevator_pitch: `${gapContext}${noSlideWarning} You are generating an ELEVATOR PITCH. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
+      pitch_email: `${gapContext}${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
+      investor_qa: `${gapContext}${noSlideWarning} You are generating INVESTOR Q&A. Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`,
+      investment_memo: `${gapContext}${noSlideWarning} You are generating an INVESTMENT MEMO with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the investmentMemo object.`,
+      board_memo: `${gapContext}${noSlideWarning} You are generating a BOARD MEMO with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the boardMemo object.`,
+      key_metrics_summary: `${gapContext}${noSlideWarning} You are generating a KEY METRICS SUMMARY organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }. Output MUST contain ONLY the keyMetrics object.`,
+      strategic_memo: `${gapContext}${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
       slide_framework: `Generate a complete slide framework (deckFramework). Each slide needs: categoryLabel, headline, subheadline, bodyContent (array), closingStatement, speakerNotes, suggestion, layoutRecommendation, metadata. Return JSON: { "deckFramework": [...] }`,
     };
 
