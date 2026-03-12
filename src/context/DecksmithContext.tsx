@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
@@ -102,6 +101,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [isAdapting, setIsAdapting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const streamingTextRef = useRef("");
   const [intakeSelections, setIntakeSelections] = useState<IntakeSelections | null>(null);
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<string>>(new Set());
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
@@ -497,7 +497,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
             if (trimmed.startsWith("data: ")) {
               try {
                 const parsed = JSON.parse(trimmed.slice(6));
-                if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); }
+                if (parsed.text) { fullText += parsed.text; setStreamingText(fullText); streamingTextRef.current = fullText; }
               } catch {}
             }
           }
@@ -713,15 +713,42 @@ Return ONLY valid JSON, no markdown fences.`;
 
     try {
       // Step 1: Generate Core Narrative (always first)
+      // Watch streamingText to pre-emptively mark core_narrative complete the moment
+      // the last section heading appears — don't wait for JSON parse to finish.
+      const currentIntakeForSections = intakeSelectionsRef.current || intakeSelections;
+      const purposeForSections = currentIntakeForSections?.purpose || "fundraising";
+      const expectedSections = CORE_NARRATIVE_SECTIONS[purposeForSections as IntakePurpose] || CORE_NARRATIVE_SECTIONS["fundraising"];
+      const lastSectionHeading = expectedSections[expectedSections.length - 1];
+      let coreNarrativePreCompleted = false;
+
+      const unsubscribeStreamWatch = (() => {
+        // Poll streamingText every 200ms — when last section heading appears, fire complete immediately
+        const interval = setInterval(() => {
+          const current = streamingTextRef.current || "";
+          if (!coreNarrativePreCompleted && current.includes(`"${lastSectionHeading}"`)) {
+            coreNarrativePreCompleted = true;
+            clearInterval(interval);
+            setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
+            stopLoadingPhases();
+            console.log("[Generation] Core Narrative pre-completed (last section detected in stream)");
+          }
+        }, 200);
+        return () => clearInterval(interval);
+      })();
+
       const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
+      unsubscribeStreamWatch();
       
       setCoreNarrative(cn);
       setStreamingText(""); // Clear now that coreNarrative is set — eliminates shimmer gap
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
-      setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
+      // Only add core_narrative if not already pre-completed above
+      if (!coreNarrativePreCompleted) {
+        setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
+        stopLoadingPhases();
+      }
       window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: 'core_narrative' } }));
-      stopLoadingPhases(); // Step 1 done — advance stepper immediately, don't wait for phase timers
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
@@ -781,7 +808,7 @@ Return ONLY valid JSON, no markdown fences.`;
         ...selectedOutputs.filter(o => !ORDERED_OUTPUTS.includes(o as any) && o !== "core_narrative"),
       ];
 
-      await Promise.all(orderedSelected.map(async (outputType) => {
+      for (const outputType of orderedSelected) {
         const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
           const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
@@ -811,7 +838,7 @@ Return ONLY valid JSON, no markdown fences.`;
           console.error(`[Generation] Failed: ${outputType}`, err);
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
         }
-      }));
+      }
 
       // Save metadata only (suggestions, tab order, score) — output content already saved incrementally
       if (activeProjectId) {
