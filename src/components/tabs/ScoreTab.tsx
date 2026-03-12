@@ -199,8 +199,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 strokeDashoffset={String(2 * Math.PI * 34 * (1 - overall / 100))}
                 transform="rotate(-90 40 40)"
               />
-              <text x="40" y="41" textAnchor="middle" className="fill-foreground font-bold" style={{fontSize:"19px",fontWeight:"700"}}>{overall}</text>
-              <text x="40" y="55" textAnchor="middle" className="fill-muted-foreground" style={{fontSize:"9px"}}>/100</text>
+              <text x="40" y="37" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
+              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px"}}>/100</text>
             </svg>
           </div>
           <div className="flex-1 min-w-0">
@@ -222,7 +222,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             <button
               onClick={onRescore}
               disabled={isRescoring}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric border border-electric/50 bg-electric/10 rounded-sm hover:bg-electric/20 transition-colors disabled:opacity-50"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/15 rounded-sm hover:bg-electric/25 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
               {isRescoring ? "Scoring…" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
@@ -258,13 +258,13 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                   <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
                     <button
                       onClick={() => setExpandedImprovement(expanded ? null : i)}
-                      className="relative w-full flex items-start px-4 py-3.5 text-left hover:bg-muted/20 transition-colors gap-3"
+                      className="w-full flex items-start justify-between px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"
                     >
                       <div className="flex items-start gap-2 flex-1 min-w-0">
                         <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
                         <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 ml-3 mt-0.5">
                         <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
                           {styles.label}
                         </span>
@@ -326,9 +326,9 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       <div className="rounded-sm border border-border overflow-hidden">
         <button
           onClick={() => setShowDetails(prev => !prev)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors text-left"
+          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/10 transition-colors text-left"
         >
-          <span className="text-xs font-medium text-foreground/60 tracking-wide">
+          <span className="text-sm font-medium text-foreground/70">
             {showDetails ? "Hide breakdown" : "Show breakdown"}
           </span>
           {showDetails
@@ -368,7 +368,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       <div className="grid grid-cols-2 gap-2 pt-1">
         <a
           href="/raise/investors"
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-border/60 rounded-sm hover:bg-muted/10 hover:border-border transition-colors text-foreground/60"
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/20 rounded-sm hover:bg-muted/10 hover:border-foreground/40 transition-colors text-foreground/80"
         >
           <TrendingUp className="h-3.5 w-3.5" />
           Go to Raise
