@@ -132,6 +132,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree } = useDecksmith();
 
   useEffect(() => {
@@ -180,140 +181,63 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const hasGaps = gaps.length > 0 || improvements.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
 
-      {/* Investor-ready ceiling banner */}
-      {isInvestorReady && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/25 bg-emerald/5 animate-fade-in">
-          <Trophy className="h-3.5 w-3.5 text-emerald shrink-0" />
-          <p className="text-xs text-foreground/80 flex-1">
-            <span className="font-medium text-emerald">Investor-ready narrative.</span>{" "}
-            {gaps.length > 0
-              ? `${gaps.length} refinement${gaps.length > 1 ? "s" : ""} below to go from good to exceptional.`
-              : "No significant gaps found. Strong across the board."}
-          </p>
-        </div>
-      )}
-
-      {/* Biggest opportunity callout — only shown when NOT investor-ready */}
-      {!isInvestorReady && lowestEntry && lowestEntry[1] < 80 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-yellow-400/20 bg-yellow-400/5 animate-fade-in">
-          <Lightbulb className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
-          <p className="text-xs text-foreground/80 flex-1">
-            <span className="font-medium">Biggest opportunity:</span>{" "}
-            {getLabel(lowestEntry[0])} ({lowestEntry[1]}). Apply a suggestion below to improve it.
-          </p>
-        </div>
-      )}
-
-      {/* Critical gap callout — when NOT investor-ready and has primary gaps */}
-      {!isInvestorReady && primaryGaps.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-destructive/25 bg-destructive/5 animate-fade-in">
-          <X className="h-3.5 w-3.5 text-destructive shrink-0" />
-          <p className="text-xs text-foreground/80 flex-1">
-            <span className="font-medium text-destructive">{primaryGaps.length} critical {primaryGaps.length === 1 ? "gap" : "gaps"}</span>{" "}
-            need attention before this narrative is investor-ready.
-          </p>
-        </div>
-      )}
-
-      {/* Applied suggestions re-score prompt */}
-      {appliedCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5">
-          <RefreshCw className={`h-3.5 w-3.5 text-emerald shrink-0 ${isRescoring ? "animate-spin" : ""}`} />
-          <p className="text-xs text-foreground/80 flex-1">
-            {appliedCount} suggestion{appliedCount > 1 ? "s" : ""} applied since last score.
-          </p>
-          <button
-            onClick={onRescore}
-            disabled={isRescoring}
-            className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50"
-          >
-            {isRescoring ? "Re-scoring…" : "Re-score"}
-          </button>
-        </div>
-      )}
-
-      {/* Re-score prompt (legacy) */}
-      {showRescore && appliedCount === 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-electric/20 bg-electric/5">
-          <RefreshCw className={`h-3.5 w-3.5 text-electric shrink-0 ${isRescoring ? "animate-spin" : ""}`} />
-          <p className="text-xs text-foreground/80 flex-1">Your outputs have changed.</p>
-          <button
-            onClick={onRescore}
-            disabled={isRescoring}
-            className="text-xs font-medium text-electric hover:underline whitespace-nowrap disabled:opacity-50"
-          >
-            {isRescoring ? "Re-scoring…" : "Re-score?"}
-          </button>
-        </div>
-      )}
-
-      {/* Top row: gauge + badges */}
+      {/* HERO */}
       <div className="card-gradient rounded-sm border border-border p-5">
-        <div className="flex items-center gap-6 flex-wrap">
-          <div className="flex flex-col items-center justify-center w-[72px] h-[72px] rounded-full border-2 border-electric/30 bg-electric/5 shrink-0">
-              <span className="text-xl font-bold text-foreground tabular-nums leading-none">{overall}</span>
-              <span className="text-[9px] text-muted-foreground mt-0.5">/100</span>
-            </div>
-          <div className="flex-1 min-w-0 space-y-2.5">
-            <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-electric">{readinessTitle}</p>
-            
+        <div className="flex items-center gap-5">
+          <div className="relative shrink-0">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="hsl(222 16% 16%)" strokeWidth="5" />
+              <circle
+                cx="40" cy="40" r="34"
+                fill="none"
+                stroke={overall >= 85 ? "hsl(155 60% 45%)" : overall >= 70 ? "hsl(217 91% 60%)" : "hsl(48 96% 53%)"}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={String(2 * Math.PI * 34)}
+                strokeDashoffset={String(2 * Math.PI * 34 * (1 - overall / 100))}
+                transform="rotate(-90 40 40)"
+              />
+              <text x="40" y="36" textAnchor="middle" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
+              <text x="40" y="50" textAnchor="middle" className="fill-muted-foreground" style={{fontSize:"10px"}}>/100</text>
+            </svg>
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1">{readinessTitle}</p>
+            <p className={"text-lg font-bold " + (isInvestorReady ? "text-emerald" : overall >= 70 ? "text-electric" : "text-yellow-400")}>
+              {levelLabel}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {isInvestorReady
+                ? (gaps.length > 0
+                  ? gaps.length + " refinement" + (gaps.length > 1 ? "s" : "") + " available"
+                  : "No significant gaps. Strong across the board.")
+                : (primaryGaps.length > 0
+                  ? primaryGaps.length + " critical gap" + (primaryGaps.length > 1 ? "s" : "") + (lowestEntry ? " · Lowest: " + getLabel(lowestEntry[0]) + " (" + lowestEntry[1] + ")" : "")
+                  : (lowestEntry ? "Biggest opportunity: " + getLabel(lowestEntry[0]) + " (" + lowestEntry[1] + ")" : ""))}
+            </p>
+          </div>
+          {(showRescore || appliedCount > 0) && (
+            <button
+              onClick={onRescore}
+              disabled={isRescoring}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-electric border border-electric/20 rounded-sm hover:border-electric/40 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
+              {isRescoring ? "Scoring…" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Score Breakdown */}
-      <div className="card-gradient rounded-sm border border-border p-5">
-        <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-electric mb-4">Score Breakdown</h3>
-        <div className="space-y-2.5">
-          {Object.entries(components).map(([key, value]) => (
-            <div key={key} className="flex items-center gap-3">
-              <span className="text-xs text-foreground/80 w-36 shrink-0 font-medium">{getLabel(key)}</span>
-              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${getScoreColor(value)} ${animated ? "animate-score-fill" : ""}`}
-                  style={{ width: `${value}%` }}
-                />
-              </div>
-              <span className={`text-xs font-semibold tabular-nums w-7 text-right ${value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/70"}`}>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Strengths */}
-      {score.strengths.length > 0 && (
-        <div className="card-gradient rounded-sm border border-border p-5">
-          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-3">Strengths</h3>
-          <ul className="space-y-2">
-            {score.strengths.map((s, i) => (
-              <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
-                <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{s}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Areas to Improve — gated for free users */}
+      {/* GAPS */}
       {hasGaps && (
         <div className="relative card-gradient rounded-sm border border-border p-5">
-          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-4 flex items-center gap-1.5">
-            <Lightbulb className="h-3 w-3" />
-            {isInvestorReady ? "Refinements" : "Areas to Improve"}
-            {isFree && (
-              <span className="ml-1 text-[10px] text-muted-foreground font-normal normal-case tracking-normal">
-                ({gaps.length} {gaps.length === 1 ? "area" : "areas"})
-              </span>
-            )}
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3">
+            {isInvestorReady ? "Refinements" : "Gaps to address"}
           </h3>
-
-          {/* Content — blurred for free users */}
-          <div
-            className={isFree ? "pointer-events-none select-none" : ""}
-            style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}
-          >
+          <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? {filter:"blur(5px)",opacity:0.45} : {}}>
             <div className="space-y-2">
               {sortedGapIndices.map(({ i }) => {
                 const gap = gaps[i];
@@ -322,36 +246,31 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 const tier = getGapTier(gap);
                 const styles = gapSeverityStyles(tier);
                 const expanded = expandedImprovement === i;
-                const isApplied = appliedSuggestions.has(`score-${i}`);
+                const isApplied = appliedSuggestions.has("score-" + i);
                 const applyLabel = howToFix ? getApplyButtonLabel(gapText, howToFix) : "Apply to narrative";
-
                 return isApplied ? (
-                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
+                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-2.5 flex items-center gap-2">
                     <Check className="h-3 w-3 text-emerald shrink-0" />
-                    <span className="text-xs leading-relaxed text-foreground/60 flex-1 min-w-0">{gapText}</span>
-                    <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">
-                      Applied
-                    </Badge>
+                    <span className="text-xs text-foreground/60 flex-1">{gapText}</span>
+                    <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">Applied</Badge>
                   </div>
                 ) : (
-                  <div key={i} className={`rounded-sm border ${styles.border} ${styles.bg} overflow-hidden`}>
+                  <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
                     <button
                       onClick={() => setExpandedImprovement(expanded ? null : i)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-muted/20 transition-colors"
                     >
                       <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <AlertTriangle className={`h-3 w-3 ${styles.icon} shrink-0 mt-0.5`} />
+                        <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
                         <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
                       </div>
                       <div className="flex items-center gap-2 ml-2 shrink-0">
-                        <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${styles.labelClass}`}>
+                        <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
                           {styles.label}
                         </span>
-                        {howToFix && (
-                          expanded
-                            ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                            : <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                        )}
+                        {howToFix && (expanded
+                          ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                          : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
                       </div>
                     </button>
                     {expanded && howToFix && (
@@ -369,7 +288,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                             disabled={applyingIndex === i}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                           >
-                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</> : applyLabel}
+                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : applyLabel}
                           </button>
                         </div>
                       </div>
@@ -377,18 +296,14 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                   </div>
                 );
               })}
-
-              {/* Remaining improvements without a matching gap */}
               {improvements.slice(gaps.length).map((imp, i) => (
-                <div key={`extra-${i}`} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
+                <div key={"extra-" + i} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
                   <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
                   <p className="text-xs text-foreground/90 leading-relaxed">{imp}</p>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Upgrade overlay — free users only */}
           {isFree && (
             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
               <Lock className="h-5 w-5 text-electric mb-2.5" />
@@ -406,22 +321,66 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
           )}
         </div>
       )}
+
+      {/* BREAKDOWN — collapsed by default */}
+      <div className="rounded-sm border border-border overflow-hidden">
+        <button
+          onClick={() => setShowDetails(prev => !prev)}
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-muted/10 transition-colors text-left"
+        >
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {showDetails ? "Hide breakdown" : "Show breakdown"}
+          </span>
+          {showDetails
+            ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+            : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+        {showDetails && (
+          <div className="border-t border-border p-5 space-y-5">
+            <div className="space-y-2.5">
+              {Object.entries(components).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="text-xs text-foreground/70 w-36 shrink-0">{getLabel(key)}</span>
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className={"h-full rounded-full " + getScoreColor(value)} style={{width: value + "%"}} />
+                  </div>
+                  <span className={"text-xs font-semibold tabular-nums w-7 text-right " + (value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/60")}>{value}</span>
+                </div>
+              ))}
+            </div>
+            {score.strengths.length > 0 && (
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-2">Strengths</p>
+                <ul className="space-y-1.5">
+                  {score.strengths.map((str, i) => (
+                    <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
+                      <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{str}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* CTAs */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-2 pt-1">
         <a
           href="/raise/investors"
-          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border rounded-sm hover:border-muted-foreground/30 transition-colors text-foreground/80"
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-border rounded-sm hover:border-muted-foreground/30 transition-colors text-muted-foreground whitespace-nowrap"
         >
           <TrendingUp className="h-3.5 w-3.5" />
-          Go to Raise
+          Raise
         </a>
         <button
           onClick={() => document.querySelector('[data-export-trigger]')?.click()}
-          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
         >
           Export Materials
         </button>
       </div>
+
     </div>
   );
 }
