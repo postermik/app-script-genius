@@ -1,20 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useDecksmith } from "@/context/DecksmithContext";
+import { toast } from "sonner";
 import {
-  Mic,
-  Layout,
-  Target,
-  CheckCircle,
-  HelpCircle,
-  Mail,
-  FileText,
-  BookOpen,
-  BarChart3,
-  Lightbulb,
-  Compass,
-  ChevronDown,
+  Mic, Layout, Target, CheckCircle, HelpCircle, Mail, FileText,
+  BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
 // stepper v3
 
 interface OutputStep {
@@ -24,23 +16,34 @@ interface OutputStep {
 }
 
 const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
-  core_narrative: { key: "core_narrative", label: "Core Narrative", icon: Compass },
-  elevator_pitch: { key: "elevator_pitch", label: "Elevator pitch", icon: Mic },
-  investor_qa: { key: "investor_qa", label: "Investor Q&A", icon: HelpCircle },
-  pitch_email: { key: "pitch_email", label: "Pitch emails", icon: Mail },
-  investment_memo: { key: "investment_memo", label: "Investment memo", icon: FileText },
-  slide_framework: { key: "slide_framework", label: "Slide framework", icon: Layout },
-  board_memo: { key: "board_memo", label: "Board memo", icon: BookOpen },
-  key_metrics_summary: { key: "key_metrics_summary", label: "Key metrics", icon: BarChart3 },
-  strategic_memo: { key: "strategic_memo", label: "Strategic memo", icon: Lightbulb },
+  core_narrative:     { key: "core_narrative",     label: "Core Narrative",   icon: Compass   },
+  elevator_pitch:     { key: "elevator_pitch",     label: "Elevator pitch",   icon: Mic       },
+  investor_qa:        { key: "investor_qa",        label: "Investor Q&A",     icon: HelpCircle},
+  pitch_email:        { key: "pitch_email",        label: "Pitch emails",     icon: Mail      },
+  investment_memo:    { key: "investment_memo",    label: "Investment memo",  icon: FileText  },
+  slide_framework:    { key: "slide_framework",    label: "Slide framework",  icon: Layout    },
+  board_memo:         { key: "board_memo",         label: "Board memo",       icon: BookOpen  },
+  key_metrics_summary:{ key: "key_metrics_summary",label: "Key metrics",      icon: BarChart3 },
+  strategic_memo:     { key: "strategic_memo",     label: "Strategic memo",   icon: Lightbulb },
+};
+
+// Toast labels per output key
+const TOAST_LABELS: Record<string, string> = {
+  core_narrative:      "Core Narrative done",
+  elevator_pitch:      "Elevator Pitch done",
+  investor_qa:         "Investor Q&A done",
+  pitch_email:         "Pitch Email done",
+  investment_memo:     "Investment Memo done",
+  slide_framework:     "Slide Framework done",
+  board_memo:          "Board Memo done",
+  key_metrics_summary: "Key Metrics done",
+  strategic_memo:      "Strategic Memo done",
+  _scoring:            "Scoring complete",
 };
 
 export function GenerationStepper() {
   const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs, isGeneratingOutputs } = useDecksmith();
   const [collapsed, setCollapsed] = useState(false);
-
-  // Track the generation count so we can detect a new run starting
-  const prevCompletedSizeRef = useRef(0);
 
   const completedKeys = new Set<string>(completedOutputs);
 
@@ -56,9 +59,37 @@ export function GenerationStepper() {
   const stillRunning = isGenerating || isGeneratingSlides || isGeneratingOutputs;
   const allDone = !stillRunning && completedKeys.has("_scoring");
 
-  // Reset collapsed when a new generation starts
+  // Track previously completed keys to detect new completions
+  const prevCompletedRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    if (isGenerating) setCollapsed(false);
+    const prev = prevCompletedRef.current;
+    const newKeys = [...completedKeys].filter(k => !prev.has(k));
+
+    for (const key of newKeys) {
+      const label = TOAST_LABELS[key];
+      if (!label) continue;
+
+      if (key === "core_narrative") {
+        // Scroll to top first, then toast
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setTimeout(() => {
+          toast.success(label, { duration: 3000 });
+        }, 400);
+      } else {
+        toast.success(label, { duration: 3000 });
+      }
+    }
+
+    prevCompletedRef.current = new Set(completedKeys);
+  }, [completedOutputs]);
+
+  // Reset prevCompletedRef when a new generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      prevCompletedRef.current = new Set();
+      setCollapsed(false);
+    }
   }, [isGenerating]);
 
   // Auto-collapse when done
@@ -66,10 +97,6 @@ export function GenerationStepper() {
     if (allDone) setCollapsed(true);
   }, [allDone]);
 
-  // Determine active step robustly:
-  // - If still running, find the first step that is NOT yet complete
-  // - This avoids the "lastCompletedIndex + 1" race where completedOutputs
-  //   hasn't flushed yet and the stepper freezes on the previous step
   const getActiveStepKey = (): string | null => {
     if (!stillRunning) return null;
     for (const step of steps) {
@@ -92,9 +119,7 @@ export function GenerationStepper() {
             <CheckCircle className="w-2.5 h-2.5" />
           </div>
           <span className="text-[10px] leading-tight text-emerald-400/80 font-medium flex-1">All outputs ready</span>
-          <ChevronDown
-            className={`w-3 h-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`}
-          />
+          <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
         </button>
       )}
 
@@ -112,14 +137,12 @@ export function GenerationStepper() {
                 key={step.key}
                 className={`flex items-center gap-2 py-0.5 transition-all duration-300 ${isPending ? "opacity-40" : "animate-fade-in"}`}
               >
-                <div
-                  className={`
+                <div className={`
                   flex items-center justify-center w-4 h-4 rounded-full shrink-0 transition-all duration-300
                   ${complete ? "bg-emerald-500/20 text-emerald-400" : ""}
-                  ${isActive ? "bg-primary/15 text-primary" : ""}
+                  ${isActive  ? "bg-primary/15 text-primary" : ""}
                   ${isPending ? "bg-muted/30 text-muted-foreground" : ""}
-                `}
-                >
+                `}>
                   {complete ? (
                     <CheckCircle className="w-2.5 h-2.5" />
                   ) : (
@@ -127,31 +150,20 @@ export function GenerationStepper() {
                   )}
                 </div>
 
-                <span
-                  className={`
+                <span className={`
                   text-[10px] leading-tight transition-all duration-300
                   ${complete ? "text-emerald-400/80" : ""}
-                  ${isActive ? "text-primary font-medium" : ""}
+                  ${isActive  ? "text-primary font-medium" : ""}
                   ${isPending ? "text-muted-foreground" : ""}
-                `}
-                >
+                `}>
                   {step.label}
                 </span>
 
                 {isActive && stillRunning && (
                   <div className="flex items-center gap-0.5 shrink-0">
-                    <span
-                      className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <span
-                      className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <span
-                      className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-0.5 h-0.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 )}
               </div>
