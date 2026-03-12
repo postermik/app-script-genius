@@ -350,7 +350,6 @@ export function OutputView() {
 
   if (!output && !coreNarrative && !isGenerating) return null;
 
-  const isFirstFree = !isPro && generationCount >= 1;
 
   const toggleSlide = (idx: number) => {
     setExcludedSlides(prev => {
