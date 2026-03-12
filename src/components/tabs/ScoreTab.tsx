@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
@@ -43,7 +43,19 @@ function getLabel(key: string) {
   return SCORE_LABELS[key] || key;
 }
 
-// Detect whether a suggestion targets the slide deck vs the narrative
+// Normalize gap — handle both plain string and {text, tier} object shapes
+function normalizeGap(gap: any): string {
+  if (typeof gap === "string") return gap;
+  if (gap && typeof gap === "object") return gap.text || JSON.stringify(gap);
+  return String(gap ?? "");
+}
+
+// Get tier from gap object, default to "secondary"
+function getGapTier(gap: any): "primary" | "secondary" | "minor" {
+  if (gap && typeof gap === "object" && gap.tier) return gap.tier;
+  return "secondary";
+}
+
 function getApplyButtonLabel(gap: string, howToFix: string): string {
   const deckKeywords = /\b(slide|deck|body content|bodyContent|headline|speaker note|layout|slide framework)\b/i;
   const combined = `${gap} ${howToFix}`;
@@ -51,12 +63,29 @@ function getApplyButtonLabel(gap: string, howToFix: string): string {
   return "Apply to narrative";
 }
 
-
-// Normalize a gap entry — handle both plain string and {text, tier} object shapes
-function normalizeGap(gap: any): string {
-  if (typeof gap === 'string') return gap;
-  if (gap && typeof gap === 'object') return gap.text || JSON.stringify(gap);
-  return String(gap);
+function gapSeverityStyles(tier: string) {
+  if (tier === "primary") return {
+    border: "border-destructive/30",
+    bg: "bg-destructive/5",
+    icon: "text-destructive",
+    label: "Critical",
+    labelClass: "text-destructive bg-destructive/10",
+  };
+  if (tier === "minor") return {
+    border: "border-border",
+    bg: "bg-muted/20",
+    icon: "text-muted-foreground",
+    label: "Minor",
+    labelClass: "text-muted-foreground bg-muted/30",
+  };
+  // secondary (default)
+  return {
+    border: "border-yellow-400/20",
+    bg: "bg-yellow-400/5",
+    icon: "text-yellow-400",
+    label: "Moderate",
+    labelClass: "text-yellow-400 bg-yellow-400/10",
+  };
 }
 
 function CircularGauge({ value, label }: { value: number; label: string }) {
@@ -77,9 +106,12 @@ function CircularGauge({ value, label }: { value: number; label: string }) {
     <div className="flex flex-col items-center gap-1.5">
       <svg width="90" height="90" viewBox="0 0 90 90" className="drop-shadow-lg">
         <circle cx="45" cy="45" r={radius} fill="none" stroke="hsl(222 16% 16%)" strokeWidth="6" />
-        <circle cx="45" cy="45" r={radius} fill="none" stroke={strokeColor} strokeWidth="6"
-          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-          transform="rotate(-90 45 45)" className="animate-gauge" />
+        <circle
+          cx="45" cy="45" r={radius} fill="none"
+          stroke={strokeColor} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          transform="rotate(-90 45 45)" className="animate-gauge"
+        />
         <text x="45" y="42" textAnchor="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
         <text x="45" y="58" textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: "11px" }}>/100</text>
       </svg>
@@ -107,7 +139,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
     return () => clearTimeout(t);
   }, []);
 
-  const handleApply = async (index: number, gap: string, howToFix: string) => {
+  const handleApply = async (index: number, gapText: string, howToFix: string) => {
     setApplyingIndex(index);
     try {
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
@@ -123,29 +155,64 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
   const overall = score.overall;
   const components = score.components;
   const readinessTitle = READINESS_TITLES[mode] || "NARRATIVE READINESS";
-  const levelLabel =
-    overall >= 85 ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready") :
-    overall >= 70 ? "Solid" :
-    "Developing";
+  const isInvestorReady = overall >= 85;
+  const levelLabel = isInvestorReady
+    ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready")
+    : overall >= 70 ? "Solid"
+    : "Developing";
 
   const gaps = score.gaps || [];
   const improvements = score.improvements || [];
   const appliedCount = appliedSuggestions.size;
+
+  // Sort gaps by severity: primary first, then secondary, then minor
+  const tierOrder = { primary: 0, secondary: 1, minor: 2 };
+  const sortedGapIndices = gaps
+    .map((gap, i) => ({ i, tier: getGapTier(gap) }))
+    .sort((a, b) => (tierOrder[a.tier] ?? 1) - (tierOrder[b.tier] ?? 1));
 
   const lowestEntry = Object.entries(components).reduce<[string, number] | null>((min, [key, value]) => {
     if (!min || value < min[1]) return [key, value];
     return min;
   }, null);
 
+  const primaryGaps = gaps.filter(g => getGapTier(g) === "primary");
+  const hasGaps = gaps.length > 0 || improvements.length > 0;
+
   return (
     <div className="space-y-4">
-      {/* Biggest opportunity callout */}
-      {lowestEntry && lowestEntry[1] < 80 && (
+
+      {/* Investor-ready ceiling banner */}
+      {isInvestorReady && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-emerald/25 bg-emerald/5 animate-fade-in">
+          <Trophy className="h-3.5 w-3.5 text-emerald shrink-0" />
+          <p className="text-xs text-foreground/80 flex-1">
+            <span className="font-medium text-emerald">Investor-ready narrative.</span>{" "}
+            {gaps.length > 0
+              ? `${gaps.length} refinement${gaps.length > 1 ? "s" : ""} below to go from good to exceptional.`
+              : "No significant gaps found. Strong across the board."}
+          </p>
+        </div>
+      )}
+
+      {/* Biggest opportunity callout — only shown when NOT investor-ready */}
+      {!isInvestorReady && lowestEntry && lowestEntry[1] < 80 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-yellow-400/20 bg-yellow-400/5 animate-fade-in">
           <Lightbulb className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
           <p className="text-xs text-foreground/80 flex-1">
             <span className="font-medium">Biggest opportunity:</span>{" "}
             {getLabel(lowestEntry[0])} ({lowestEntry[1]}). Apply a suggestion below to improve it.
+          </p>
+        </div>
+      )}
+
+      {/* Critical gap callout — when NOT investor-ready and has primary gaps */}
+      {!isInvestorReady && primaryGaps.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-sm border border-destructive/25 bg-destructive/5 animate-fade-in">
+          <X className="h-3.5 w-3.5 text-destructive shrink-0" />
+          <p className="text-xs text-foreground/80 flex-1">
+            <span className="font-medium text-destructive">{primaryGaps.length} critical {primaryGaps.length === 1 ? "gap" : "gaps"}</span>{" "}
+            need attention before this narrative is investor-ready.
           </p>
         </div>
       )}
@@ -234,10 +301,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       )}
 
       {/* Areas to Improve — gated for free users */}
-      {(gaps.length > 0 || improvements.length > 0) && (
+      {hasGaps && (
         <div className="relative card-gradient rounded-sm border border-border p-5">
           <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-yellow-400 mb-4 flex items-center gap-1.5">
-            <Lightbulb className="h-3 w-3" /> Areas to Improve
+            <Lightbulb className="h-3 w-3" />
+            {isInvestorReady ? "Refinements" : "Areas to Improve"}
             {isFree && (
               <span className="ml-1 text-[10px] text-muted-foreground font-normal normal-case tracking-normal">
                 ({gaps.length} {gaps.length === 1 ? "area" : "areas"})
@@ -251,39 +319,47 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
             style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}
           >
             <div className="space-y-2">
-              {gaps.map((gap, i) => {
+              {sortedGapIndices.map(({ i }) => {
+                const gap = gaps[i];
                 const howToFix = improvements[i];
+                const gapText = normalizeGap(gap);
+                const tier = getGapTier(gap);
+                const styles = gapSeverityStyles(tier);
                 const expanded = expandedImprovement === i;
                 const isApplied = appliedSuggestions.has(`score-${i}`);
-                const gapText = normalizeGap(gap);
-              const applyLabel = howToFix ? getApplyButtonLabel(gapText, howToFix) : "Apply to narrative";
+                const applyLabel = howToFix ? getApplyButtonLabel(gapText, howToFix) : "Apply to narrative";
 
                 return isApplied ? (
                   <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-center gap-2">
                     <Check className="h-3 w-3 text-emerald shrink-0" />
-                    <span className="text-xs leading-relaxed text-foreground/60 flex-1 min-w-0">{normalizeGap(gap)}</span>
+                    <span className="text-xs leading-relaxed text-foreground/60 flex-1 min-w-0">{gapText}</span>
                     <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">
                       Applied
                     </Badge>
                   </div>
                 ) : (
-                  <div key={i} className="rounded-sm border border-border bg-muted/30 overflow-hidden">
+                  <div key={i} className={`rounded-sm border ${styles.border} ${styles.bg} overflow-hidden`}>
                     <button
                       onClick={() => setExpandedImprovement(expanded ? null : i)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
-                        <span className="text-xs text-foreground/90 leading-relaxed">{normalizeGap(gap)}</span>
+                        <AlertTriangle className={`h-3 w-3 ${styles.icon} shrink-0 mt-0.5`} />
+                        <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
                       </div>
-                      {howToFix && (
-                        expanded
-                          ? <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
-                          : <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0 ml-2" />
-                      )}
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${styles.labelClass}`}>
+                          {styles.label}
+                        </span>
+                        {howToFix && (
+                          expanded
+                            ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                            : <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        )}
+                      </div>
                     </button>
                     {expanded && howToFix && (
-                      <div className="px-4 pb-3 border-t border-border pt-3 animate-fade-in">
+                      <div className="px-4 pb-3 border-t border-border/50 pt-3 animate-fade-in">
                         <div className="flex items-start gap-2">
                           <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
                           <div className="flex-1">
@@ -293,13 +369,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                         </div>
                         <div className="mt-2 flex justify-end">
                           <button
-                            onClick={() => handleApply(i, gap, howToFix)}
+                            onClick={() => handleApply(i, gapText, howToFix)}
                             disabled={applyingIndex === i}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                           >
-                            {applyingIndex === i
-                              ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                              : applyLabel}
+                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</> : applyLabel}
                           </button>
                         </div>
                       </div>
