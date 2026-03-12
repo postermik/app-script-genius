@@ -28,7 +28,6 @@ import { findData } from "@/lib/findData";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -276,13 +275,12 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
 
 export function OutputView() {
   const {
-    output, setOutput, reset, isPro, generationCount, currentProjectId, rawInput,
+    output, setOutput, reset, isPro, isHobby, isFree, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
     completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText,
   } = useDecksmith();
   const navigate = useNavigate();
-  const { subscribed } = useSubscription();
   const isMobile = useIsMobile();
 
   const intent = output ? getOutputIntent(output) : "create";
@@ -304,10 +302,19 @@ export function OutputView() {
   const [isRescoring, setIsRescoring] = useState(false);
   const [refiningCoreIndex, setRefiningCoreIndex] = useState<number | null>(null);
 
+  // Listen for free tier upgrade required event fired from generate()
+  useEffect(() => {
+    const handler = () => setUpgradeOpen(true);
+    window.addEventListener('rhetoric:upgrade-required', handler);
+    return () => window.removeEventListener('rhetoric:upgrade-required', handler);
+  }, []);
+
+  // Show upgrade banner for free users who have used their 1 draft
+  const isFirstFree = isFree && generationCount >= 1;
+
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
     ? ["core_narrative" as OutputDeliverable, ...intakeSelections.outputs]
     : ["core_narrative" as OutputDeliverable, "slide_framework"];
-
   const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>("core_narrative");
 
   useEffect(() => {
@@ -619,14 +626,14 @@ export function OutputView() {
       </div>
 
       {isFirstFree && (
-        <div className="border-t border-border px-6 py-5 card-gradient sticky bottom-0">
+        <div className="border-t border-border px-6 py-5 card-gradient sticky bottom-0 z-10">
           <div className="flex items-center justify-between" style={isMobile ? undefined : { marginLeft: 200 }}>
             <div>
-              <p className="text-sm font-medium text-foreground">Unlock Full Narrative</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Upgrade to Pro for all sections, exports, and refinements.</p>
+              <p className="text-sm font-medium text-foreground">You've used your free draft</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Upgrade for unlimited drafts, exports, investor discovery, and more.</p>
             </div>
-            <button onClick={() => toast.info("Upgrade to Pro for full access.")} className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue">
-              Upgrade to Pro
+            <button onClick={() => setUpgradeOpen(true)} className="text-xs px-4 py-2 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all glow-blue shrink-0 ml-4">
+              Upgrade
             </button>
           </div>
         </div>

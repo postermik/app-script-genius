@@ -35,6 +35,8 @@ interface DecksmithContextType {
   isEvaluation: boolean;
   session: Session | null;
   isPro: boolean;
+  isHobby: boolean;
+  isFree: boolean;
   projects: Project[];
   loadProjects: () => Promise<void>;
   currentProjectId: string | null;
@@ -129,6 +131,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
   const { subscribed, productId } = useSubscription();
   const isPro = devSimPro || (subscribed && productId === TIERS.pro.product_id);
+  const isHobby = !isPro && subscribed && productId === TIERS.hobby.product_id;
+  const isFree = !isPro && !isHobby;
   const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -688,6 +692,12 @@ Return ONLY valid JSON, no markdown fences.`;
   // ── Main generate function ──
   const generate = useCallback(async () => {
     if (!rawInput.trim() || isGenerating) return;
+
+    // Free tier: hard block after 1 generation
+    if (isFree && generationCount >= 1) {
+      window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required', { detail: { reason: 'free_limit' } }));
+      return;
+    }
     setIsGenerating(true);
     setStreamingText("");
     setIsEvaluation(false);
@@ -1394,7 +1404,7 @@ Return ONLY valid JSON. No markdown fences.`;
         voiceProfile, setVoiceProfile,
         detectedMode, output, setOutput, isGenerating, loadingPhase, refiningSection,
         generationCount, generate, evaluateDeck, refineSection, reset, isEvaluation,
-        session, isPro, projects, loadProjects,
+        session, isPro, isHobby, isFree, projects, loadProjects,
         currentProjectId, openProject, deleteProject, duplicateProject,
         versions, currentVersion, saveVersion, loadVersion,
         outreachTracker, addOutreachEntry, updateOutreachEntry, removeOutreachEntry,
