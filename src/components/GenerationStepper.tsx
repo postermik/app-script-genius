@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+// stepper v3
 
 interface OutputStep {
   key: string;
