@@ -889,7 +889,6 @@ Return ONLY valid JSON, no markdown fences.`;
           const metadataUpdate = {
             ...existing,
             intake_selections: intakeSelectionsRef.current,
-            applied_suggestions: Array.from(appliedSuggestions),
             dismissed_suggestions: Array.from(dismissedSuggestions),
             tab_order: completedTypes,
             score: (fullOutput as any)?.score || existing.score || null,
