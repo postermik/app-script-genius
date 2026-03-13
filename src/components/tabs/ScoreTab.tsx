@@ -336,27 +336,23 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                             <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
                           </div>
                         </div>
-                        {(() => {
-                          const relevantSlide = detectRelevantSlide(gapText);
-                          if (relevantSlide !== null && slides[relevantSlide]) {
-                            return (
-                              <div className="mt-2 mb-1 flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id={`slide-target-${i}`}
-                                  checked={slideTarget === relevantSlide}
-                                  onChange={e => setSlideTarget(e.target.checked ? relevantSlide : null)}
-                                  className="h-3 w-3 accent-electric"
-                                />
-                                <label htmlFor={`slide-target-${i}`} className="text-[10px] text-foreground/70 cursor-pointer">
-                                  Also apply to <span className="text-electric font-medium">{slides[relevantSlide].categoryLabel || slides[relevantSlide].headline}</span>
-                                </label>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          {(() => {
+                            const relevantSlide = detectRelevantSlide(gapText);
+                            if (relevantSlide !== null && slides[relevantSlide]) {
+                              const active = slideTarget === relevantSlide;
+                              return (
+                                <button
+                                  onClick={() => setSlideTarget(active ? null : relevantSlide)}
+                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "bg-transparent border-border/50 text-foreground/50 hover:border-border hover:text-foreground/70")}
+                                >
+                                  {active && <Check className="h-2.5 w-2.5" />}
+                                  Also apply to {slides[relevantSlide].categoryLabel || slides[relevantSlide].headline}
+                                </button>
+                              );
+                            }
+                            return <span />;
+                          })()}
                           <button
                             onClick={() => handleApply(i, gapText, howToFix)}
                             disabled={applyingIndex === i}
@@ -392,24 +388,26 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
               className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-electric/50 transition-colors"
               rows={2}
             />
-            <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                {["slide_framework", "pitch_email", "investment_memo"].map(type => {
-                  const label = type === "slide_framework" ? "Slides" : type === "pitch_email" ? "Email" : "Memo";
-                  const checked = insightOutputs.includes(type);
-                  return (
-                    <label key={type} className="flex items-center gap-1 text-[10px] text-foreground/70 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => setInsightOutputs(prev => checked ? prev.filter(t => t !== type) : [...prev, type])}
-                        className="h-3 w-3 accent-electric"
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
-              </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[
+                { type: "slide_framework", label: "Slides" },
+                { type: "pitch_email", label: "Email" },
+                { type: "investment_memo", label: "Memo" },
+              ].map(({ type, label }) => {
+                const active = insightOutputs.includes(type);
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setInsightOutputs(prev => active ? prev.filter(t => t !== type) : [...prev, type])}
+                    className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "bg-transparent border-border/50 text-foreground/50 hover:border-border hover:text-foreground/70")}
+                  >
+                    {active && <Check className="h-2.5 w-2.5" />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-end">
               <button
                 onClick={async () => {
                   if (!insightText.trim()) return;
