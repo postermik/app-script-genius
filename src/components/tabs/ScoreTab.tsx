@@ -143,13 +143,12 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree } = useDecksmith();
+  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree, generateOutput } = useDecksmith();
 
   const [slideTarget, setSlideTarget] = useState<number | null>(null);
   const [insightText, setInsightText] = useState("");
   const [applyingInsight, setApplyingInsight] = useState(false);
   const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
-  const { generateOutput } = useDecksmith();
 
   // Detect which slide index is most relevant to a gap based on keyword overlap
   const handleApplyNarrative = async (index: number, howToFix: string) => {
