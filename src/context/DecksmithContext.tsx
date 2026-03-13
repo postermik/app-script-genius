@@ -1172,7 +1172,12 @@ GAP RULES:
 4. tier "minor" = polish only, cap at 1.
 5. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
 
-Re-evaluate gaps each time based only on what is currently in the narrative. Only include a gap if the weakness genuinely persists. Do not re-surface gaps that were already addressed. Do not invent new gaps to replace ones the user fixed.
+Re-evaluate gaps each time based only on what is currently in the narrative. Only include a gap if the weakness genuinely persists.${previousGaps.length > 0 ? `
+
+PREVIOUSLY SHOWN GAPS — do not repeat these unless the weakness is still clearly present in a meaningfully different form:
+${previousGaps.map((g: any, i: number) => `${i + 1}. ${typeof g === "string" ? g : g.text}`).join("\n")}` : ""}
+
+Do not invent new gaps to replace ones the user fixed. Do not paraphrase a previous gap to make it look new.
 
 Return ONLY valid JSON with this exact shape:
 {
