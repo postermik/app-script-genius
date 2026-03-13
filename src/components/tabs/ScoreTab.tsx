@@ -345,22 +345,22 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                               const active = slideTarget === relevantSlide;
                               return (
                                 <button
-                                  onClick={() => setSlideTarget(active ? null : relevantSlide)}
-                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "border-electric/30 text-electric/60 hover:border-electric/60 hover:text-electric/90")}
+                                  onClick={() => handleApplySlide(i, relevantSlide)}
+                                  disabled={applyingSlideIndex === i}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium border border-electric/30 text-electric/60 hover:border-electric/60 hover:text-electric/90 disabled:opacity-40 transition-colors"
                                 >
-                                  {active && <Check className="h-2.5 w-2.5" />}
-                                  Apply to {slideLabel}
+                                  {applyingSlideIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : `Apply to ${slideLabel}`}
                                 </button>
                               );
                             }
                             return null;
                           })()}
                           <button
-                            onClick={() => handleApply(i, gapText, howToFix)}
+                            onClick={() => handleApplyNarrative(i, howToFix)}
                             disabled={applyingIndex === i}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                           >
-                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : (slideTarget !== null ? "Apply to Both" : "Apply to Core Narrative")}
+                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : "Apply to Core Narrative"}
                           </button>
                         </div>
                       </div>
