@@ -30,29 +30,26 @@ export function SectionEditor({
     if (!instruction.trim() || remixLoading || !onRemixSection) return;
     setRemixLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const SUPABASE_URL = "https://jilopuugwyrqogoxlxjo.supabase.co";
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/decksmith-ai`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "apikey": SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `You are editing a section of a startup fundraising narrative.
-
-CURRENT CONTENT:
-${section.content}
-
-INSTRUCTION: ${instruction}
-
-STYLE RULE: Never use em dashes (—) anywhere in your output. Use a comma, colon, or period instead.
-
-Rewrite ONLY the content of this section following the instruction. Return just the rewritten text — no labels, no preamble, no explanation.`
-          }],
+          mode: "refine",
+          input: section.heading,
+          section: section.heading,
+          path: "",
+          tone: instruction,
+          currentContent: section.content,
         }),
       });
       const data = await res.json();
-      const refined = data?.content?.[0]?.text?.trim();
+      const refined = data?.content || data?.refined || data?.result || data?.text;
       if (refined) {
         onRemixSection(index, refined);
         toast.success("Section remixed");
