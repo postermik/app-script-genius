@@ -326,7 +326,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
       )}
 
       {/* BREAKDOWN — collapsed by default */}
-      <div className="rounded-sm border border-border overflow-hidden">
+      <div className="rounded-sm border border-border/60 bg-muted/5 overflow-hidden">
         <button
           onClick={() => setShowDetails(prev => !prev)}
           className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/10 transition-colors text-left"

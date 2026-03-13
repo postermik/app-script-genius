@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { Pencil, Wand2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { SuggestionCard } from "./SuggestionCard";
 import type { DeliverableSection } from "@/types/rhetoric";
@@ -21,6 +22,49 @@ export function SectionEditor({
   dismissed, applyingIndex, onApplySuggestion, onDismissSuggestion, onSaveEdit,
 }: Props) {
   const [editing, setEditing] = useState(false);
+  const [showRemix, setShowRemix] = useState(false);
+  const [remixInput, setRemixInput] = useState("");
+  const [remixLoading, setRemixLoading] = useState(false);
+
+  const handleRemix = async (instruction: string) => {
+    if (!instruction.trim() || remixLoading || !onRemixSection) return;
+    setRemixLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are editing a section of a startup fundraising narrative.
+
+CURRENT CONTENT:
+${section.content}
+
+INSTRUCTION: ${instruction}
+
+STYLE RULE: Never use em dashes (—) anywhere in your output. Use a comma, colon, or period instead.
+
+Rewrite ONLY the content of this section following the instruction. Return just the rewritten text — no labels, no preamble, no explanation.`
+          }],
+        }),
+      });
+      const data = await res.json();
+      const refined = data?.content?.[0]?.text?.trim();
+      if (refined) {
+        onRemixSection(index, refined);
+        toast.success("Section remixed");
+      }
+    } catch (e) {
+      toast.error("Remix failed. Try again.");
+    } finally {
+      setRemixLoading(false);
+      setShowRemix(false);
+      setRemixInput("");
+    }
+  };
   const [editContent, setEditContent] = useState("");
 
   const startEdit = () => { setEditContent(section.content); setEditing(true); };

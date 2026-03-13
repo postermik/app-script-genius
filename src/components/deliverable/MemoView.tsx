@@ -60,6 +60,12 @@ export function MemoView({ deliverable, onUpdateDeliverable }: Props) {
           applyingIndex={applyingIndex}
           onApplySuggestion={applySuggestion}
           onDismissSuggestion={handleDismiss}
+          onRemixSection={(sectionIndex, newContent) => {
+            if (!deliverable.sections || !onUpdateDeliverable) return;
+            const updated = [...deliverable.sections];
+            updated[sectionIndex] = { ...updated[sectionIndex], content: newContent };
+            onUpdateDeliverable({ ...deliverable, sections: updated });
+          }}
           onSaveEdit={handleSaveEdit}
         />
       ))}
