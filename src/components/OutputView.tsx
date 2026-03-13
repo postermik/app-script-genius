@@ -281,7 +281,7 @@ export function OutputView() {
     output, setOutput, reset, isPro, isHobby, isFree, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText, appliedSuggestions, appliedSuggestions,
+    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText, appliedSuggestions,
   } = useDecksmith();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
