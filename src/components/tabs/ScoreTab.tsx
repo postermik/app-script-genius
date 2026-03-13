@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock, Trophy } from "lucide-react";
+import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock, Trophy, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { RhetoricScore } from "@/types/rhetoric";
@@ -131,17 +131,55 @@ interface Props {
   score: RhetoricScore;
   mode: string;
   showRescore?: boolean;
+  slides?: { categoryLabel: string; headline: string }[];
   onRescore?: () => void;
   isRescoring?: boolean;
   hasPendingImprovements?: boolean;
 }
 
-export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, hasPendingImprovements }: Props) {
+export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, hasPendingImprovements, slides = [] }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree } = useDecksmith();
+
+  const [slideTarget, setSlideTarget] = useState<number | null>(null);
+  const [insightText, setInsightText] = useState("");
+  const [applyingInsight, setApplyingInsight] = useState(false);
+  const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
+  const { applyInsight, generateOutput } = useDecksmith();
+
+  // Detect which slide index is most relevant to a gap based on keyword overlap
+  function detectRelevantSlide(gapText: string): number | null {
+    if (!slides.length) return null;
+    const gapLower = gapText.toLowerCase();
+    const keywords = [
+      ["market", "tam", "sam", "som", "sizing", "addressable"],
+      ["traction", "revenue", "arr", "mrr", "growth", "users", "customers"],
+      ["team", "founder", "experience", "background"],
+      ["problem", "pain", "challenge"],
+      ["solution", "product", "how it works"],
+      ["differentiation", "competition", "moat", "unique"],
+      ["business model", "pricing", "monetize", "revenue model"],
+      ["why now", "timing", "tailwind"],
+      ["ask", "raise", "use of funds", "capital"],
+    ];
+    let bestIdx: number | null = null;
+    let bestScore = 0;
+    slides.forEach((slide, idx) => {
+      const slideLower = (slide.categoryLabel + " " + slide.headline).toLowerCase();
+      keywords.forEach(group => {
+        const gapHit = group.some(k => gapLower.includes(k));
+        const slideHit = group.some(k => slideLower.includes(k));
+        if (gapHit && slideHit) {
+          const score = group.filter(k => gapLower.includes(k) && slideLower.includes(k)).length + 1;
+          if (score > bestScore) { bestScore = score; bestIdx = idx; }
+        }
+      });
+    });
+    return bestScore > 0 ? bestIdx : null;
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 100);
@@ -153,6 +191,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
     try {
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
       markSuggestionApplied(`score-${index}`);
+      // If a slide target is selected, regenerate just that slide
+      if (slideTarget !== null) {
+        await generateOutput("slide_framework" as any);
+        setSlideTarget(null);
+      }
       setExpandedImprovement(null);
     } catch {
       // refineSection already shows toast on error
@@ -230,7 +273,6 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
             <button
               onClick={onRescore}
               disabled={isRescoring || !hasPendingImprovements}
-              disabled={isRescoring}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
@@ -294,6 +336,26 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                             <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
                           </div>
                         </div>
+                        {(() => {
+                          const relevantSlide = detectRelevantSlide(gapText);
+                          if (relevantSlide !== null && slides[relevantSlide]) {
+                            return (
+                              <div className="mt-2 mb-1 flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`slide-target-${i}`}
+                                  checked={slideTarget === relevantSlide}
+                                  onChange={e => setSlideTarget(e.target.checked ? relevantSlide : null)}
+                                  className="h-3 w-3 accent-electric"
+                                />
+                                <label htmlFor={`slide-target-${i}`} className="text-[10px] text-foreground/70 cursor-pointer">
+                                  Also apply to <span className="text-electric font-medium">{slides[relevantSlide].categoryLabel || slides[relevantSlide].headline}</span>
+                                </label>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                         <div className="mt-2 flex justify-end">
                           <button
                             onClick={() => handleApply(i, gapText, howToFix)}
@@ -316,6 +378,58 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
               ))}
             </div>
           </div>
+        {/* ADD INSIGHT */}
+        {!isFree && (
+          <div className="mt-3 rounded-sm border border-border/50 bg-card/50 p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="h-3 w-3 text-electric" />
+              <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Add insight</span>
+            </div>
+            <textarea
+              value={insightText}
+              onChange={e => setInsightText(e.target.value)}
+              placeholder="e.g. My best user is a technical founder who doesn't need a CFO"
+              className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-electric/50 transition-colors"
+              rows={2}
+            />
+            <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                {["slide_framework", "pitch_email", "investment_memo"].map(type => {
+                  const label = type === "slide_framework" ? "Slides" : type === "pitch_email" ? "Email" : "Memo";
+                  const checked = insightOutputs.includes(type);
+                  return (
+                    <label key={type} className="flex items-center gap-1 text-[10px] text-foreground/70 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setInsightOutputs(prev => checked ? prev.filter(t => t !== type) : [...prev, type])}
+                        className="h-3 w-3 accent-electric"
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
+              <button
+                onClick={async () => {
+                  if (!insightText.trim()) return;
+                  setApplyingInsight(true);
+                  try {
+                    await applyInsight(insightText, insightOutputs);
+                    setInsightText("");
+                  } finally {
+                    setApplyingInsight(false);
+                  }
+                }}
+                disabled={applyingInsight || !insightText.trim()}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                {applyingInsight ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : <>Apply</>}
+              </button>
+            </div>
+          </div>
+        )}
+
           {isFree && (
             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
               <Lock className="h-5 w-5 text-electric mb-2.5" />
