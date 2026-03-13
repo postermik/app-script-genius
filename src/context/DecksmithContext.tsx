@@ -699,7 +699,13 @@ Return ONLY valid JSON, no markdown fences.`;
     const overridePrefix = outputType !== "slide_framework" ? `IMPORTANT: This request is for "${outputType}" ONLY. Do NOT generate slides or deckFramework.\n\n` : "";
     const fullInput = `${overridePrefix}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
-    const maxTokens = outputType === "slide_framework" ? 12000 : 4096;
+    const maxTokens =
+      outputType === "slide_framework" ? 5000 :
+      outputType === "investment_memo" ? 3000 :
+      outputType === "investor_qa" ? 2500 :
+      outputType === "elevator_pitch" ? 1200 :
+      outputType === "pitch_email" ? 2000 :
+      2500;
 
     const parsed = await callEdgeFunction(
       {
@@ -1036,7 +1042,7 @@ Return ONLY valid JSON, no markdown fences.`;
       const currentContent = getNestedValue(sourceObj, path);
       const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
+        body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, max_tokens: 2000, model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       const refined = data.content;
