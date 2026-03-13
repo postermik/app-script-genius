@@ -1110,6 +1110,8 @@ Return ONLY valid JSON, no markdown fences.`;
 
   const rescoreNarrative = useCallback(async () => {
     if (!output) return;
+    const previousScore: number = (output?.score?.overall ?? 0);
+    const improvementsWereApplied: boolean = appliedSuggestions.size > 0;
     setRefiningSection("rescore");
     try {
       // Build snapshot from coreNarrative + outputData (new architecture)
@@ -1165,12 +1167,12 @@ overall = weighted average: clarity 15%, marketFraming 15%, differentiation 12%,
 
 GAP RULES:
 1. Gaps describe NARRATIVE weaknesses, not output-specific issues. Write "revenue model lacks funnel math" not "the revenue slide lacks...".
-2. tier "primary" = investor would pause or pass. Surface ALL primary gaps — no cap.
-3. tier "secondary" = would strengthen narrative, cap at 2.
+2. tier "primary" = investor closes the tab or sends a pass email. Reserved ONLY for: complete absence of differentiation, no credible addressable market, no team credibility whatsoever, fundamentally broken unit economics, or incoherent problem/solution fit. A missing logo, imprecise TAM, thin traction, or lack of a named customer is NOT primary. Hard cap: surface at most 3 primary gaps. Rank all gaps by investor impact and keep only the top 3. Drop the rest.
+3. tier "secondary" = would meaningfully strengthen the narrative in a pitch meeting. Cap at 3.
 4. tier "minor" = polish only, cap at 1.
 5. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
 
-Re-evaluate gaps from scratch each time. If a weakness still exists, include it again. Only omit a gap if the narrative genuinely addressed it.
+Re-evaluate gaps each time based only on what is currently in the narrative. Only include a gap if the weakness genuinely persists. Do not re-surface gaps that were already addressed. Do not invent new gaps to replace ones the user fixed.
 
 Return ONLY valid JSON with this exact shape:
 {
@@ -1204,6 +1206,10 @@ No markdown fences. No commentary outside the JSON.`;
       setOutput((prev) => {
         if (!prev) return prev;
         const updated = JSON.parse(JSON.stringify(prev));
+        // Score can never go down when the user applied improvements
+        if (improvementsWereApplied && typeof scoreContent?.overall === "number") {
+          scoreContent.overall = Math.max(scoreContent.overall, previousScore + 1);
+        }
         updated.score = scoreContent;
         updated._appliedSuggestions = [];
         saveProject(updated as NarrativeOutputData);

@@ -112,8 +112,15 @@ function CircularGauge({ value, label }: { value: number; label: string }) {
           strokeDasharray={circumference} strokeDashoffset={offset}
           transform="rotate(-90 45 45)" className="animate-gauge"
         />
-        <text x="45" y="42" textAnchor="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
-        <text x="45" y="58" textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: "11px" }}>/100</text>
+        {Array.from({ length: 8 }).map((_, i) => {
+          const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
+          const x1 = 45 + 30 * Math.cos(angle);
+          const y1 = 45 + 30 * Math.sin(angle);
+          const x2 = 45 + 34 * Math.cos(angle);
+          const y2 = 45 + 34 * Math.sin(angle);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(222 16% 22%)" strokeWidth="1.5" />;
+        })}
+        <text x="45" y="45" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
       </svg>
       <p className={`text-[11px] font-semibold ${levelColor}`}>{label}</p>
     </div>
@@ -126,9 +133,10 @@ interface Props {
   showRescore?: boolean;
   onRescore?: () => void;
   isRescoring?: boolean;
+  hasPendingImprovements?: boolean;
 }
 
-export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: Props) {
+export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, hasPendingImprovements }: Props) {
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
@@ -200,7 +208,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
                 transform="rotate(-90 40 40)"
               />
               <text x="40" y="39" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
-              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px",opacity:"0.6"}}>/100</text>
+              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px",opacity:"0"}}>/100</text>
             </svg>
           </div>
           <div className="flex-1 min-w-0">
@@ -221,6 +229,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring }: P
           {(showRescore || appliedCount > 0) && (
             <button
               onClick={onRescore}
+              disabled={isRescoring || !hasPendingImprovements}
               disabled={isRescoring}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
             >

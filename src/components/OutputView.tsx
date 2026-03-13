@@ -67,7 +67,10 @@ function synthesizeInvestorQA(output: any, outputData: Record<string, any>): Inv
     "questions",
     "deliverable.questions",
   );
-  if (items?.length) return items;
+  if (items?.length) return items.map((item: any) => ({
+    question: item.question ?? "",
+    answer: item.answer ?? item.suggestedAnswer ?? "",
+  }));
 
   if (output?.analysis?.commonQuestions?.length) {
     return output.analysis.commonQuestions.map((q: any) => ({ question: q.question, answer: q.suggestedAnswer }));
@@ -278,7 +281,7 @@ export function OutputView() {
     output, setOutput, reset, isPro, isHobby, isFree, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText,
+    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText, appliedSuggestions, appliedSuggestions,
   } = useDecksmith();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -605,7 +608,7 @@ export function OutputView() {
             )}
 
             {activeTab === "score" && isLoading && <ScoreShimmer />}
-            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} />}
+            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} />}
             {activeTab === "score" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
@@ -615,7 +618,7 @@ export function OutputView() {
               <AnalysisTab analysis={analysis} score={score} mode={output!.mode} />
             )}
             {activeTab === "analysis" && !isLoading && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} />
+              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} />
             )}
             {activeTab === "analysis" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
