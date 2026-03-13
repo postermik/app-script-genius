@@ -141,6 +141,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree } = useDecksmith();
 
@@ -151,6 +152,30 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const { generateOutput } = useDecksmith();
 
   // Detect which slide index is most relevant to a gap based on keyword overlap
+  const handleApplyNarrative = async (index: number, howToFix: string) => {
+    setApplyingIndex(index);
+    try {
+      await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
+      markSuggestionApplied(`score-${index}`);
+      setExpandedImprovement(null);
+    } catch {
+      // refineSection shows toast on error
+    } finally {
+      setApplyingIndex(null);
+    }
+  };
+
+  const handleApplySlide = async (index: number) => {
+    setApplyingSlideIndex(index);
+    try {
+      await generateOutput("slide_framework" as any);
+    } catch {
+      // generateOutput shows toast on error
+    } finally {
+      setApplyingSlideIndex(null);
+    }
+  };
+
   function detectRelevantSlide(gapText: string): number | null {
     if (!slides.length) return null;
     const gapLower = gapText.toLowerCase();
@@ -186,23 +211,6 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
     return () => clearTimeout(t);
   }, []);
 
-  const handleApply = async (index: number, gapText: string, howToFix: string) => {
-    setApplyingIndex(index);
-    try {
-      await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
-      markSuggestionApplied(`score-${index}`);
-      // If a slide target is selected, regenerate just that slide
-      if (slideTarget !== null) {
-        await generateOutput("slide_framework" as any);
-        setSlideTarget(null);
-      }
-      setExpandedImprovement(null);
-    } catch {
-      // refineSection already shows toast on error
-    } finally {
-      setApplyingIndex(null);
-    }
-  };
 
   const overall = score.overall;
   const components = score.components;
