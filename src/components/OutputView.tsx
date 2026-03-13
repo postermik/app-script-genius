@@ -608,7 +608,7 @@ export function OutputView() {
             )}
 
             {activeTab === "score" && isLoading && <ScoreShimmer />}
-            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} />}
+            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />}
             {activeTab === "score" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
@@ -618,7 +618,7 @@ export function OutputView() {
               <AnalysisTab analysis={analysis} score={score} mode={output!.mode} />
             )}
             {activeTab === "analysis" && !isLoading && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} />
+              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />
             )}
             {activeTab === "analysis" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
