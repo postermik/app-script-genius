@@ -340,15 +340,16 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                           {(() => {
                             const relevantSlide = detectRelevantSlide(gapText);
                             if (relevantSlide !== null && slides[relevantSlide]) {
-                              const slideLabel = (slides[relevantSlide].categoryLabel || slides[relevantSlide].headline || "").toLowerCase().replace(/w/g, (c: string) => c.toUpperCase());
+                              const rawLabel = slides[relevantSlide].categoryLabel || slides[relevantSlide].headline || "";
+                              const slideLabel = (rawLabel + " Slide").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase());
                               const active = slideTarget === relevantSlide;
                               return (
                                 <button
                                   onClick={() => setSlideTarget(active ? null : relevantSlide)}
-                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "border-border/40 text-foreground/50 hover:border-border/70 hover:text-foreground/80")}
+                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "border-electric/30 text-electric/60 hover:border-electric/60 hover:text-electric/90")}
                                 >
                                   {active && <Check className="h-2.5 w-2.5" />}
-                                  Apply to {slideLabel} Slide
+                                  Apply to {slideLabel}
                                 </button>
                               );
                             }
