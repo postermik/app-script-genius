@@ -1147,13 +1147,32 @@ Return ONLY valid JSON, no markdown fences.`;
         previousGaps,
       };
 
-      const scoringInstruction = `You are re-scoring a ${purpose} narrative for a ${stage.replace("_", "-")} stage company.
+      const scoringInstruction = `You are scoring a ${purpose} narrative for a ${stage.replace("_", "-")} stage company. Score COLD — based only on the narrative content below. Ignore any prior scores.
 
-IMPORTANT — Stage calibration: Score relative to what is realistic and expected at the ${stage.replace("_", "-")} stage. A pre-seed company should NOT be penalized for lacking revenue metrics, named customer logos, or detailed unit economics — these are NOT expected at this stage. Score on narrative quality, market framing, clarity, and founder credibility instead.
+STAGE CALIBRATION: Score relative to what is realistic at the ${stage.replace("_", "-")} stage. Pre-seed companies are NOT penalized for lacking revenue metrics, named logos, or unit economics. Score on narrative quality, clarity, market framing, and credibility.
 
-CONSISTENCY: Re-evaluate each gap from scratch. If a weakness still exists in the narrative, include it again. Only omit a gap if the narrative genuinely addressed it.
+COMPONENT RUBRICS — score each on 0-100:
+- clarity: 90+ = every sentence earns its place, zero jargon; 75-89 = clear but some filler; 60-74 = meandering or overlong; <60 = confusing
+- marketFraming: 90+ = TAM/SAM/SOM with sourced logic, tight ICP; 75-89 = market sized but logic thin; 60-74 = market asserted not proven; <60 = vague or missing
+- differentiation: 90+ = named alternatives with specific wedge; 75-89 = differentiation stated but generic; 60-74 = "we're better" without proof; <60 = no competitive framing
+- riskTransparency: 90+ = 2+ risks named with mitigation plans; 75-89 = risks acknowledged, no mitigation; 60-74 = one risk mentioned; <60 = perfect-world pitch, no risks surfaced
+- persuasiveStructure: 90+ = problem→solution→why now→ask flows naturally; 75-89 = structure present but weak transitions; 60-74 = elements out of order; <60 = no narrative arc
+- metricCompleteness: 90+ = traction metrics with numbers and trend; 75-89 = some metrics but vague; 60-74 = metrics claimed without evidence; <60 = no metrics (adjust for stage)
+- narrativeCoherence: 90+ = every section reinforces core thesis; 75-89 = mostly coherent, one tangent; 60-74 = sections feel disconnected; <60 = contradictory or scattered
+- momentumSignal: 90+ = concrete proof of velocity (customers, growth, shipped); 75-89 = momentum implied; 60-74 = stated but unsubstantiated; <60 = no signal
 
-Evaluate the narrative snapshot provided. Return ONLY a valid JSON object with this exact shape:
+overall = weighted average: clarity 15%, marketFraming 15%, differentiation 12%, riskTransparency 10%, persuasiveStructure 15%, metricCompleteness 10%, narrativeCoherence 13%, momentumSignal 10%
+
+GAP RULES:
+1. Gaps describe NARRATIVE weaknesses, not output-specific issues. Write "revenue model lacks funnel math" not "the revenue slide lacks...".
+2. tier "primary" = investor would pause or pass. Surface ALL primary gaps — no cap.
+3. tier "secondary" = would strengthen narrative, cap at 2.
+4. tier "minor" = polish only, cap at 1.
+5. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
+
+Re-evaluate gaps from scratch each time. If a weakness still exists, include it again. Only omit a gap if the narrative genuinely addressed it.
+
+Return ONLY valid JSON with this exact shape:
 {
   "overall": <number 0-100>,
   "components": { <key>: <number 0-100>, ... },
@@ -1162,15 +1181,7 @@ Evaluate the narrative snapshot provided. Return ONLY a valid JSON object with t
   "improvements": [<string matching each gap>, ...]
 }
 
-Components to score: clarity, marketFraming, differentiation, riskTransparency, persuasiveStructure, metricCompleteness, narrativeCoherence, momentumSignal.
-
-GAP RULES:
-1. Gaps describe NARRATIVE weaknesses, not output-specific issues. Write "market sizing lacks a credible SAM/SOM" not "the market sizing slide lacks...".
-2. Tier: "primary" = investor would pause/pass, surface ALL. "secondary" = strengthens narrative, cap at 2. "minor" = polish, cap at 1.
-3. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
-4. SCORE STABILITY: Score the narrative as presented. If the founder addressed a gap, that component score must rise. Never score a revised narrative lower unless content regressed.
-
-Return ONLY valid JSON. No markdown fences.`;
+No markdown fences. No commentary outside the JSON.`;
 
       // mode: "score" hits the dedicated scoring handler.
       // We embed the scoringInstruction into the outputData so the score handler
