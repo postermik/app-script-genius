@@ -73,7 +73,7 @@ interface DecksmithContextType {
   generationOutputs: OutputDeliverable[];
   coreNarrative: CoreNarrativeData | null;
   outputData: Record<string, any>;
-  applyInsight: (insight: string, outputTypes: string[]) => Promise<void>;
+  generateOutput: (outputType: OutputDeliverable) => Promise<void>;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -984,16 +984,7 @@ Return ONLY valid JSON, no markdown fences.`;
     await generateOutput("slide_framework");
   }, [generateOutput]);
 
-  // Apply a free-text insight to the narrative, then regenerate selected outputs
-  const applyInsight = useCallback(async (insight: string, outputTypes: string[]) => {
-    if (!insight.trim()) return;
-    // Refine the core narrative with the insight as the tone/instruction
-    await refineSection("insight", "narrativeStructure", insight as any);
-    // Regenerate each selected output sequentially
-    for (const outputType of outputTypes) {
-      await generateOutput(outputType as any);
-    }
-  }, [refineSection, generateOutput]);
+
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
     if (!extractedText.trim() || isGenerating) return;
@@ -1493,7 +1484,6 @@ No markdown fences. No commentary outside the JSON.`;
         generateSlides, isGeneratingSlides,
         isGeneratingOutputs,
         generateOutput,
-        applyInsight,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
           setAppliedSuggestions(prev => new Set(prev).add(key));

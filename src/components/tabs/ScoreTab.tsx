@@ -148,7 +148,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const [insightText, setInsightText] = useState("");
   const [applyingInsight, setApplyingInsight] = useState(false);
   const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
-  const { applyInsight, generateOutput } = useDecksmith();
+  const { generateOutput } = useDecksmith();
 
   // Detect which slide index is most relevant to a gap based on keyword overlap
   function detectRelevantSlide(gapText: string): number | null {
@@ -415,7 +415,10 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                   if (!insightText.trim()) return;
                   setApplyingInsight(true);
                   try {
-                    await applyInsight(insightText, insightOutputs);
+                    await refineSection("insight", "narrativeStructure", insightText as any);
+                    for (const outputType of insightOutputs) {
+                      await generateOutput(outputType as any);
+                    }
                     setInsightText("");
                   } finally {
                     setApplyingInsight(false);
