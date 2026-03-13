@@ -336,29 +336,30 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                             <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
                           </div>
                         </div>
-                        <div className="mt-3 flex items-center justify-between gap-2">
+                        <div className="mt-3 flex items-center justify-end gap-2">
                           {(() => {
                             const relevantSlide = detectRelevantSlide(gapText);
                             if (relevantSlide !== null && slides[relevantSlide]) {
+                              const slideLabel = (slides[relevantSlide].categoryLabel || slides[relevantSlide].headline || "").toLowerCase().replace(/w/g, (c: string) => c.toUpperCase());
                               const active = slideTarget === relevantSlide;
                               return (
                                 <button
                                   onClick={() => setSlideTarget(active ? null : relevantSlide)}
-                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "bg-transparent border-border/50 text-foreground/50 hover:border-border hover:text-foreground/70")}
+                                  className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "border-border/40 text-foreground/50 hover:border-border/70 hover:text-foreground/80")}
                                 >
                                   {active && <Check className="h-2.5 w-2.5" />}
-                                  Also apply to {slides[relevantSlide].categoryLabel || slides[relevantSlide].headline}
+                                  Apply to {slideLabel} Slide
                                 </button>
                               );
                             }
-                            return <span />;
+                            return null;
                           })()}
                           <button
                             onClick={() => handleApply(i, gapText, howToFix)}
                             disabled={applyingIndex === i}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                           >
-                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : applyLabel}
+                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : "Apply to Core Narrative"}
                           </button>
                         </div>
                       </div>
