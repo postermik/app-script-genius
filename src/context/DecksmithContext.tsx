@@ -1207,8 +1207,18 @@ No markdown fences. No commentary outside the JSON.`;
         if (!prev) return prev;
         const updated = JSON.parse(JSON.stringify(prev));
         // Score can never go down when the user applied improvements
-        if (improvementsWereApplied && typeof scoreContent?.overall === "number") {
+        if (
+          improvementsWereApplied &&
+          scoreContent != null &&
+          typeof scoreContent.overall === "number" &&
+          isFinite(scoreContent.overall)
+        ) {
           scoreContent.overall = Math.max(scoreContent.overall, previousScore + 1);
+        }
+        // Never write a NaN or null score to state
+        if (scoreContent == null || typeof scoreContent.overall !== "number" || !isFinite(scoreContent.overall)) {
+          console.error("[Rescore] Invalid score returned, keeping previous score", scoreContent);
+          return prev;
         }
         updated.score = scoreContent;
         updated._appliedSuggestions = [];

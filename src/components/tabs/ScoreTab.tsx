@@ -114,11 +114,11 @@ function CircularGauge({ value, label }: { value: number; label: string }) {
         />
         {Array.from({ length: 8 }).map((_, i) => {
           const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
-          const x1 = 45 + 30 * Math.cos(angle);
-          const y1 = 45 + 30 * Math.sin(angle);
-          const x2 = 45 + 34 * Math.cos(angle);
-          const y2 = 45 + 34 * Math.sin(angle);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(222 16% 22%)" strokeWidth="1.5" />;
+          const x1 = 45 + 41 * Math.cos(angle);
+          const y1 = 45 + 41 * Math.sin(angle);
+          const x2 = 45 + 44 * Math.cos(angle);
+          const y2 = 45 + 44 * Math.sin(angle);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(222 16% 28%)" strokeWidth="1.5" />;
         })}
         <text x="45" y="45" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
       </svg>
