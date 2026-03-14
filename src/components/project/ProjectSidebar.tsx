@@ -43,7 +43,8 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
   const isMobile = useIsMobile();
   const { completedOutputs, isGeneratingOutputs, isGenerating } = useDecksmith();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
-  const stepperVisible = isLoading || isGeneratingOutputs || completedOutputs.size > 0;
+  const isActivelyGenerating = isLoading || isGeneratingOutputs;
+  const stepperVisible = isActivelyGenerating || (completedOutputs.size > 0 && isGenerating);
 
   // Track which tabs have new content since last visit
   const [pulseTabs, setPulseTabs] = useState<Set<OutputTabKey>>(new Set());
@@ -157,7 +158,7 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
         {/* Generation stepper */}
         <div className={`mt-6 pt-4 border-t border-border transition-opacity duration-500 ${stepperVisible ? "block" : "hidden"}`}>
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-3">
-            Generating
+            {isActivelyGenerating ? "Generating" : "Complete"}
           </p>
           <GenerationStepper />
         </div>
