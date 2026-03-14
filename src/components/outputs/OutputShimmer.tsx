@@ -1,4 +1,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
+
+function LoadingLine({ lines }: { lines: string[] }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % lines.length), 3000);
+    return () => clearInterval(t);
+  }, [lines.length]);
+  return (
+    <p className="text-[11px] text-muted-foreground/60 italic mt-3 transition-opacity duration-500">
+      {lines[idx]}
+    </p>
+  );
+}
 
 export function SlideShimmer() {
   return (
@@ -11,7 +25,12 @@ export function SlideShimmer() {
           <Skeleton className="h-3 w-5/6 bg-muted/30" />
         </div>
       ))}
-    </div>
+    <LoadingLine lines={[
+      "Building the slide that makes investors lean in...",
+      "Writing headlines that do the work...",
+      "Structuring the argument slide by slide...",
+    ]} />
+  </div>
   );
 }
 
@@ -26,7 +45,12 @@ export function PitchShimmer() {
           <Skeleton className="h-4 w-4/6 bg-muted/30" />
         </div>
       ))}
-    </div>
+    <LoadingLine lines={[
+      "Writing the email that gets a reply...",
+      "Three variants. One lands.",
+      "Crafting the cold open...",
+    ]} />
+  </div>
   );
 }
 
@@ -69,7 +93,12 @@ export function MemoShimmer() {
           <Skeleton className="h-3 w-4/6 bg-muted/30" />
         </div>
       ))}
-    </div>
+    <LoadingLine lines={[
+      "Writing the memo a partner will actually read...",
+      "Building the investment case section by section...",
+      "Structuring the argument for a 30-minute meeting...",
+    ]} />
+  </div>
   );
 }
 
@@ -90,7 +119,13 @@ export function CoreNarrativeShimmer() {
           </div>
         ))}
       </div>
-    </div>
+    <LoadingLine lines={[
+      "Framing your story for a skeptical partner...",
+      "Finding the argument behind your business...",
+      "Stress-testing your narrative logic...",
+      "Sharpening the thesis...",
+    ]} />
+  </div>
   );
 }
 

@@ -267,6 +267,15 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
             <p className={"text-lg font-bold " + (isInvestorReady ? "text-emerald" : overall >= 70 ? "text-electric" : "text-yellow-400")}>
               {levelLabel}
             </p>
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 mb-1">
+              {isInvestorReady
+                ? "This narrative is ready for a partner meeting."
+                : overall >= 70
+                ? "Strong foundation. A few gaps an investor would flag."
+                : overall >= 55
+                ? "The core story is there. Needs sharper evidence."
+                : "Narrative needs work before investor conversations."}
+            </p>
             <p className="text-xs text-foreground/75 mt-1.5 leading-relaxed">
               {isInvestorReady
                 ? (gaps.length > 0
@@ -284,7 +293,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
-              {isRescoring ? "Scoring…" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
+              {isRescoring ? "Scoring…" : appliedCount >= gaps.length && gaps.length > 0 ? "Re-score — all gaps addressed" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
             </button>
           )}
         </div>
@@ -295,6 +304,11 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
         <div className="relative card-gradient rounded-sm border border-border p-5 pb-6">
           <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3">
             {isInvestorReady ? "Refinements" : "Gaps to address"}
+            {!isInvestorReady && primaryGaps.length > 0 && gaps.every((_, i) => appliedSuggestions.has(`score-${i}`)) && (
+              <span className="ml-2 text-[10px] font-normal text-emerald normal-case tracking-normal">
+                All critical gaps addressed. Ready to rescore.
+              </span>
+            )}
           </h3>
           <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? {filter:"blur(5px)",opacity:0.45} : {}}>
             <div className="space-y-2">
