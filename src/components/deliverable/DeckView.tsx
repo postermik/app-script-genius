@@ -24,16 +24,41 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
 
   if (framework.length === 0) return null;
 
-  const slides: SlideData[] = framework.map((slide: any, idx: number) => ({
-    headline: typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`),
-    content: typeof slide === "object" ? (slide.body || slide.content || "") : "",
-    slideType: slide?.metadata?.slideType,
-    visualDirection: slide?.metadata?.visualDirection,
-    categoryLabel: slide?.categoryLabel,
-    closingStatement: slide?.closingStatement,
-    layoutRecommendation: slide?.layoutRecommendation,
-    suggestion: slide?.suggestion,
-  }));
+  // Filter out generic placeholder/scaffolding text that leaked from prompts
+  const isPlaceholderText = (text: string): boolean => {
+    if (!text) return false;
+    const placeholders = [
+      "key supporting context for your narrative",
+      "key supporting data point",
+      "strategic context and framing",
+      "evidence that reinforces the narrative",
+      "supporting slide that reinforces the core narrative",
+      "supporting detail about the market",
+    ];
+    return placeholders.some(p => text.toLowerCase().includes(p));
+  };
+
+  const slides: SlideData[] = framework.map((slide: any, idx: number) => {
+    const rawContent = typeof slide === "object" ? (slide.body || slide.content || "") : "";
+    const rawClosing = slide?.closingStatement || "";
+    // Filter placeholder items from bodyContent array
+    const rawBodyContent = slide?.bodyContent;
+    const filteredBodyContent = Array.isArray(rawBodyContent)
+      ? rawBodyContent.filter((item: string) => !isPlaceholderText(item))
+      : rawBodyContent;
+    return {
+      headline: typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`),
+      content: isPlaceholderText(rawContent) ? "" : rawContent,
+      slideType: slide?.metadata?.slideType,
+      visualDirection: slide?.metadata?.visualDirection,
+      categoryLabel: slide?.categoryLabel,
+      closingStatement: isPlaceholderText(rawClosing) ? "" : rawClosing,
+      layoutRecommendation: slide?.layoutRecommendation,
+      suggestion: slide?.suggestion,
+      bodyContent: filteredBodyContent,
+      subheadline: isPlaceholderText(slide?.subheadline || "") ? "" : slide?.subheadline,
+    };
+  });
 
   const deckSuggestions = deliverable.suggestions || [];
 
