@@ -154,8 +154,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const handleApplyNarrative = async (index: number, howToFix: string) => {
     setApplyingIndex(index);
     try {
+    markSuggestionApplied(`score-${index}`);
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
-      markSuggestionApplied(`score-${index}`);
       setExpandedImprovement(null);
     } catch {
       // refineSection shows toast on error
@@ -166,6 +166,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
 
   const handleApplySlide = async (index: number) => {
     setApplyingSlideIndex(index);
+    markSuggestionApplied(`score-${index}`);
     try {
       await generateOutput("slide_framework" as any);
     } catch {
