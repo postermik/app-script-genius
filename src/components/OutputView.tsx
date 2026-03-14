@@ -250,8 +250,8 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
         className="w-full flex items-center justify-between px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 hover:border-emerald/30 transition-colors group"
       >
         <p className="text-xs text-foreground/80">
-          <span className="font-medium text-emerald">All outputs ready.</span>{" "}
-          Check your Investor Readiness Score
+          <span className="font-medium text-emerald">Your narrative is ready.</span>{" "}
+          See how it scores against investor expectations
         </p>
         <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
       </button>
