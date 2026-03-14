@@ -109,18 +109,7 @@ export function ProductView() {
         <div className="max-w-[720px] w-full animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-4">What are you working on?</h1>
 
-          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-6">Paste your narrative and we'll help you build the right outputs.</p>
-          {rawInput.trim() === "" && (
-            <p className="text-center text-[11px] text-muted-foreground/50 mb-6">
-              Not sure what to write?{" "}
-              <button
-                onClick={() => setRawInput("Company name: Acme AI\nOne-line description: AI-powered contract review that flags risk in seconds, not hours.\nStage: Pre-seed\nPurpose: Fundraising\nThe problem: Legal review costs $500-2K per contract. Small teams skip it entirely, exposing themselves to risk they don't see until it's too late.\nThe solution: Acme AI reviews any contract in under 60 seconds, flags material risk, and suggests plain-English edits. No lawyer needed for standard agreements.\nWhy now: LLMs now have the reasoning depth to understand legal language in context. The SMB market is underserved and price-sensitive.\nMarket: 6M small businesses in the US sign contracts regularly. Beachhead: tech startups and freelancers. SAM $2B.\nTraction: 200 beta users. $8K MRR. 40% week-over-week growth.\nBusiness model: SaaS. $49/month individual, $199/month team.\nDifferentiation: Faster than any lawyer. Cheaper than any alternative. Trained on commercial contracts, not general text.\nFounder: 8 years in legal tech. Former counsel at Fortune 500. Built the first version in 30 days.\nThe ask: $750K pre-seed on a post-money SAFE.")}
-                className="text-electric/70 hover:text-electric underline underline-offset-2 transition-colors"
-              >
-                Try an example
-              </button>
-            </p>
-          )}
+          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">Paste your narrative and we'll help you build the right outputs.</p>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
 
