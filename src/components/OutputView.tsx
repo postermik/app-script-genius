@@ -108,9 +108,9 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
   if (!thesis) return null;
   const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
   return [
-    { label: "Direct Ask", subject: `{firm_name} + ${title} — Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
+    { label: "Direct Ask", subject: `{firm_name} + ${title}: Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
     { label: "Warm Intro Request", subject: `Intro request: ${title}`, body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]` },
-    { label: "Follow-Up", subject: `Re: ${title} — following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update — do you have 15 min this week?\n\nBest,\n[Your name]` },
+    { label: "Follow-Up", subject: `Re: ${title}: following up`, body: `Hi {investor_name},\n\nFollowing up on my note last week. Since then we've [milestone]. Would love to share an update. Do you have 15 min this week?\n\nBest,\n[Your name]` },
   ];
 }
 
@@ -251,7 +251,7 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
       >
         <p className="text-xs text-foreground/80">
           <span className="font-medium text-emerald">Your narrative is ready.</span>{" "}
-          See how it scores against investor expectations
+          See how it scores against professional expectations
         </p>
         <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
       </button>
@@ -317,7 +317,7 @@ export function OutputView() {
 
   const selectedOutputs: OutputDeliverable[] = intakeSelections?.outputs?.length
     ? ["core_narrative" as OutputDeliverable, ...intakeSelections.outputs]
-    : ["core_narrative" as OutputDeliverable, "slide_framework"];
+    : ["core_narrative" as OutputDeliverable, "slide_framework", "elevator_pitch"];
   const [activeOutputTab, setActiveOutputTab] = useState<OutputDeliverable>("core_narrative");
 
   useEffect(() => {
