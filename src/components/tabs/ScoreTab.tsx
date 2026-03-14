@@ -212,11 +212,13 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   }, []);
 
 
-  const overall = score.overall;
+  const overall = typeof score.overall === "number" && isFinite(score.overall) ? score.overall : 0;
   const components = score.components;
   const readinessTitle = READINESS_TITLES[mode] || "NARRATIVE READINESS";
   const isInvestorReady = overall >= 85;
-  const levelLabel = isInvestorReady
+  const levelLabel = overall === 0
+    ? "Scoring..."
+    : isInvestorReady
     ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready")
     : overall >= 70 ? "Solid"
     : "Developing";
@@ -293,7 +295,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
-              {isRescoring ? "Scoring…" : appliedCount >= gaps.length && gaps.length > 0 ? "Re-score — all gaps addressed" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
+              {isRescoring ? "Scoring…" : appliedCount >= gaps.length && gaps.length > 0 ? "Re-score: all gaps addressed" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
             </button>
           )}
         </div>
