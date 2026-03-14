@@ -109,5 +109,135 @@ export function ProductView() {
         <div className="max-w-[720px] w-full animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-4">What are you working on?</h1>
 
-          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-12">Paste your narrative and we'll help you build the right outputs.</p>
+          <p className="text-base text-secondary-foreground max-w-[540px] mx-auto leading-relaxed text-center mb-6">Paste your narrative and we'll help you build the right outputs.</p>
+          {rawInput.trim() === "" && (
+            <p className="text-center text-[11px] text-muted-foreground/50 mb-6">
+              Not sure what to write?{" "}
+              <button
+                onClick={() => setRawInput("Company name: Acme AI\nOne-line description: AI-powered contract review that flags risk in seconds, not hours.\nStage: Pre-seed\nPurpose: Fundraising\nThe problem: Legal review costs $500-2K per contract. Small teams skip it entirely, exposing themselves to risk they don't see until it's too late.\nThe solution: Acme AI reviews any contract in under 60 seconds, flags material risk, and suggests plain-English edits. No lawyer needed for standard agreements.\nWhy now: LLMs now have the reasoning depth to understand legal language in context. The SMB market is underserved and price-sensitive.\nMarket: 6M small businesses in the US sign contracts regularly. Beachhead: tech startups and freelancers. SAM $2B.\nTraction: 200 beta users. $8K MRR. 40% week-over-week growth.\nBusiness model: SaaS. $49/month individual, $199/month team.\nDifferentiation: Faster than any lawyer. Cheaper than any alternative. Trained on commercial contracts, not general text.\nFounder: 8 years in legal tech. Former counsel at Fortune 500. Built the first version in 30 days.\nThe ask: $750K pre-seed on a post-money SAFE.")}
+                className="text-electric/70 hover:text-electric underline underline-offset-2 transition-colors"
+              >
+                Try an example
+              </button>
+            </p>
+          )}
           <div className="space-y-5">
+            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
+
+            {/* Intake card */}
+            {showIntake && !isGenerating && (
+              <IntakeCard
+                rawInput={rawInput}
+                onGenerate={handleIntakeGenerate}
+                onCancel={() => setShowIntake(false)}
+              />
+            )}
+
+            {!showIntake && !isFreeAndLocked && !isGenerating && (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <button onClick={handleShowIntake} disabled={!rawInput.trim()} className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                    Generate
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.pptx,.docx"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={!!uploadingFile} className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-sm hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
+                    {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploadingFile ? "Extracting…" : "Upload"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isFreeAndLocked && (
+              <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
+                <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
+                <p className="text-sm font-medium text-foreground mb-2">You've used your free draft.</p>
+                <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
+                <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
+              </div>
+            )}
+
+            {isGenerating && <GenerationStepper />}
+          </div>
+        </div>
+        {!isGenerating && !showIntake && (
+          <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
+            <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
+            {projects.length === 0 ? (
+              <div className="card-gradient border border-border rounded-sm p-10 flex flex-col items-center text-center">
+                <FileText className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                <p className="text-sm text-muted-foreground">No projects yet.</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Paste your narrative above to get started.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {projects.slice(0, 6).map((project) => (
+                  <RecentProjectTile key={project.id} project={project} onOpen={() => openProject(project)} onDelete={() => deleteProject(project.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+    </div>
+  );
+}
+
+const MODE_LABELS: Record<string, string> = {
+  fundraising: "Fundraising",
+  board_update: "Board Meeting",
+  board_meeting: "Board Meeting",
+  strategy: "Strategy",
+};
+
+function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyPrompt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(project.raw_input || "");
+    setCopied(true);
+    toast.success("Prompt copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="card-gradient border border-border rounded-sm p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all">
+      <div className="flex items-start justify-between mb-1.5">
+        <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1 min-w-0">
+          {project.title}
+          {project.detected_intent === "evaluate" && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
+          )}
+        </h3>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+          <button onClick={copyPrompt} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+            {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+      </p>
+      <div className="mt-auto">
+        <button onClick={onOpen} className="flex items-center text-xs text-muted-foreground hover:text-electric transition-colors cursor-pointer">
+          Open <ArrowRight className="h-3 w-3 ml-1" />
+        </button>
+      </div>
+    </div>
+  );
+}
