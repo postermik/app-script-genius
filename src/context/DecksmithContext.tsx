@@ -616,32 +616,12 @@ Return ONLY valid JSON, no markdown fences.`;
     if (parsed.coreNarrative?.sections?.length) {
       cn = parsed.coreNarrative;
     } else {
-      // Synthesize from supporting data
-      const s = parsed.supporting || parsed.data || {};
+      // Fallback: generate empty sections with headings
       cn = {
-        sections: sectionHeadings.map(heading => {
-          const key = heading.toLowerCase().replace(/[^a-z]/g, "");
-          // Try to find matching content
-          let content = "";
-          if (key === "problem") content = s.narrativeStructure?.worldToday || s.narrativeStructure?.breakingPoint || "";
-          else if (key === "solution") content = s.narrativeStructure?.newModel || "";
-          else if (key === "whynow") content = s.whyNow || "";
-          else if (key === "market") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : (s.marketLogic || "");
-          else if (key === "traction") content = s.narrativeStructure?.whyThisWins || "";
-          else if (key === "vision") content = s.narrativeStructure?.theFuture || s.thesis?.content || s.thesis || "";
-          else if (key === "challenges") content = s.risks || "";
-          else if (key === "progressmetrics") content = s.narrativeStructure?.whyThisWins || "";
-          else if (key === "strategicupdates") content = s.thesis?.content || s.thesis || "";
-          else if (key === "marketposition") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : "";
-          else if (key === "keyasks") content = s.narrativeStructure?.theFuture || "";
-          else if (key === "nextquarterpriorities") content = s.whyNow || "";
-          else if (key === "currentstate") content = s.narrativeStructure?.worldToday || "";
-          else if (key === "strategicinsight") content = s.thesis?.coreInsight || s.thesis?.content || s.thesis || "";
-          else if (key === "marketlandscape") content = Array.isArray(s.marketLogic) ? s.marketLogic.join(" ") : "";
-          else if (key === "actionplan") content = s.narrativeStructure?.newModel || "";
-          
-          return { heading, content: content || `[Content for ${heading} will be generated]` };
-        })
+        sections: sectionHeadings.map(heading => ({
+          heading,
+          content: `[Content for ${heading} will be generated]`
+        }))
       };
     }
 
