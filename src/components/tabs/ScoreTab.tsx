@@ -364,8 +364,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                           {(() => {
                             const relevantSlide = detectRelevantSlide(gapText);
                             if (relevantSlide !== null && slides[relevantSlide]) {
-                              const rawLabel = slides[relevantSlide].categoryLabel || slides[relevantSlide].headline || "";
-                              const slideLabel = (rawLabel + " Slide").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase());
+                              const cat = slides[relevantSlide].categoryLabel || "";
+                              const slideLabel = cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : "Slide";
                               const active = slideTarget === relevantSlide;
                               return (
                                 <button
@@ -373,7 +373,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                                   disabled={applyingSlideIndex === i}
                                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium border border-electric/30 text-electric/60 hover:border-electric/60 hover:text-electric/90 disabled:opacity-40 transition-colors"
                                 >
-                                  {applyingSlideIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : `Apply to ${slideLabel}`}
+                                  {applyingSlideIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : `Apply to ${slideLabel} Slide`}
                                 </button>
                               );
                             }

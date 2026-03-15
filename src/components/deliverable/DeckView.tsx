@@ -41,7 +41,6 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const slides: SlideData[] = framework.map((slide: any, idx: number) => {
     const rawContent = typeof slide === "object" ? (slide.body || slide.content || "") : "";
     const rawClosing = slide?.closingStatement || "";
-    // Filter placeholder items from bodyContent array
     const rawBodyContent = slide?.bodyContent;
     const filteredBodyContent = Array.isArray(rawBodyContent)
       ? rawBodyContent.filter((item: string) => !isPlaceholderText(item))
@@ -59,6 +58,19 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       subheadline: isPlaceholderText(slide?.subheadline || "") ? "" : slide?.subheadline,
     };
   });
+
+  const handleEditSlide = (slideIndex: number, field: string, value: string | string[]) => {
+    if (!onUpdateDeliverable) return;
+    const updatedFramework = [...framework];
+    const slide = { ...updatedFramework[slideIndex] };
+    if (field === "bodyContent") {
+      slide.bodyContent = value;
+    } else {
+      (slide as any)[field] = value;
+    }
+    updatedFramework[slideIndex] = slide;
+    onUpdateDeliverable({ ...deliverable, deckFramework: updatedFramework });
+  };
 
   const deckSuggestions = deliverable.suggestions || [];
 
@@ -134,6 +146,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
         onThemeChange={onThemeChange}
         onRefineSlide={handleRefineSlide}
         refiningSlideIndex={refiningSlideIndex}
+        onEditSlide={handleEditSlide}
       />
     </div>
   );

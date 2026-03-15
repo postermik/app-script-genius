@@ -31,6 +31,7 @@ interface Props {
   onThemeChange: (theme: DeckTheme) => void;
   onRefineSlide?: (slideIndex: number, tone: string) => void;
   refiningSlideIndex?: number | null;
+  onEditSlide?: (slideIndex: number, field: string, value: string | string[]) => void;
 }
 
 const REFINE_OPTIONS = [
@@ -152,7 +153,7 @@ function getLightness(hex: string): number {
   return ((max + min) / 2) * 100;
 }
 
-export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange, onRefineSlide, refiningSlideIndex }: Props) {
+export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder, onReorder, theme, onThemeChange, onRefineSlide, refiningSlideIndex, onEditSlide }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
   const [dismissedSlideSuggestions, setDismissedSlideSuggestions] = useState<number[]>([]);
@@ -297,11 +298,19 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {slide.categoryLabel}
                   </span>
                 )}
-                <h5 className={`text-base font-bold leading-tight ${isExcluded ? "text-muted-foreground line-through" : ""}`}
-                  style={!isExcluded ? { color: themeColors.primary } : undefined}>
+                <h5 className={`text-base font-bold leading-tight outline-none ${isExcluded ? "text-muted-foreground line-through" : ""}`}
+                  style={!isExcluded ? { color: themeColors.primary } : undefined}
+                  contentEditable={!isExcluded && !!onEditSlide}
+                  suppressContentEditableWarning
+                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "headline", e.currentTarget.textContent || "")}
+                >
                   {slide.headline}
                 </h5>
-                <p className="text-sm text-secondary-foreground leading-snug">
+                <p className="text-sm text-secondary-foreground leading-snug outline-none"
+                  contentEditable={!isExcluded && !!onEditSlide}
+                  suppressContentEditableWarning
+                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "subheadline", e.currentTarget.textContent || "")}
+                >
                   {subheader}
                 </p>
                 {bodyPoints.length > 0 && (
@@ -309,13 +318,26 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {bodyPoints.map((point, pi) => (
                       <li key={pi} className="text-[13px] text-muted-foreground leading-snug flex items-start gap-1.5">
                         <span className="mt-0.5 shrink-0" style={{ color: themeColors.accent }}>•</span>
-                        <span className="line-clamp-2">{point}</span>
+                        <span className="line-clamp-none outline-none"
+                          contentEditable={!isExcluded && !!onEditSlide}
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            if (!onEditSlide) return;
+                            const updated = [...bodyPoints];
+                            updated[pi] = e.currentTarget.textContent || "";
+                            onEditSlide(slide.originalIdx, "bodyContent", updated);
+                          }}
+                        >{point}</span>
                       </li>
                     ))}
                   </ul>
                 )}
                 {slide.closingStatement && (
-                  <p className="text-[13px] font-medium mt-2 leading-snug text-secondary-foreground">
+                  <p className="text-[13px] font-medium mt-2 leading-snug text-secondary-foreground outline-none"
+                    contentEditable={!isExcluded && !!onEditSlide}
+                    suppressContentEditableWarning
+                    onBlur={(e) => onEditSlide?.(slide.originalIdx, "closingStatement", e.currentTarget.textContent || "")}
+                  >
                     {slide.closingStatement}
                   </p>
                 )}
