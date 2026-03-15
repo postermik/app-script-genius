@@ -10,6 +10,8 @@ export interface SlideData {
   closingStatement?: string;
   layoutRecommendation?: string;
   suggestion?: string | null;
+  bodyContent?: string[];
+  subheadline?: string;
 }
 
 export interface DeckTheme {
@@ -77,7 +79,7 @@ function getSlideReason(headline: string, idx: number, total: number): string {
   if (h.includes("roadmap") || h.includes("milestone")) return "Roadmap shows a clear plan and gives confidence in execution.";
   if (h.includes("summary") || h.includes("executive")) return "Executive summary gives decision-makers the key takeaway upfront.";
   if (h.includes("competitive") || h.includes("landscape")) return "Competitive landscape shows you understand the field and where you fit.";
-  return "Supporting slide that reinforces the core narrative through additional context.";
+  return "";
 }
 
 function getSlideSubheader(headline: string, content: string): string {
@@ -100,7 +102,7 @@ function getSlideSubheader(headline: string, content: string): string {
     const firstSentence = content.split(/[.!?]/)[0]?.trim();
     if (firstSentence && firstSentence.length < 80) return firstSentence;
   }
-  return "Key supporting context for your narrative";
+  return "";
 }
 
 function getSlideBodyPoints(headline: string, content: string): string[] {
@@ -122,7 +124,7 @@ function getSlideBodyPoints(headline: string, content: string): string[] {
   if (h.includes("traction") || h.includes("metric")) return ["Key growth metrics and trends", "Customer acquisition milestones", "Revenue or engagement trajectory"];
   if (h.includes("team")) return ["Founder domain expertise", "Key hires and advisory board", "Track record of execution"];
   if (h.includes("ask") || h.includes("funding")) return ["Funding amount and use of proceeds", "Key milestones this enables", "Expected runway and next raise"];
-  return ["Key supporting data point", "Strategic context and framing", "Evidence that reinforces the narrative"];
+  return [];
 }
 
 function getThemePreviewColors(theme: DeckTheme) {
@@ -238,8 +240,9 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
       <div className="space-y-4">
         {orderedSlides.map((slide, i) => {
           const isExcluded = excludedSlides.has(slide.originalIdx);
-          const subheader = getSlideSubheader(slide.headline, slide.content);
-          const bodyPoints = getSlideBodyPoints(slide.headline, slide.content);
+          const subheader = slide.subheadline || getSlideSubheader(slide.headline, slide.content);
+          const bodyPoints = (slide.bodyContent && slide.bodyContent.length > 0) ? slide.bodyContent : getSlideBodyPoints(slide.headline, slide.content);
+          const slideReason = getSlideReason(slide.headline, i, orderedSlides.length);
           return (
             <div
               key={slide.originalIdx}
@@ -318,7 +321,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 )}
                 <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
-                  <span className="italic">{getSlideReason(slide.headline, i, orderedSlides.length)}</span>
+                  <span className="italic">{slideReason}</span>
                 </p>
 
                 {/* Slide-level suggestion */}
