@@ -309,7 +309,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {bodyPoints.map((point, pi) => (
                       <li key={pi} className="text-[13px] text-muted-foreground leading-snug flex items-start gap-1.5">
                         <span className="mt-0.5 shrink-0" style={{ color: themeColors.accent }}>•</span>
-                        <span className="line-clamp-1">{point}</span>
+                        <span className="line-clamp-2">{point}</span>
                       </li>
                     ))}
                   </ul>
@@ -319,10 +319,12 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {slide.closingStatement}
                   </p>
                 )}
+                {slideReason && (
                 <p className="text-[13px] text-muted-foreground leading-relaxed mt-1 flex items-start gap-1.5">
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/60" />
                   <span className="italic">{slideReason}</span>
                 </p>
+                )}
 
                 {/* Slide-level suggestion */}
                 {slide.suggestion && !dismissedSlideSuggestions.includes(slide.originalIdx) && (
