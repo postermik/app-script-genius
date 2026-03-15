@@ -314,22 +314,14 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   style={!isExcluded ? { color: themeColors.primary } : undefined}
                   contentEditable={editingSlide === slide.originalIdx}
                   suppressContentEditableWarning
-                  onBlur={(e) => {
-                    onEditSlide?.(slide.originalIdx, "headline", e.currentTarget.textContent || "");
-                    setSavedSlide(slide.originalIdx);
-                    setTimeout(() => setSavedSlide(null), 1500);
-                  }}
+                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "headline", e.currentTarget.textContent || "")}
                 >
                   {slide.headline}
                 </h5>
                 <p className={`text-sm text-secondary-foreground leading-snug outline-none rounded-sm transition-all ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-2 py-1 -mx-2" : ""}`}
                   contentEditable={editingSlide === slide.originalIdx}
                   suppressContentEditableWarning
-                  onBlur={(e) => {
-                    onEditSlide?.(slide.originalIdx, "subheadline", e.currentTarget.textContent || "");
-                    setSavedSlide(slide.originalIdx);
-                    setTimeout(() => setSavedSlide(null), 1500);
-                  }}
+                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "subheadline", e.currentTarget.textContent || "")}
                 >
                   {subheader}
                 </p>
@@ -346,8 +338,6 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                             const updated = [...bodyPoints];
                             updated[pi] = e.currentTarget.textContent || "";
                             onEditSlide(slide.originalIdx, "bodyContent", updated);
-                            setSavedSlide(slide.originalIdx);
-                            setTimeout(() => setSavedSlide(null), 1500);
                           }}
                         >{point}</span>
                       </li>
@@ -358,11 +348,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   <p className={`text-[13px] font-medium mt-2 leading-snug text-secondary-foreground outline-none rounded-sm transition-all ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-2 py-1 -mx-2" : ""}`}
                     contentEditable={editingSlide === slide.originalIdx}
                     suppressContentEditableWarning
-                    onBlur={(e) => {
-                      onEditSlide?.(slide.originalIdx, "closingStatement", e.currentTarget.textContent || "");
-                      setSavedSlide(slide.originalIdx);
-                      setTimeout(() => setSavedSlide(null), 1500);
-                    }}
+                    onBlur={(e) => onEditSlide?.(slide.originalIdx, "closingStatement", e.currentTarget.textContent || "")}
                   >
                     {slide.closingStatement}
                   </p>
@@ -396,7 +382,17 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 {/* Edit toggle */}
                 {!isExcluded && onEditSlide && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); setEditingSlide(editingSlide === slide.originalIdx ? null : slide.originalIdx); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (editingSlide === slide.originalIdx) {
+                        // Exiting edit mode: show saved indicator then close
+                        setSavedSlide(slide.originalIdx);
+                        setEditingSlide(null);
+                        setTimeout(() => setSavedSlide(null), 1500);
+                      } else {
+                        setEditingSlide(slide.originalIdx);
+                      }
+                    }}
                     className={`text-xs px-3 py-1.5 rounded-sm border font-medium flex items-center gap-1 transition-colors ${
                       editingSlide === slide.originalIdx
                         ? "border-electric text-electric bg-electric/10"
