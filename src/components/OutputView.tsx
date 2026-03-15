@@ -35,7 +35,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): ElevatorPitchData | null {
   const od = outputData?.elevator_pitch;
-  console.log("[Render] elevator_pitch structure:", Object.keys(od || {}));
+
 
   const pitch = findData<ElevatorPitchData>(od,
     "elevatorPitch",
@@ -58,7 +58,7 @@ function synthesizeElevatorPitch(output: any, outputData: Record<string, any>): 
 
 function synthesizeInvestorQA(output: any, outputData: Record<string, any>): InvestorQAItem[] | null {
   const od = outputData?.investor_qa;
-  console.log("[Render] investor_qa structure:", Object.keys(od || {}));
+
 
   const items = findData<InvestorQAItem[]>(od,
     "investorQA",
@@ -89,7 +89,7 @@ function synthesizeInvestorQA(output: any, outputData: Record<string, any>): Inv
 
 function synthesizePitchEmails(output: any, outputData: Record<string, any>): PitchEmailVariant[] | null {
   const od = outputData?.pitch_email;
-  console.log("[Render] pitch_email structure:", Object.keys(od || {}));
+
 
   const emails = findData<PitchEmailVariant[]>(od,
     "pitchEmails",
@@ -116,7 +116,7 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
 
 function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>): InvestmentMemoData | null {
   const od = outputData?.investment_memo;
-  console.log("[Render] investment_memo structure:", Object.keys(od || {}));
+
 
   const sections = findData<{ heading: string; content: string }[]>(od,
     "investmentMemo.sections",
@@ -153,7 +153,7 @@ function synthesizeInvestmentMemo(output: any, outputData: Record<string, any>):
 
 function synthesizeBoardMemo(outputData: Record<string, any>): BoardMemoData | null {
   const od = outputData?.board_memo;
-  console.log("[Render] board_memo structure:", Object.keys(od || {}));
+
 
   const sections = findData<{ heading: string; content: string }[]>(od,
     "boardMemo.sections",
@@ -176,7 +176,7 @@ function synthesizeBoardMemo(outputData: Record<string, any>): BoardMemoData | n
 
 function synthesizeKeyMetrics(outputData: Record<string, any>): KeyMetricsSummaryData | null {
   const od = outputData?.key_metrics_summary;
-  console.log("[Render] key_metrics_summary structure:", Object.keys(od || {}));
+
 
   const categories = findData<KeyMetricsSummaryData["categories"]>(od,
     "keyMetrics.categories",
@@ -201,7 +201,7 @@ function synthesizeKeyMetrics(outputData: Record<string, any>): KeyMetricsSummar
 
 function synthesizeStrategicMemo(outputData: Record<string, any>): StrategicMemoData | null {
   const od = outputData?.strategic_memo;
-  console.log("[Render] strategic_memo structure:", Object.keys(od || {}));
+
 
   const sections = findData<{ heading: string; content: string }[]>(od,
     "strategicMemo.sections",
@@ -387,12 +387,6 @@ export function OutputView() {
     const oldData = (output as any)?.data;
     if (oldData?.deckFramework?.length || oldData?.boardDeckOutline?.length) {
       const fallbackDeliverable = { type: "deck" as const, deckFramework: oldData.deckFramework || oldData.boardDeckOutline };
-      return <DeckView deliverable={fallbackDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} />;
-    }
-
-    const supporting = (output as any)?.supporting;
-    if (supporting?.deckFramework?.length) {
-      const fallbackDeliverable = { type: "deck" as const, deckFramework: supporting.deckFramework };
       return <DeckView deliverable={fallbackDeliverable} excludedSlides={excludedSlides} onToggleSlide={toggleSlide} slideOrder={slideOrder} onReorder={setSlideOrder} deckTheme={deckTheme} onThemeChange={setDeckTheme} />;
     }
 
@@ -644,25 +638,4 @@ export function OutputView() {
       <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </div>
   );
-}
-
-export function buildTabs(output: any): { key: string; label: string; sections: { key: string; path: string; label: string; content: string }[] }[] {
-  const d = (output.data || output.supporting || output.deliverable || {}) as any;
-  const mode = output.mode;
-  if (mode === "fundraising") {
-    return [
-      { key: "thesis", label: "Thesis", sections: [{ key: "thesis-content", path: "thesis.content", label: "Investment Thesis", content: d.thesis?.content || "" }, { key: "thesis-insight", path: "thesis.coreInsight", label: "Core Insight", content: d.thesis?.coreInsight || "" }, { key: "market-logic", path: "marketLogic", label: "Market Logic", content: Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || "") }, { key: "why-now", path: "whyNow", label: "Why Now", content: d.whyNow || "" }, { key: "risks", path: "risks", label: "Risks", content: d.risks || "" }] },
-      { key: "narrative", label: "Narrative Arc", sections: [{ key: "world-today", path: "narrativeStructure.worldToday", label: "The World Today", content: d.narrativeStructure?.worldToday || "" }, { key: "breaking-point", path: "narrativeStructure.breakingPoint", label: "The Breaking Point", content: d.narrativeStructure?.breakingPoint || "" }, { key: "new-model", path: "narrativeStructure.newModel", label: "The New Model", content: d.narrativeStructure?.newModel || "" }, { key: "why-wins", path: "narrativeStructure.whyThisWins", label: "Why This Wins", content: d.narrativeStructure?.whyThisWins || "" }, { key: "the-future", path: "narrativeStructure.theFuture", label: "The Future", content: d.narrativeStructure?.theFuture || "" }] },
-      { key: "pitch", label: "Pitch Prep", sections: [{ key: "pitch-script", path: "pitchScript", label: "60-Second Pitch", content: d.pitchScript || "" }] },
-      { key: "deck", label: "Deck Framework", sections: [] },
-    ];
-  }
-  if (mode === "board_update") {
-    return [
-      { key: "summary", label: "Executive Summary", sections: [{ key: "exec-summary", path: "executiveSummary", label: "Executive Summary", content: d.executiveSummary || "" }] },
-      { key: "metrics", label: "Metrics Narrative", sections: [{ key: "metrics-narr", path: "metricsNarrative", label: "Metrics Narrative", content: d.metricsNarrative || "" }] },
-      { key: "deck", label: "Board Deck Outline", sections: [] },
-    ];
-  }
-  return [];
 }
