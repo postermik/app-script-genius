@@ -44,7 +44,8 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
   const { completedOutputs, isGeneratingOutputs, isGenerating } = useDecksmith();
   const items = intent === "evaluate" ? EVALUATE_SIDEBAR : CREATE_SIDEBAR;
   const isActivelyGenerating = isLoading || isGeneratingOutputs;
-  const stepperVisible = isActivelyGenerating || (completedOutputs.size > 0 && isGenerating);
+  const hasEverGenerated = completedOutputs.size > 0;
+  const stepperVisible = isActivelyGenerating || hasEverGenerated;
 
   // Track which tabs have new content since last visit
   const [pulseTabs, setPulseTabs] = useState<Set<OutputTabKey>>(new Set());
