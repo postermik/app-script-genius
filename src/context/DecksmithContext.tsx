@@ -649,8 +649,8 @@ Return ONLY valid JSON, no markdown fences.`;
   }, [streamFromEdgeFunction]);
 
   // ── Models by output type ──
-  const FAST_OUTPUTS: OutputDeliverable[] = ["elevator_pitch", "pitch_email", "board_memo", "strategic_memo", "key_metrics_summary"];
-  const HEAVY_OUTPUTS: OutputDeliverable[] = ["investor_qa", "investment_memo", "slide_framework"];
+  const FAST_OUTPUTS: OutputDeliverable[] = ["elevator_pitch", "pitch_email", "investor_qa", "board_memo", "strategic_memo", "key_metrics_summary"];
+  const HEAVY_OUTPUTS: OutputDeliverable[] = ["investment_memo", "slide_framework"];
   const HAIKU_MODEL = "claude-haiku-4-5-20251001";
   const SONNET_MODEL = "claude-sonnet-4-20250514";
 
@@ -803,6 +803,8 @@ Return JSON: { "deckFramework": [...] }`,
       setStreamingText(""); // Clear now that coreNarrative is set — eliminates shimmer gap
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
+      // Scroll to top so user sees the completed narrative from the beginning
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       // Only add core_narrative if not already pre-completed above
       if (!coreNarrativePreCompleted) {
         setCompletedOutputs(prev => { const next = new Set(prev); next.add("core_narrative"); return next; });
