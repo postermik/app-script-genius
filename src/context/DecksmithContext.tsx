@@ -691,7 +691,21 @@ Return ONLY valid JSON, no markdown fences.`;
       board_memo: `${gapContext}${noSlideWarning} You are generating a BOARD MEMO with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the boardMemo object.`,
       key_metrics_summary: `${gapContext}${noSlideWarning} You are generating a KEY METRICS SUMMARY organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }. Output MUST contain ONLY the keyMetrics object.`,
       strategic_memo: `${gapContext}${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
-      slide_framework: `Generate a complete slide framework (deckFramework). Each slide needs: categoryLabel, headline, subheadline, bodyContent (array), closingStatement, speakerNotes, suggestion, layoutRecommendation, metadata. Return JSON: { "deckFramework": [...] }`,
+      slide_framework: `${gapContext}You are generating a SLIDE FRAMEWORK (pitch deck). Generate 10-12 slides.
+
+CRITICAL RULES FOR EVERY SLIDE:
+- headline: A COMPLETE ARGUMENT (8-15 words, max 20). NOT a topic label. BAD: "Market Opportunity". GOOD: "15,000 US pre-seed raises annually represent a $300M narrative infrastructure gap"
+- bodyContent: An array of 3-5 SPECIFIC, CONCRETE bullet points drawn from the founder's narrative. Each bullet must contain real data, real claims, or real arguments. NEVER output generic descriptions like "Key supporting data point" or "Strategic context and framing". Every bullet must be a real sentence with real information.
+- subheadline: One supporting context line drawn from the narrative (not a generic description)
+- closingStatement: One punchy line that reinforces the slide's takeaway
+- speakerNotes: 2-4 sentences of what the presenter should SAY (context, stories, objection-handling)
+- layoutRecommendation: Choose from "3-column-with-icons", "data-cards", "split-layout", "concentric-circles", "flywheel", "competitive-matrix", "timeline", "full-bleed-statement", "team-grid"
+- suggestion: Optional 1-2 sentence improvement suggestion for this slide (include on ~50% of slides)
+- metadata: { slideType, visualDirection, visualDominant, dataPoints }
+
+VALIDATION: If any bodyContent item is a generic placeholder like "Key supporting context" or "Evidence that reinforces the narrative" instead of real content, the entire output is INVALID. Use the founder's actual data, claims, and arguments.
+
+Return JSON: { "deckFramework": [...] }`,
     };
 
     const prompt = outputPrompts[outputType] || "";
@@ -700,7 +714,7 @@ Return ONLY valid JSON, no markdown fences.`;
     const fullInput = `${overridePrefix}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens =
-      outputType === "slide_framework" ? 5000 :
+      outputType === "slide_framework" ? 7000 :
       outputType === "investment_memo" ? 3000 :
       outputType === "investor_qa" ? 2500 :
       outputType === "elevator_pitch" ? 1200 :
