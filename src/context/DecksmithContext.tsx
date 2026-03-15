@@ -581,17 +581,17 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     const sectionHeadings = CORE_NARRATIVE_SECTIONS[purpose];
     
     const promptSuffix = `\n\n---\nGENERATION INSTRUCTIONS:
-FORMAT RULE: pitchScript must always be a plain string value. Never emit arrays, bullet points, or extra keys inside the pitchScript field.\n\nSTYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
+STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.
 
 Generate a complete narrative analysis. Return a JSON object with:
 1. "coreNarrative": An object with "sections" array. Each section must have "heading" and "content" (3-5 sentence paragraph). Use these exact headings: ${sectionHeadings.map(h => `"${h}"`).join(", ")}
-2. "supporting": Object with thesis, narrativeStructure, pitchScript, marketLogic, risks, whyNow fields
-3. "score": Object with overall (0-100), components (Record<string,number>), strengths (string[]), gaps (string[]), improvements (string[])
+2. "score": Object with overall (0-100), components (Record<string,number>), strengths (string[]), gaps (array of {text, tier} objects where tier is "primary" or "secondary"), improvements (string[])
+3. "supporting": Object with ONLY a "thesis" field: { "thesis": { "content": "2-3 sentence investment thesis", "coreInsight": "One bold sentence" } }. Do NOT include narrativeStructure, pitchScript, marketLogic, risks, or whyNow.
 4. "title": A short title for this narrative
 5. "intent": "create"
 6. "mode": "${purpose === 'board_meeting' ? 'board_update' : purpose}"
 
-Do NOT generate deckFramework or slides. Focus only on the narrative foundation.
+Do NOT generate deckFramework, slides, narrativeStructure, pitchScript, marketLogic, risks, or whyNow. Those are handled separately. Focus ONLY on coreNarrative, thesis, and score.
 Return ONLY valid JSON, no markdown fences.`;
 
     console.log("[Generation] Starting Core Narrative generation...");
@@ -700,7 +700,7 @@ CRITICAL RULES FOR EVERY SLIDE:
 - closingStatement: One punchy line that reinforces the slide's takeaway
 - speakerNotes: 2-4 sentences of what the presenter should SAY (context, stories, objection-handling)
 - layoutRecommendation: Choose from "3-column-with-icons", "data-cards", "split-layout", "concentric-circles", "flywheel", "competitive-matrix", "timeline", "full-bleed-statement", "team-grid"
-- suggestion: Optional 1-2 sentence improvement suggestion for this slide (include on ~50% of slides)
+- suggestion: Optional 1-2 sentence improvement for this slide (include on ~50% of slides)
 - metadata: { slideType, visualDirection, visualDominant, dataPoints }
 
 VALIDATION: If any bodyContent item is a generic placeholder like "Key supporting context" or "Evidence that reinforces the narrative" instead of real content, the entire output is INVALID. Use the founder's actual data, claims, and arguments.
