@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2, Pencil } from "lucide-react";
+import { GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2, Pencil, X, Check } from "lucide-react";
 
 export interface SlideData {
   headline: string;
@@ -41,6 +41,7 @@ const REFINE_OPTIONS = [
   { value: "analytical", label: "Analytical" },
   { value: "condense", label: "Condense" },
   { value: "expand", label: "Expand" },
+  { value: "revert", label: "Revert to Original" },
 ];
 
 function getLayoutLabel(type?: string) {
@@ -159,6 +160,8 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
   const [dismissedSlideSuggestions, setDismissedSlideSuggestions] = useState<number[]>([]);
   const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
   const [themeExpanded, setThemeExpanded] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<number | null>(null);
+  const [savedSlide, setSavedSlide] = useState<number | null>(null);
 
   if (slides.length === 0) return null;
 
@@ -255,11 +258,15 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                 isExcluded ? "opacity-50 border-border bg-muted/30" : "border-border hover:border-muted-foreground/20 card-gradient accent-left-border"
               } ${dragIdx === i ? "ring-2 ring-electric/30 scale-[0.99]" : ""}`}
             >
-              {/* Layout recommendation badge, top-right */}
-              {slide.layoutRecommendation && (
-                <span className="absolute top-2 right-2 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
-                  {formatLayoutRecommendation(slide.layoutRecommendation)}
-                </span>
+              {/* Exclude button, top-right */}
+              {!isExcluded && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleSlide(slide.originalIdx); }}
+                  className="absolute top-2 right-2 p-1 rounded-sm text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Remove slide"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
 
               {/* Drag handle + slide number */}
@@ -298,18 +305,31 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {slide.categoryLabel}
                   </span>
                 )}
-                <h5 className={`text-base font-bold leading-tight outline-none ${isExcluded ? "text-muted-foreground line-through" : ""}`}
+                {savedSlide === slide.originalIdx && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald font-medium animate-fade-in">
+                    <Check className="h-3 w-3" /> Saved
+                  </span>
+                )}
+                <h5 className={`text-base font-bold leading-tight outline-none rounded-sm transition-all ${isExcluded ? "text-muted-foreground line-through" : ""} ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-2 py-1 -mx-2" : ""}`}
                   style={!isExcluded ? { color: themeColors.primary } : undefined}
-                  contentEditable={!isExcluded && !!onEditSlide}
+                  contentEditable={editingSlide === slide.originalIdx}
                   suppressContentEditableWarning
-                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "headline", e.currentTarget.textContent || "")}
+                  onBlur={(e) => {
+                    onEditSlide?.(slide.originalIdx, "headline", e.currentTarget.textContent || "");
+                    setSavedSlide(slide.originalIdx);
+                    setTimeout(() => setSavedSlide(null), 1500);
+                  }}
                 >
                   {slide.headline}
                 </h5>
-                <p className="text-sm text-secondary-foreground leading-snug outline-none"
-                  contentEditable={!isExcluded && !!onEditSlide}
+                <p className={`text-sm text-secondary-foreground leading-snug outline-none rounded-sm transition-all ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-2 py-1 -mx-2" : ""}`}
+                  contentEditable={editingSlide === slide.originalIdx}
                   suppressContentEditableWarning
-                  onBlur={(e) => onEditSlide?.(slide.originalIdx, "subheadline", e.currentTarget.textContent || "")}
+                  onBlur={(e) => {
+                    onEditSlide?.(slide.originalIdx, "subheadline", e.currentTarget.textContent || "");
+                    setSavedSlide(slide.originalIdx);
+                    setTimeout(() => setSavedSlide(null), 1500);
+                  }}
                 >
                   {subheader}
                 </p>
@@ -318,14 +338,16 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {bodyPoints.map((point, pi) => (
                       <li key={pi} className="text-[13px] text-muted-foreground leading-snug flex items-start gap-1.5">
                         <span className="mt-0.5 shrink-0" style={{ color: themeColors.accent }}>•</span>
-                        <span className="line-clamp-none outline-none"
-                          contentEditable={!isExcluded && !!onEditSlide}
+                        <span className={`line-clamp-none outline-none rounded-sm transition-all ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-1.5 py-0.5 -mx-1.5" : ""}`}
+                          contentEditable={editingSlide === slide.originalIdx}
                           suppressContentEditableWarning
                           onBlur={(e) => {
                             if (!onEditSlide) return;
                             const updated = [...bodyPoints];
                             updated[pi] = e.currentTarget.textContent || "";
                             onEditSlide(slide.originalIdx, "bodyContent", updated);
+                            setSavedSlide(slide.originalIdx);
+                            setTimeout(() => setSavedSlide(null), 1500);
                           }}
                         >{point}</span>
                       </li>
@@ -333,10 +355,14 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   </ul>
                 )}
                 {slide.closingStatement && (
-                  <p className="text-[13px] font-medium mt-2 leading-snug text-secondary-foreground outline-none"
-                    contentEditable={!isExcluded && !!onEditSlide}
+                  <p className={`text-[13px] font-medium mt-2 leading-snug text-secondary-foreground outline-none rounded-sm transition-all ${editingSlide === slide.originalIdx ? "ring-1 ring-electric/30 px-2 py-1 -mx-2" : ""}`}
+                    contentEditable={editingSlide === slide.originalIdx}
                     suppressContentEditableWarning
-                    onBlur={(e) => onEditSlide?.(slide.originalIdx, "closingStatement", e.currentTarget.textContent || "")}
+                    onBlur={(e) => {
+                      onEditSlide?.(slide.originalIdx, "closingStatement", e.currentTarget.textContent || "");
+                      setSavedSlide(slide.originalIdx);
+                      setTimeout(() => setSavedSlide(null), 1500);
+                    }}
                   >
                     {slide.closingStatement}
                   </p>
@@ -367,6 +393,21 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
 
               {/* Actions */}
               <div className="flex flex-col items-end justify-center gap-2 shrink-0">
+                {/* Edit toggle */}
+                {!isExcluded && onEditSlide && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingSlide(editingSlide === slide.originalIdx ? null : slide.originalIdx); }}
+                    className={`text-xs px-3 py-1.5 rounded-sm border font-medium flex items-center gap-1 transition-colors ${
+                      editingSlide === slide.originalIdx
+                        ? "border-electric text-electric bg-electric/10"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {editingSlide === slide.originalIdx ? "Done" : "Edit"}
+                  </button>
+                )}
+
                 {/* Refine dropdown */}
                 <div className="relative">
                   <button
@@ -377,18 +418,25 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                     {refiningSlideIndex === slide.originalIdx ? <><Loader2 className="h-3 w-3 animate-spin" /> Refining…</> : <>Refine <ChevronDown className="h-3 w-3" /></>}
                   </button>
                   {refineOpen === i && (
-                    <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in">
                       {REFINE_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
                           onClick={(e) => {
                             e.stopPropagation();
                             setRefineOpen(null);
-                            onRefineSlide?.(slide.originalIdx, opt.value);
+                            if (opt.value === "revert") {
+                              onRefineSlide?.(slide.originalIdx, "revert");
+                            } else {
+                              onRefineSlide?.(slide.originalIdx, opt.value);
+                            }
                           }}
                           disabled={refiningSlideIndex === slide.originalIdx}
-                          className="w-full text-left text-xs px-3 py-2.5 text-foreground hover:bg-accent hover:text-foreground transition-colors font-medium disabled:opacity-50"
+                          className={`w-full text-left text-xs px-3 py-2.5 hover:bg-accent transition-colors font-medium disabled:opacity-50 ${
+                            opt.value === "revert" ? "text-muted-foreground border-t border-border" : "text-foreground"
+                          }`}
                         >
+                          {opt.value === "revert" && <RotateCcw className="h-3 w-3 inline mr-1.5" />}
                           {opt.label}
                         </button>
                       ))}
@@ -396,20 +444,6 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (isExcluded) onToggleSlide(slide.originalIdx); }}
-                    className={`p-2 rounded-sm transition-colors ${!isExcluded ? "text-emerald bg-emerald/10" : "text-muted-foreground hover:text-emerald hover:bg-emerald/5"}`}
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleSlide(slide.originalIdx); }}
-                    className={`p-2 rounded-sm transition-colors ${isExcluded ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"}`}
-                  >
-                    <ThumbsDown className="h-4 w-4" />
-                  </button>
-                </div>
                 {isExcluded && (
                   <button onClick={() => onToggleSlide(slide.originalIdx)}
                     className="text-xs text-secondary-foreground hover:text-foreground flex items-center gap-1 transition-colors px-2 py-1 border border-border rounded-sm">
