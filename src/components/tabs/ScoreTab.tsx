@@ -271,12 +271,12 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
             </p>
             <p className="text-[11px] text-muted-foreground/70 mt-0.5 mb-1">
               {isInvestorReady
-                ? "This narrative is ready for a partner meeting."
+                ? "This narrative is ready for the room."
                 : overall >= 70
-                ? "Strong foundation. A few gaps an investor would flag."
+                ? "Strong foundation. A few gaps your audience would flag."
                 : overall >= 55
                 ? "The core story is there. Needs sharper evidence."
-                : "Narrative needs work before investor conversations."}
+                : "Narrative needs more work before presenting."}
             </p>
             <p className="text-xs text-foreground/75 mt-1.5 leading-relaxed">
               {isInvestorReady
