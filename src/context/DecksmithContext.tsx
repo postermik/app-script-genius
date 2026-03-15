@@ -1328,6 +1328,9 @@ No markdown fences. No commentary outside the JSON.`;
   }, [output, rawInput, audienceVariants, voiceProfile, currentProjectId]);
 
   const openProject = useCallback((project: Project) => {
+    // Dismiss any lingering toasts from previous generation
+    toast.dismiss();
+    
     setRawInput(project.raw_input);
     setDetectedMode(project.mode as OutputMode);
     setCurrentProjectId(project.id);
