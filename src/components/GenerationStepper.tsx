@@ -63,6 +63,12 @@ export function GenerationStepper() {
   const prevCompletedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    // Only fire toasts during active generation, not on project restore
+    if (!stillRunning) {
+      prevCompletedRef.current = new Set(completedKeys);
+      return;
+    }
+
     const prev = prevCompletedRef.current;
     const newKeys = [...completedKeys].filter(k => !prev.has(k));
 
@@ -71,7 +77,6 @@ export function GenerationStepper() {
       if (!label) continue;
 
       if (key === "core_narrative") {
-        // Scroll to top first, then toast
         window.scrollTo({ top: 0, behavior: "smooth" });
         setTimeout(() => {
           toast.success(label, { duration: 3000 });
