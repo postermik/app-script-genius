@@ -1034,33 +1034,87 @@ Return JSON: { "deckFramework": [...] }`,
     if (!output) return;
     setRefiningSection(sectionKey);
     try {
-      const sourceObj = (output as any).supporting || output.data || {};
-      const currentContent = getNestedValue(sourceObj, path);
+      // Determine the current content to refine based on the path
+      let currentContent: string | undefined;
+      const cn = coreNarrativeRef.current;
+
+      if (path === "narrativeStructure" && cn?.sections?.length) {
+        // Score tab "Apply to Core Narrative": refine the full core narrative with the howToFix directive
+        currentContent = cn.sections.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n");
+      } else if (path.startsWith("coreNarrative.sections.") && cn?.sections?.length) {
+        // Core Narrative Refine button: refine a specific section
+        const parts = path.split(".");
+        const sectionIndex = parseInt(parts[2], 10);
+        currentContent = cn.sections[sectionIndex]?.content;
+      } else {
+        // Fallback for backward compat (old projects with supporting data)
+        const sourceObj = (output as any).supporting || (output as any).data || {};
+        currentContent = getNestedValue(sourceObj, path);
+      }
+
       const noEmDashRule = "STYLE RULE: Never use em dashes (\u2014) anywhere in your output. Use commas, periods, colons, or semicolons instead.";
       const { data, error } = await supabase.functions.invoke("decksmith-ai", {
         body: { mode: "refine", input: rawInput, section: sectionKey, path, tone, currentContent, max_tokens: 2000, model: "claude-sonnet-4-20250514", styleRule: noEmDashRule },
       });
       if (error) throw error;
       const refined = data.content;
-      setOutput((prev) => {
-        if (!prev) return prev;
-        const updated = JSON.parse(JSON.stringify(prev));
-        if (updated.supporting && getNestedValue(updated.supporting, path.split(".")[0]) !== undefined) {
-          setNestedValue(updated.supporting, path, refined);
-        } else if (updated.data) {
-          setNestedValue(updated.data, path, refined);
-        } else if (updated.supporting) {
-          setNestedValue(updated.supporting, path, refined);
+
+      // Write the refined content back to the right place
+      if (path === "narrativeStructure" && cn?.sections?.length) {
+        // Score tab Apply: the refined text is a full rewrite of the core narrative
+        // Parse it back into sections and update coreNarrative
+        const newSections = cn.sections.map((s: any) => {
+          const regex = new RegExp(`${s.heading}:\\s*([\\s\\S]*?)(?=\\n[A-Z][a-z]+:|$)`);
+          const match = refined.match(regex);
+          return { heading: s.heading, content: match ? match[1].trim() : s.content };
+        });
+        const updatedCN = { sections: newSections };
+        setCoreNarrative(updatedCN);
+        // Persist to Supabase
+        if (currentProjectId) {
+          supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
+            const existing = (proj?.output_data as any) || {};
+            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+          });
         }
-        saveProject(updated as NarrativeOutputData);
-        if (currentProjectId && session) {
-          const historyEntry = { section: sectionKey, tone, timestamp: new Date().toISOString(), before: currentContent, after: refined };
-          supabase.from("projects").update({
-            refinement_history: [...(projects.find(p => p.id === currentProjectId)?.refinement_history || []), historyEntry] as any,
-          }).eq("id", currentProjectId).then();
+      } else if (path.startsWith("coreNarrative.sections.") && cn?.sections?.length) {
+        // Core Narrative Refine: update the specific section
+        const parts = path.split(".");
+        const sectionIndex = parseInt(parts[2], 10);
+        const updatedSections = [...cn.sections];
+        updatedSections[sectionIndex] = { ...updatedSections[sectionIndex], content: refined };
+        const updatedCN = { sections: updatedSections };
+        setCoreNarrative(updatedCN);
+        // Persist to Supabase
+        if (currentProjectId) {
+          supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
+            const existing = (proj?.output_data as any) || {};
+            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+          });
         }
-        return updated;
-      });
+      } else {
+        // Fallback: update output.supporting or output.data (old projects)
+        setOutput((prev) => {
+          if (!prev) return prev;
+          const updated = JSON.parse(JSON.stringify(prev));
+          if (updated.supporting && getNestedValue(updated.supporting, path.split(".")[0]) !== undefined) {
+            setNestedValue(updated.supporting, path, refined);
+          } else if (updated.data) {
+            setNestedValue(updated.data, path, refined);
+          } else if (updated.supporting) {
+            setNestedValue(updated.supporting, path, refined);
+          }
+          saveProject(updated as NarrativeOutputData);
+          return updated;
+        });
+      }
+
+      if (currentProjectId && session) {
+        const historyEntry = { section: sectionKey, tone, timestamp: new Date().toISOString(), before: currentContent, after: refined };
+        supabase.from("projects").update({
+          refinement_history: [...(projects.find(p => p.id === currentProjectId)?.refinement_history || []), historyEntry] as any,
+        }).eq("id", currentProjectId).then();
+      }
     } catch (e: any) {
       console.error("Refinement error:", e);
       toast.error("Refinement failed. Please try again.");

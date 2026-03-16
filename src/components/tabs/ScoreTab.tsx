@@ -248,21 +248,7 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
-            <svg width="80" height="80" viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="hsl(222 16% 16%)" strokeWidth="5" />
-              <circle
-                cx="40" cy="40" r="34"
-                fill="none"
-                stroke={overall >= 85 ? "hsl(155 60% 45%)" : overall >= 70 ? "hsl(217 91% 60%)" : "hsl(48 96% 53%)"}
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeDasharray={String(2 * Math.PI * 34)}
-                strokeDashoffset={String(2 * Math.PI * 34 * (1 - overall / 100))}
-                transform="rotate(-90 40 40)"
-              />
-              <text x="40" y="39" textAnchor="middle" dominantBaseline="central" className="fill-foreground font-bold" style={{fontSize:"20px"}}>{overall}</text>
-              <text x="40" y="54" textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{fontSize:"9px",opacity:"0"}}>/100</text>
-            </svg>
+            <CircularGauge value={overall} label="" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1">{readinessTitle}</p>
