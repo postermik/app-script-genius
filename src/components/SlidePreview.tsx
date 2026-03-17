@@ -393,7 +393,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                         setEditingSlide(slide.originalIdx);
                       }
                     }}
-                    className={`text-xs px-3 py-1.5 rounded-sm border font-medium flex items-center gap-1 transition-colors ${
+                    className={`text-xs px-3 py-1.5 w-[76px] justify-center rounded-sm border font-medium flex items-center gap-1 transition-colors ${
                       editingSlide === slide.originalIdx
                         ? "border-electric text-electric bg-electric/10"
                         : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
@@ -409,7 +409,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   <button
                     onClick={(e) => { e.stopPropagation(); setRefineOpen(refineOpen === i ? null : i); }}
                     disabled={refiningSlideIndex === slide.originalIdx}
-                    className="text-xs px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors font-medium flex items-center gap-1 disabled:opacity-50"
+                    className="text-xs px-3 py-1.5 w-[76px] justify-center rounded-sm border border-electric/30 text-electric hover:bg-electric/10 transition-colors font-medium flex items-center gap-1 disabled:opacity-50"
                   >
                     {refiningSlideIndex === slide.originalIdx ? <><Loader2 className="h-3 w-3 animate-spin" /> Refining…</> : <>Refine <ChevronDown className="h-3 w-3" /></>}
                   </button>

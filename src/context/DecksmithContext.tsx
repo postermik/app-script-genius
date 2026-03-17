@@ -1232,7 +1232,7 @@ overall = weighted average: clarity 15%, marketFraming 15%, differentiation 12%,
 
 GAP RULES:
 1. Gaps describe NARRATIVE weaknesses, not output-specific issues. Write "revenue model lacks funnel math" not "the revenue slide lacks...".
-2. tier "primary" = investor closes the tab or sends a pass email. Reserved ONLY for: complete absence of differentiation, no credible addressable market, no team credibility whatsoever, fundamentally broken unit economics, or incoherent problem/solution fit. A missing logo, imprecise TAM, thin traction, or lack of a named customer is NOT primary. Hard cap: surface at most 3 primary gaps. Rank all gaps by investor impact and keep only the top 3. Drop the rest.
+2. tier "primary" = investor closes the tab or sends a pass email. Reserved ONLY for: complete absence of differentiation, no credible addressable market, no team credibility whatsoever, fundamentally broken unit economics, or incoherent problem/solution fit. A missing logo, imprecise TAM, thin traction, or lack of a named customer is NOT primary. Surface ALL primary gaps. Do not hide any.
 3. tier "secondary" = would meaningfully strengthen the narrative in a pitch meeting. Cap at 3.
 4. tier "minor" = polish only, cap at 1.
 5. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.

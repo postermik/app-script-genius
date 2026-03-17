@@ -141,38 +141,30 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
-  const [applyingSlideIndex, setApplyingSlideIndex] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree, generateOutput } = useDecksmith();
 
-  const [slideTarget, setSlideTarget] = useState<number | null>(null);
   const [insightText, setInsightText] = useState("");
   const [applyingInsight, setApplyingInsight] = useState(false);
   const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
 
   // Detect which slide index is most relevant to a gap based on keyword overlap
-  const handleApplyNarrative = async (index: number, howToFix: string) => {
+  const handleApply = async (index: number, howToFix: string) => {
     setApplyingIndex(index);
-    try {
     markSuggestionApplied(`score-${index}`);
+    try {
+      // Always apply to core narrative
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
+      // Also regenerate slide framework if a relevant slide exists
+      const relevantSlide = detectRelevantSlide(normalizeGap(gaps[index]));
+      if (relevantSlide !== null && slides[relevantSlide]) {
+        await generateOutput("slide_framework" as any);
+      }
       setExpandedImprovement(null);
     } catch {
-      // refineSection shows toast on error
+      // refineSection/generateOutput show toast on error
     } finally {
       setApplyingIndex(null);
-    }
-  };
-
-  const handleApplySlide = async (index: number) => {
-    setApplyingSlideIndex(index);
-    markSuggestionApplied(`score-${index}`);
-    try {
-      await generateOutput("slide_framework" as any);
-    } catch {
-      // generateOutput shows toast on error
-    } finally {
-      setApplyingSlideIndex(null);
     }
   };
 
@@ -346,31 +338,13 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                             <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
                           </div>
                         </div>
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          {(() => {
-                            const relevantSlide = detectRelevantSlide(gapText);
-                            if (relevantSlide !== null && slides[relevantSlide]) {
-                              const cat = slides[relevantSlide].categoryLabel || "";
-                              const slideLabel = cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : "Slide";
-                              const active = slideTarget === relevantSlide;
-                              return (
-                                <button
-                                  onClick={() => handleApplySlide(i, relevantSlide)}
-                                  disabled={applyingSlideIndex === i}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium border border-electric/30 text-electric/60 hover:border-electric/60 hover:text-electric/90 disabled:opacity-40 transition-colors"
-                                >
-                                  {applyingSlideIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : `Apply to ${slideLabel} Slide`}
-                                </button>
-                              );
-                            }
-                            return null;
-                          })()}
+                        <div className="mt-3 flex items-center justify-end">
                           <button
-                            onClick={() => handleApplyNarrative(i, howToFix)}
+                            onClick={() => handleApply(i, howToFix)}
                             disabled={applyingIndex === i}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
                           >
-                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : "Apply to Core Narrative"}
+                            {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : "Apply Fix"}
                           </button>
                         </div>
                       </div>
