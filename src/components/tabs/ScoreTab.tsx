@@ -28,7 +28,7 @@ interface Props {
 }
 
 export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, slides = [] }: Props) {
-  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection } = useDecksmith();
+  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection, coreNarrative } = useDecksmith();
 
   const [expandedOp, setExpandedOp] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
@@ -59,8 +59,21 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
     if (!input) return;
     setApplyingOp(op.id);
     try {
-      const directive = `Incorporate this information into the ${op.category} section: ${input}`;
-      await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      // Find the section index that matches this opportunity's category
+      const cn = coreNarrative;
+      const sectionIdx = cn?.sections?.findIndex((s: any) =>
+        s.heading.toLowerCase().includes(op.category.toLowerCase()) ||
+        op.category.toLowerCase().includes(s.heading.toLowerCase())
+      ) ?? -1;
+
+      if (sectionIdx >= 0) {
+        const directive = `Incorporate this information naturally: ${input}`;
+        await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`, directive as any);
+      } else {
+        // Fallback: refine the full narrative
+        const directive = `Add this to the ${op.category} section: ${input}`;
+        await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      }
       setUserInputs(prev => ({ ...prev, [op.id]: "" }));
       setExpandedOp(null);
     } catch {
@@ -75,8 +88,19 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
     if (!suggestion) return;
     setApplyingOp(op.id);
     try {
-      const directive = `Incorporate these findings into the ${op.category} section:\n${suggestion}`;
-      await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      const cn = coreNarrative;
+      const sectionIdx = cn?.sections?.findIndex((s: any) =>
+        s.heading.toLowerCase().includes(op.category.toLowerCase()) ||
+        op.category.toLowerCase().includes(s.heading.toLowerCase())
+      ) ?? -1;
+
+      if (sectionIdx >= 0) {
+        const directive = `Incorporate these findings naturally:\n${suggestion}`;
+        await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`, directive as any);
+      } else {
+        const directive = `Add these findings to the ${op.category} section:\n${suggestion}`;
+        await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      }
       setAiResults(prev => ({ ...prev, [op.id]: "" }));
       setExpandedOp(null);
     } catch {
@@ -107,8 +131,8 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
                 const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
                 return <line key={i} x1={45 + 41 * Math.cos(angle)} y1={45 + 41 * Math.sin(angle)} x2={45 + 44 * Math.cos(angle)} y2={45 + 44 * Math.sin(angle)} stroke="hsl(222 16% 28%)" strokeWidth="1.5" />;
               })}
-              <text x="45" y="42" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "20px" }}>{completedCount}</text>
-              <text x="45" y="56" textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" style={{ fontSize: "9px" }}>of {totalCount}</text>
+              <text x="45" y="38" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{completedCount}</text>
+              <text x="45" y="58" textAnchor="middle" dominantBaseline="middle" className="fill-secondary-foreground" style={{ fontSize: "11px", fontWeight: 500 }}>of {totalCount}</text>
             </svg>
           </div>
 
@@ -119,7 +143,6 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-700 ${getProgressColor(strength.percentage)}`} style={{ width: `${strength.percentage}%` }} />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">{completedCount} of {totalCount} areas covered</p>
           </div>
         </div>
       </div>
@@ -152,7 +175,9 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
-                        <span className="text-[9px] font-semibold text-electric/60 bg-electric/10 px-1.5 py-0.5 rounded-full">+{op.points}</span>
+                        <span className="text-[9px] font-semibold text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded-full">
+                          {op.category}
+                        </span>
                         {expanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                       </div>
                     </button>
@@ -252,6 +277,17 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, sli
             </div>
             {showCompleted ? <ChevronUp className="h-3.5 w-3.5 text-emerald/60" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald/60" />}
           </button>
+          {showCompleted && (
+            <div className="border-t border-emerald/10 px-4 py-3 space-y-2">
+              {strength.completedOpportunities.map((op) => (
+                <div key={op.id} className="flex items-center gap-2 py-1">
+                  <Check className="h-3 w-3 text-emerald shrink-0" />
+                  <span className="text-xs text-foreground/60">{op.label}</span>
+                  <span className="text-[9px] text-muted-foreground/50 ml-auto">{op.category}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

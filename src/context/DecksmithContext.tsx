@@ -31,6 +31,7 @@ export interface NarrativeStrength {
   tierLabel: string;
   tierDescription: string;
   opportunities: NarrativeOpportunity[];
+  completedOpportunities: NarrativeOpportunity[];
   completedCount: number;
   totalCount: number;
 }
@@ -1516,6 +1517,7 @@ Return JSON: { "deckFramework": [...] }`,
       percentage,
       tier, tierLabel, tierDescription,
       opportunities: opportunities.filter(o => !o.completed),
+      completedOpportunities: completedOps,
       completedCount: completedOps.length,
       totalCount: opportunities.length,
     };
