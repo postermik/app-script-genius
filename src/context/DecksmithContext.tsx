@@ -1197,8 +1197,8 @@ Return JSON: { "deckFramework": [...] }`,
       const investorQA = od?.investor_qa?.investorQA || [];
 
       // Collect previous gaps to avoid repetition
-      const previousScore = (output as any).score;
-      const previousGaps: string[] = previousScore?.gaps || [];
+      const previousScoreObj = (output as any).score;
+      const previousGaps: string[] = previousScoreObj?.gaps || [];
 
       const narrativeSnapshot = {
         stage,
@@ -1291,11 +1291,25 @@ No markdown fences. No commentary outside the JSON.`;
           return prev;
         }
         updated.score = scoreContent;
-        updated._appliedSuggestions = [];
+        // Only clear applied suggestions if we got genuinely new gaps
+        const oldGapTexts = new Set((previousScoreObj?.gaps || []).map((g: any) => typeof g === "string" ? g : g.text));
+        const newGapTexts = (scoreContent.gaps || []).map((g: any) => typeof g === "string" ? g : g.text);
+        const hasNewGaps = newGapTexts.some((t: string) => !oldGapTexts.has(t));
+        if (hasNewGaps) {
+          updated._appliedSuggestions = [];
+        }
         saveProject(updated as NarrativeOutputData);
         return updated;
       });
-      setAppliedSuggestions(new Set());
+      // Only clear applied badges if score changed meaningfully
+      if (scoreContent && typeof scoreContent.overall === "number" && scoreContent.overall !== previousScore) {
+        const oldGapTexts = new Set(((output as any)?.score?.gaps || []).map((g: any) => typeof g === "string" ? g : g.text));
+        const newGapTexts = (scoreContent.gaps || []).map((g: any) => typeof g === "string" ? g : g.text);
+        const hasNewGaps = newGapTexts.some((t: string) => !oldGapTexts.has(t));
+        if (hasNewGaps) {
+          setAppliedSuggestions(new Set());
+        }
+      }
       toast.success("Score updated.");
     } catch (e: any) {
       console.error("Rescore error:", e);
