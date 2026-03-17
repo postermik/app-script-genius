@@ -1418,10 +1418,11 @@ Return JSON: { "deckFramework": [...] }`,
         description: "Saying 'no competitors' is a red flag. Show you understand the landscape.",
         prompt: "Who are the existing alternatives? (companies, tools, or how people solve this today)",
         completed: (() => {
-          const text = allText.toLowerCase();
-          const hasCompetitorSection = cn?.sections?.some((s: any) => /compet|landscape|alternative/i.test(s.heading));
-          const namedCompanies = text.match(/\b[A-Z][a-z]+(?:\.[a-z]+)?\b/g)?.length || 0;
-          return !!(hasCompetitorSection || namedCompanies > 3);
+          const hasCompetitorInHeading = cn?.sections?.some((s: any) => /compet|landscape|alternative/i.test(s.heading));
+          const hasCompetitorInContent = /compet|landscape|alternative|incumbent|rival/i.test(allText);
+          const knownTools = /slidebean|canva|pitch\.com|gamma|tome|jasper|docsend|visible|chatgpt|beautiful\.ai|footnote|method/i;
+          const hasNamedCompetitor = knownTools.test(allText);
+          return !!(hasCompetitorInHeading || hasCompetitorInContent || hasNamedCompetitor);
         })(),
         aiAssistAvailable: true, sectionHeading: "Market", category: "Differentiation", points: 10,
       });
