@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Layers, Target, Search, Settings } from "lucide-react";
+import { Layers, Compass, Search, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { OutputTabKey } from "@/types/rhetoric";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,13 +15,13 @@ interface SidebarItem {
 
 const CREATE_SIDEBAR: SidebarItem[] = [
   { key: "outputs", label: "Outputs", Icon: Layers },
-  { key: "score", label: "Score", Icon: Target },
+  { key: "score", label: "Guide", Icon: Compass },
 ];
 
 const EVALUATE_SIDEBAR: SidebarItem[] = [
   { key: "analysis", label: "Analysis", Icon: Search },
   { key: "outputs", label: "Outputs", Icon: Layers },
-  { key: "score", label: "Score", Icon: Target },
+  { key: "score", label: "Guide", Icon: Compass },
 ];
 
 // Which completedOutputs key signals each tab is done

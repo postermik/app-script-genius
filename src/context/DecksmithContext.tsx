@@ -20,6 +20,7 @@ export interface NarrativeOpportunity {
   completed: boolean;
   aiAssistAvailable: boolean;
   category: string;
+  sectionHeading: string;
   points: number;
 }
 
@@ -92,6 +93,7 @@ interface DecksmithContextType {
   rescoreNarrative: () => Promise<void>;
   computeNarrativeStrength: () => NarrativeStrength;
   aiAssistOpportunity: (opportunityId: string, context: string) => Promise<string>;
+  generateGuideSummary: () => Promise<string>;
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
@@ -1387,47 +1389,51 @@ Return JSON: { "deckFramework": [...] }`,
       opportunities.push({
         id: "specific_pain",
         label: "Quantify the problem",
-        description: "Add a specific number or data point to your Problem section (cost, time, percentage).",
+        description: "Investors respond to specific numbers. What does this problem actually cost your customers?",
         prompt: "What's the biggest cost or time waste your customers face? (e.g. $15K per project, 6 weeks wasted)",
         completed: /\$[\d,]+|\d+%|\d+x|\d+ (hours|days|weeks|months|years)/.test(sectionText("Problem")),
         aiAssistAvailable: true,
+        sectionHeading: "Problem",
         category: "Problem",
         points: 10,
       });
       opportunities.push({
         id: "product_named",
-        label: "Name your product",
-        description: "Make sure your Solution section clearly names what you're building.",
+        label: "Name your product clearly",
+        description: "Your Solution section should leave no doubt about what you're building and who it's for.",
         prompt: "What's the name of your product or company?",
         completed: sectionText("Solution").length > 50,
         aiAssistAvailable: false,
+        sectionHeading: "Solution",
         category: "Solution",
         points: 5,
       });
       opportunities.push({
         id: "market_figures",
         label: "Size your market",
-        description: "Include at least one market figure (TAM, SAM, or industry size).",
+        description: "Every investor will ask 'how big is this?' Having a researched answer ready is table stakes.",
         prompt: "What industry are you in? We'll research the market size for you.",
         completed: /\$[\d.]+ ?(B|M|billion|million)|TAM|SAM|SOM/i.test(sectionText("Market") + " " + allText),
         aiAssistAvailable: true,
+        sectionHeading: "Market",
         category: "Market",
         points: 15,
       });
       opportunities.push({
         id: "traction_metrics",
         label: "Add traction data",
-        description: "Include at least one real metric: users, revenue, growth rate, or conversion.",
+        description: "Real numbers, even small ones, build more credibility than any amount of vision.",
         prompt: "What's your current traction? (users, MRR, growth rate, waitlist size, anything)",
         completed: /\d+.*?(users|customers|MRR|ARR|revenue|growth|conversion|paying)/i.test(sectionText("Traction") + " " + allText),
         aiAssistAvailable: false,
+        sectionHeading: "Traction",
         category: "Traction",
         points: 15,
       });
       opportunities.push({
         id: "competitors_named",
         label: "Name your competitors",
-        description: "Name at least one specific competitor or alternative. Investors always ask.",
+        description: "Saying 'no competitors' is a red flag. Show you understand the landscape.",
         prompt: "Who are the existing alternatives? (companies, tools, or how people solve this today)",
         completed: (() => {
           const text = allText.toLowerCase();
@@ -1436,36 +1442,40 @@ Return JSON: { "deckFramework": [...] }`,
           return !!(hasCompetitorSection || namedCompanies > 3);
         })(),
         aiAssistAvailable: true,
+        sectionHeading: "Market",
         category: "Differentiation",
         points: 10,
       });
       opportunities.push({
         id: "ask_amount",
         label: "State your raise",
-        description: "Include a specific dollar amount you're raising.",
+        description: "Be direct about what you need. Vague asks signal uncertainty.",
         prompt: "How much are you raising? (e.g. $500K, $2M)",
         completed: /\$[\d.]+ ?(K|M|k|m|thousand|million)/i.test(allText + " " + rawInput),
         aiAssistAvailable: false,
+        sectionHeading: "Vision",
         category: "Ask",
         points: 10,
       });
       opportunities.push({
         id: "use_of_funds",
         label: "Explain use of funds",
-        description: "Tell investors what the money will be used for.",
+        description: "Investors want to know their money has a plan, not just a destination.",
         prompt: "What will you use the funds for? (e.g. hiring, product, marketing)",
         completed: /use of funds|allocated to|will fund|will be used|spend on|invest in/i.test(allText),
         aiAssistAvailable: false,
+        sectionHeading: "Vision",
         category: "Ask",
         points: 5,
       });
       opportunities.push({
         id: "why_now",
         label: "Explain why now",
-        description: "Add a timing argument. What changed that makes this possible or urgent today?",
+        description: "Timing is one of the top reasons investors pass or lean in. What changed recently?",
         prompt: "What recent change makes this the right time? (new regulation, technology shift, market event)",
         completed: sectionText("Why Now").length > 80,
         aiAssistAvailable: true,
+        sectionHeading: "Why Now",
         category: "Timing",
         points: 10,
       });
@@ -1473,20 +1483,22 @@ Return JSON: { "deckFramework": [...] }`,
       opportunities.push({
         id: "slides_generated",
         label: "Generate slide framework",
-        description: "A slide framework gives investors a visual structure of your pitch.",
+        description: "A structured slide framework turns your narrative into a visual pitch.",
         prompt: "",
         completed: slideFw.length >= 5,
         aiAssistAvailable: false,
+        sectionHeading: "",
         category: "Materials",
         points: 10,
       });
       opportunities.push({
         id: "qa_prepared",
-        label: "Prepare for Q&A",
-        description: "Investor Q&A prep helps you anticipate tough questions.",
+        label: "Prepare for investor Q&A",
+        description: "The best founders walk into meetings ready for the hard questions.",
         prompt: "",
         completed: qaItems.length >= 3,
         aiAssistAvailable: false,
+        sectionHeading: "",
         category: "Materials",
         points: 10,
       });
@@ -1544,6 +1556,36 @@ Return JSON: { "deckFramework": [...] }`,
     if (error) throw error;
     return data.content || "Could not generate suggestions. Please try again.";
   }, [rawInput]);
+
+  // ── Generate AI consultant summary for Guide tab ──
+  const generateGuideSummary = useCallback(async (): Promise<string> => {
+    const cn = coreNarrativeRef.current;
+    const od = outputDataRef.current;
+    const strength = computeNarrativeStrength();
+    const narrativeText = cn?.sections?.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n") || rawInput;
+    const uncompletedLabels = strength.opportunities.map(o => o.label).join(", ");
+    const completedLabels = strength.completedOpportunities.map(o => o.label).join(", ");
+    const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
+    const stage = intakeSelectionsRef.current?.stage || "seed";
+
+    const prompt = `You are a senior fundraising advisor reviewing a founder's narrative materials for a ${stage.replace("_", "-")} stage ${purpose} effort. Be warm, direct, and specific. No fluff.
+
+Read their narrative and give a 2-3 sentence personalized assessment. Then identify 2-3 specific areas to strengthen next, explaining WHY each matters for their specific situation (not generic advice).
+
+What they've covered well: ${completedLabels || "just getting started"}
+What's still needed: ${uncompletedLabels || "looking strong across the board"}
+
+Their narrative:
+${narrativeText}
+
+Respond in plain text. No JSON. No bullet points. Write like you're speaking directly to the founder across a table. Do not use em dashes.`;
+
+    const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+      body: { mode: "refine", input: rawInput, section: "guide-summary", path: "assist", tone: prompt, currentContent: narrativeText, max_tokens: 500, model: "claude-haiku-4-5-20251001" },
+    });
+    if (error) throw error;
+    return data.content || "";
+  }, [rawInput, computeNarrativeStrength]);
 
   const rescoreNarrative = useCallback(async () => {
     if (!output) return;
@@ -1939,7 +1981,7 @@ No markdown fences. No commentary outside the JSON.`;
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied,
-        applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity,
+        applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
         dismissedSuggestions, dismissSuggestion,
       }}
     >
