@@ -12,6 +12,29 @@ const SUPABASE_ANON_KEY = "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz";
 
 type LoadingPhase = "idle" | "structuring" | "sharpening" | "designing" | "scoring";
 
+export interface NarrativeOpportunity {
+  id: string;
+  label: string;
+  description: string;
+  prompt: string;
+  completed: boolean;
+  aiAssistAvailable: boolean;
+  category: string;
+  points: number;
+}
+
+export interface NarrativeStrength {
+  score: number;
+  maxScore: number;
+  percentage: number;
+  tier: "building" | "sharpening" | "ready" | "exceptional";
+  tierLabel: string;
+  tierDescription: string;
+  opportunities: NarrativeOpportunity[];
+  completedCount: number;
+  totalCount: number;
+}
+
 interface DecksmithContextType {
   rawInput: string;
   setRawInput: (v: string) => void;
@@ -66,6 +89,8 @@ interface DecksmithContextType {
   markSuggestionApplied: (key: string) => void;
   applyDeckSuggestion: (suggestion: string, suggestionIndex: number) => Promise<void>;
   rescoreNarrative: () => Promise<void>;
+  computeNarrativeStrength: () => NarrativeStrength;
+  aiAssistOpportunity: (opportunityId: string, context: string) => Promise<string>;
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
   isGeneratingSlides: boolean;
@@ -1340,6 +1365,184 @@ Return JSON: { "deckFramework": [...] }`,
     }
   }, [output, rawInput, currentProjectId, markSuggestionApplied]);
 
+  // ── Deterministic Narrative Strength scoring ──
+  const computeNarrativeStrength = useCallback((): NarrativeStrength => {
+    const cn = coreNarrativeRef.current;
+    const od = outputDataRef.current;
+    const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
+    const sectionText = (heading: string) => cn?.sections?.find((s: any) => s.heading.toLowerCase() === heading.toLowerCase())?.content || "";
+
+    const allText = cn?.sections?.map((s: any) => s.content).join(" ") || "";
+    const slideFw = od?.slide_framework?.deckFramework || [];
+    const qaItems = od?.investor_qa?.investorQA || [];
+    const pitchData = od?.elevator_pitch;
+    const memoData = od?.investment_memo;
+
+    // Define opportunities based on mode
+    const opportunities: NarrativeOpportunity[] = [];
+
+    if (purpose === "fundraising") {
+      // Content depth checks
+      opportunities.push({
+        id: "specific_pain",
+        label: "Quantify the problem",
+        description: "Add a specific number or data point to your Problem section (cost, time, percentage).",
+        prompt: "What's the biggest cost or time waste your customers face? (e.g. $15K per project, 6 weeks wasted)",
+        completed: /\$[\d,]+|\d+%|\d+x|\d+ (hours|days|weeks|months|years)/.test(sectionText("Problem")),
+        aiAssistAvailable: true,
+        category: "Problem",
+        points: 10,
+      });
+      opportunities.push({
+        id: "product_named",
+        label: "Name your product",
+        description: "Make sure your Solution section clearly names what you're building.",
+        prompt: "What's the name of your product or company?",
+        completed: sectionText("Solution").length > 50,
+        aiAssistAvailable: false,
+        category: "Solution",
+        points: 5,
+      });
+      opportunities.push({
+        id: "market_figures",
+        label: "Size your market",
+        description: "Include at least one market figure (TAM, SAM, or industry size).",
+        prompt: "What industry are you in? We'll research the market size for you.",
+        completed: /\$[\d.]+ ?(B|M|billion|million)|TAM|SAM|SOM/i.test(sectionText("Market") + " " + allText),
+        aiAssistAvailable: true,
+        category: "Market",
+        points: 15,
+      });
+      opportunities.push({
+        id: "traction_metrics",
+        label: "Add traction data",
+        description: "Include at least one real metric: users, revenue, growth rate, or conversion.",
+        prompt: "What's your current traction? (users, MRR, growth rate, waitlist size, anything)",
+        completed: /\d+.*?(users|customers|MRR|ARR|revenue|growth|conversion|paying)/i.test(sectionText("Traction") + " " + allText),
+        aiAssistAvailable: false,
+        category: "Traction",
+        points: 15,
+      });
+      opportunities.push({
+        id: "competitors_named",
+        label: "Name your competitors",
+        description: "Name at least one specific competitor or alternative. Investors always ask.",
+        prompt: "Who are the existing alternatives? (companies, tools, or how people solve this today)",
+        completed: (() => {
+          const text = allText.toLowerCase();
+          const hasCompetitorSection = cn?.sections?.some((s: any) => /compet|landscape|alternative/i.test(s.heading));
+          const namedCompanies = text.match(/\b[A-Z][a-z]+(?:\.[a-z]+)?\b/g)?.length || 0;
+          return !!(hasCompetitorSection || namedCompanies > 3);
+        })(),
+        aiAssistAvailable: true,
+        category: "Differentiation",
+        points: 10,
+      });
+      opportunities.push({
+        id: "ask_amount",
+        label: "State your raise",
+        description: "Include a specific dollar amount you're raising.",
+        prompt: "How much are you raising? (e.g. $500K, $2M)",
+        completed: /\$[\d.]+ ?(K|M|k|m|thousand|million)/i.test(allText + " " + rawInput),
+        aiAssistAvailable: false,
+        category: "Ask",
+        points: 10,
+      });
+      opportunities.push({
+        id: "use_of_funds",
+        label: "Explain use of funds",
+        description: "Tell investors what the money will be used for.",
+        prompt: "What will you use the funds for? (e.g. hiring, product, marketing)",
+        completed: /use of funds|allocated to|will fund|will be used|spend on|invest in/i.test(allText),
+        aiAssistAvailable: false,
+        category: "Ask",
+        points: 5,
+      });
+      opportunities.push({
+        id: "why_now",
+        label: "Explain why now",
+        description: "Add a timing argument. What changed that makes this possible or urgent today?",
+        prompt: "What recent change makes this the right time? (new regulation, technology shift, market event)",
+        completed: sectionText("Why Now").length > 80,
+        aiAssistAvailable: true,
+        category: "Timing",
+        points: 10,
+      });
+      // Output completeness checks
+      opportunities.push({
+        id: "slides_generated",
+        label: "Generate slide framework",
+        description: "A slide framework gives investors a visual structure of your pitch.",
+        prompt: "",
+        completed: slideFw.length >= 5,
+        aiAssistAvailable: false,
+        category: "Materials",
+        points: 10,
+      });
+      opportunities.push({
+        id: "qa_prepared",
+        label: "Prepare for Q&A",
+        description: "Investor Q&A prep helps you anticipate tough questions.",
+        prompt: "",
+        completed: qaItems.length >= 3,
+        aiAssistAvailable: false,
+        category: "Materials",
+        points: 10,
+      });
+    }
+    // TODO: Add board_update and strategy opportunities in future
+
+    const completedOps = opportunities.filter(o => o.completed);
+    const totalPoints = opportunities.reduce((sum, o) => sum + o.points, 0);
+    const earnedPoints = completedOps.reduce((sum, o) => sum + o.points, 0);
+    const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+    let tier: NarrativeStrength["tier"];
+    let tierLabel: string;
+    let tierDescription: string;
+    if (percentage >= 90) {
+      tier = "exceptional"; tierLabel = "Exceptional"; tierDescription = "Your narrative is ready for any room.";
+    } else if (percentage >= 70) {
+      tier = "ready"; tierLabel = "Investor Ready"; tierDescription = "Strong foundation. A few additions would make it stand out.";
+    } else if (percentage >= 40) {
+      tier = "sharpening"; tierLabel = "Getting Sharp"; tierDescription = "Your story is taking shape. Keep building.";
+    } else {
+      tier = "building"; tierLabel = "Story Built"; tierDescription = "Great start. Let's strengthen it together.";
+    }
+
+    return {
+      score: earnedPoints,
+      maxScore: totalPoints,
+      percentage,
+      tier, tierLabel, tierDescription,
+      opportunities: opportunities.filter(o => !o.completed),
+      completedCount: completedOps.length,
+      totalCount: opportunities.length,
+    };
+  }, [rawInput]);
+
+  // ── AI Assist for opportunities (Help me find this) ──
+  const aiAssistOpportunity = useCallback(async (opportunityId: string, context: string): Promise<string> => {
+    const cn = coreNarrativeRef.current;
+    const narrativeContext = cn?.sections?.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n") || rawInput;
+
+    const prompts: Record<string, string> = {
+      specific_pain: `Based on this startup description, research and suggest 2-3 specific, quantified pain points the target market faces. Use real industry data from your training knowledge. Return only the pain points, each on a new line with a number or statistic.\n\nStartup context:\n${narrativeContext}`,
+      market_figures: `Based on this startup description, provide TAM, SAM, and SOM estimates with sources and assumptions. Use real market data from your training knowledge. Format as:\nTAM: $XB (basis)\nSAM: $YB (assumption)\nSOM: $ZM (assumption)\n\nStartup context:\n${narrativeContext}`,
+      competitors_named: `Based on this startup description, identify 3-5 specific competitors or alternatives that investors would expect to see addressed. Include company names and one line about what they do. Return as a simple list.\n\nStartup context:\n${narrativeContext}`,
+      why_now: `Based on this startup description, suggest 2-3 specific "why now" timing arguments. What changed recently (technology, regulation, market shift, behavior change) that makes this possible or urgent? Use real, verifiable trends. Return as a simple list.\n\nStartup context:\n${narrativeContext}`,
+    };
+
+    const prompt = prompts[opportunityId];
+    if (!prompt) return "AI assist is not available for this item.";
+
+    const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+      body: { mode: "refine", input: rawInput, section: `ai-assist-${opportunityId}`, path: "assist", tone: prompt, currentContent: context || narrativeContext, max_tokens: 1500, model: "claude-haiku-4-5-20251001" },
+    });
+    if (error) throw error;
+    return data.content || "Could not generate suggestions. Please try again.";
+  }, [rawInput]);
+
   const rescoreNarrative = useCallback(async () => {
     if (!output) return;
     const previousScore: number = (output?.score?.overall ?? 0);
@@ -1734,7 +1937,7 @@ No markdown fences. No commentary outside the JSON.`;
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied,
-        applyDeckSuggestion, rescoreNarrative,
+        applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity,
         dismissedSuggestions, dismissSuggestion,
       }}
     >

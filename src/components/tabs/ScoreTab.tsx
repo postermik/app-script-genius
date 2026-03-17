@@ -1,127 +1,24 @@
-import { useState, useEffect } from "react";
-import { Check, AlertTriangle, X, ChevronDown, ChevronUp, Lightbulb, TrendingUp, RefreshCw, Loader2, Lock, Trophy, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, RefreshCw } from "lucide-react";
 import { useDecksmith } from "@/context/DecksmithContext";
-import type { RhetoricScore } from "@/types/rhetoric";
+import type { NarrativeOpportunity } from "@/context/DecksmithContext";
 
-const READINESS_TITLES: Record<string, string> = {
-  fundraising: "CAPITAL READINESS",
-  board_update: "UPDATE READINESS",
-  strategy: "STRATEGY READINESS",
-  product_vision: "VISION READINESS",
-  investor_update: "UPDATE READINESS",
-};
-
-const SCORE_LABELS: Record<string, string> = {
-  clarity: "Clarity",
-  marketFraming: "Market Framing",
-  differentiation: "Differentiation",
-  riskTransparency: "Risk Transparency",
-  persuasiveStructure: "Persuasive Structure",
-  metricCompleteness: "Metric Completeness",
-  strategicAlignment: "Strategic Alignment",
-  actionability: "Actionability",
-  marketInsight: "Market Insight",
-  competitivePositioning: "Competitive Positioning",
-  feasibility: "Feasibility",
-  userInsight: "User Insight",
-  solutionFit: "Solution Fit",
-  narrativeCoherence: "Narrative Coherence",
-  transparency: "Transparency",
-  momentumSignal: "Momentum Signal",
-  brevity: "Brevity",
-};
-
-function getScoreColor(value: number) {
-  if (value >= 80) return "bg-emerald";
-  if (value >= 60) return "bg-electric";
-  if (value >= 40) return "bg-yellow-400";
-  return "bg-destructive";
+function getProgressColor(pct: number) {
+  if (pct >= 90) return "bg-emerald";
+  if (pct >= 70) return "bg-electric";
+  if (pct >= 40) return "bg-yellow-400";
+  return "bg-muted-foreground/40";
 }
 
-function getLabel(key: string) {
-  return SCORE_LABELS[key] || key;
-}
-
-// Normalize gap — handle both plain string and {text, tier} object shapes
-function normalizeGap(gap: any): string {
-  if (typeof gap === "string") return gap;
-  if (gap && typeof gap === "object") return gap.text || JSON.stringify(gap);
-  return String(gap ?? "");
-}
-
-// Get tier from gap object, default to "secondary"
-function getGapTier(gap: any): "primary" | "secondary" | "minor" {
-  if (gap && typeof gap === "object" && gap.tier) return gap.tier;
-  return "secondary";
-}
-
-function gapSeverityStyles(tier: string) {
-  if (tier === "primary") return {
-    border: "border-destructive/30",
-    bg: "bg-destructive/5",
-    icon: "text-destructive",
-    label: "Critical",
-    labelClass: "text-destructive bg-destructive/10",
-  };
-  if (tier === "minor") return {
-    border: "border-border",
-    bg: "bg-muted/20",
-    icon: "text-muted-foreground",
-    label: "Minor",
-    labelClass: "text-muted-foreground bg-muted/30",
-  };
-  // secondary (default)
-  return {
-    border: "border-yellow-400/20",
-    bg: "bg-yellow-400/5",
-    icon: "text-yellow-400",
-    label: "Moderate",
-    labelClass: "text-yellow-400 bg-yellow-400/10",
-  };
-}
-
-function CircularGauge({ value, label }: { value: number; label: string }) {
-  const radius = 36;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
-  const strokeColor =
-    value >= 80 ? "hsl(155 60% 45%)" :
-    value >= 60 ? "hsl(217 91% 60%)" :
-    value >= 40 ? "hsl(48 96% 53%)" :
-    "hsl(0 65% 48%)";
-  const levelColor =
-    value >= 80 ? "text-emerald" :
-    value >= 60 ? "text-electric" :
-    "text-muted-foreground";
-
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <svg width="90" height="90" viewBox="0 0 90 90" className="drop-shadow-lg">
-        <circle cx="45" cy="45" r={radius} fill="none" stroke="hsl(222 16% 16%)" strokeWidth="6" />
-        <circle
-          cx="45" cy="45" r={radius} fill="none"
-          stroke={strokeColor} strokeWidth="6" strokeLinecap="round"
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          transform="rotate(-90 45 45)" className="animate-gauge"
-        />
-        {Array.from({ length: 8 }).map((_, i) => {
-          const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
-          const x1 = 45 + 41 * Math.cos(angle);
-          const y1 = 45 + 41 * Math.sin(angle);
-          const x2 = 45 + 44 * Math.cos(angle);
-          const y2 = 45 + 44 * Math.sin(angle);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="hsl(222 16% 28%)" strokeWidth="1.5" />;
-        })}
-        <text x="45" y="45" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "22px" }}>{value}</text>
-      </svg>
-      <p className={`text-[11px] font-semibold ${levelColor}`}>{label}</p>
-    </div>
-  );
+function getTierColor(tier: string) {
+  if (tier === "exceptional") return "text-emerald";
+  if (tier === "ready") return "text-electric";
+  if (tier === "sharpening") return "text-yellow-400";
+  return "text-muted-foreground";
 }
 
 interface Props {
-  score: RhetoricScore;
+  score: any;
   mode: string;
   showRescore?: boolean;
   slides?: { categoryLabel: string; headline: string }[];
@@ -130,362 +27,206 @@ interface Props {
   hasPendingImprovements?: boolean;
 }
 
-export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, hasPendingImprovements, slides = [] }: Props) {
-  const [animated, setAnimated] = useState(false);
-  const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
-  const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
-  const [applyingAll, setApplyingAll] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree, generateOutput, batchApplyGaps } = useDecksmith();
+export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, slides = [] }: Props) {
+  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection } = useDecksmith();
 
-  const [insightText, setInsightText] = useState("");
-  const [applyingInsight, setApplyingInsight] = useState(false);
-  const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
+  const [expandedOp, setExpandedOp] = useState<string | null>(null);
+  const [userInputs, setUserInputs] = useState<Record<string, string>>({});
+  const [aiResults, setAiResults] = useState<Record<string, string>>({});
+  const [loadingAi, setLoadingAi] = useState<string | null>(null);
+  const [applyingOp, setApplyingOp] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  // All gaps checked by default, user can opt out
-  const [checkedGaps, setCheckedGaps] = useState<Set<number>>(new Set(score.gaps?.map((_, i) => i) || []));
-  // Reset checked state when gaps change (new score)
-  useEffect(() => {
-    setCheckedGaps(new Set(score.gaps?.map((_, i) => i) || []));
-  }, [score.gaps]);
+  const strength = computeNarrativeStrength();
+  const allOpportunities = strength.opportunities;
+  const completedCount = strength.completedCount;
+  const totalCount = strength.totalCount;
 
-  const toggleGapCheck = (index: number) => {
-    setCheckedGaps(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  };
-
-  // Apply All: batch all checked, unapplied gaps
-  const handleApplyAll = async () => {
-    const gaps = score.gaps || [];
-    const improvements = score.improvements || [];
-    const toApply = [...checkedGaps]
-      .filter(i => !appliedSuggestions.has(`score-${i}`) && improvements[i])
-      .map(i => ({ index: i, howToFix: improvements[i], gapText: normalizeGap(gaps[i]) }));
-    if (toApply.length === 0) return;
-    setApplyingAll(true);
+  const handleAiAssist = async (op: NarrativeOpportunity) => {
+    setLoadingAi(op.id);
     try {
-      await batchApplyGaps(toApply, slides);
+      const result = await aiAssistOpportunity(op.id, "");
+      setAiResults(prev => ({ ...prev, [op.id]: result }));
     } catch {
-      // batchApplyGaps shows toast on error
+      setAiResults(prev => ({ ...prev, [op.id]: "Could not generate suggestions. Please try again." }));
     } finally {
-      setApplyingAll(false);
+      setLoadingAi(null);
     }
   };
 
-  // Individual apply (single gap)
-  const handleApply = async (index: number, howToFix: string) => {
-    setApplyingIndex(index);
+  const handleApplyUserInput = async (op: NarrativeOpportunity) => {
+    const input = userInputs[op.id]?.trim();
+    if (!input) return;
+    setApplyingOp(op.id);
     try {
-      await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
-      const relevantSlide = detectRelevantSlide(normalizeGap(gaps[index]));
-      if (relevantSlide !== null && slides[relevantSlide]) {
-        await refineSection(`slide-${relevantSlide}`, `deckFramework.${relevantSlide}`, howToFix as any);
-      }
-      markSuggestionApplied(`score-${index}`);
-      setExpandedImprovement(null);
+      const directive = `Incorporate this information into the ${op.category} section: ${input}`;
+      await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      setUserInputs(prev => ({ ...prev, [op.id]: "" }));
+      setExpandedOp(null);
     } catch {
-      // refineSection shows toast on error
+      // refineSection shows toast
     } finally {
-      setApplyingIndex(null);
+      setApplyingOp(null);
     }
   };
 
-  function detectRelevantSlide(gapText: string): number | null {
-    if (!slides.length) return null;
-    const gapLower = gapText.toLowerCase();
-    const keywords = [
-      ["market", "tam", "sam", "som", "sizing", "addressable"],
-      ["traction", "revenue", "arr", "mrr", "growth", "users", "customers"],
-      ["team", "founder", "experience", "background"],
-      ["problem", "pain", "challenge"],
-      ["solution", "product", "how it works"],
-      ["differentiation", "competition", "moat", "unique"],
-      ["business model", "pricing", "monetize", "revenue model"],
-      ["why now", "timing", "tailwind"],
-      ["ask", "raise", "use of funds", "capital"],
-    ];
-    let bestIdx: number | null = null;
-    let bestScore = 0;
-    slides.forEach((slide, idx) => {
-      const slideLower = (slide.categoryLabel + " " + slide.headline).toLowerCase();
-      keywords.forEach(group => {
-        const gapHit = group.some(k => gapLower.includes(k));
-        const slideHit = group.some(k => slideLower.includes(k));
-        if (gapHit && slideHit) {
-          const score = group.filter(k => gapLower.includes(k) && slideLower.includes(k)).length + 1;
-          if (score > bestScore) { bestScore = score; bestIdx = idx; }
-        }
-      });
-    });
-    return bestScore > 0 ? bestIdx : null;
-  }
-
-  useEffect(() => {
-    const t = setTimeout(() => setAnimated(true), 100);
-    return () => clearTimeout(t);
-  }, []);
-
-
-  const overall = typeof score.overall === "number" && isFinite(score.overall) ? score.overall : 0;
-  const components = score.components;
-  const readinessTitle = READINESS_TITLES[mode] || "NARRATIVE READINESS";
-  const isInvestorReady = overall >= 85;
-  const levelLabel = overall === 0
-    ? "Scoring..."
-    : isInvestorReady
-    ? (mode === "board_update" ? "Board-Ready" : mode === "strategy" ? "Conference-Ready" : "Investor-Ready")
-    : overall >= 70 ? "Solid"
-    : "Developing";
-
-  const gaps = score.gaps || [];
-  const improvements = score.improvements || [];
-  const appliedCount = appliedSuggestions.size;
-
-  // Sort gaps by severity: primary first, then secondary, then minor
-  const tierOrder = { primary: 0, secondary: 1, minor: 2 };
-  const sortedGapIndices = gaps
-    .map((gap, i) => ({ i, tier: getGapTier(gap) }))
-    .sort((a, b) => (tierOrder[a.tier] ?? 1) - (tierOrder[b.tier] ?? 1));
-
-  const lowestEntry = Object.entries(components).reduce<[string, number] | null>((min, [key, value]) => {
-    if (!min || value < min[1]) return [key, value];
-    return min;
-  }, null);
-
-  const primaryGaps = gaps.filter(g => getGapTier(g) === "primary");
-  const hasGaps = gaps.length > 0 || improvements.length > 0;
+  const handleApplyAiSuggestion = async (op: NarrativeOpportunity) => {
+    const suggestion = aiResults[op.id];
+    if (!suggestion) return;
+    setApplyingOp(op.id);
+    try {
+      const directive = `Incorporate these findings into the ${op.category} section:\n${suggestion}`;
+      await refineSection(`opportunity-${op.id}`, "narrativeStructure", directive as any);
+      setAiResults(prev => ({ ...prev, [op.id]: "" }));
+      setExpandedOp(null);
+    } catch {
+      // refineSection shows toast
+    } finally {
+      setApplyingOp(null);
+    }
+  };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
 
-      {/* HERO */}
+      {/* HERO: Progress + tier */}
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
-            <CircularGauge value={overall} label="" />
+            <svg width="90" height="90" viewBox="0 0 90 90">
+              <circle cx="45" cy="45" r="36" fill="none" stroke="hsl(222 16% 16%)" strokeWidth="6" />
+              <circle
+                cx="45" cy="45" r="36" fill="none"
+                stroke={strength.percentage >= 90 ? "hsl(155 60% 45%)" : strength.percentage >= 70 ? "hsl(217 91% 60%)" : strength.percentage >= 40 ? "hsl(48 96% 53%)" : "hsl(222 16% 28%)"}
+                strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={String(2 * Math.PI * 36)}
+                strokeDashoffset={String(2 * Math.PI * 36 * (1 - strength.percentage / 100))}
+                transform="rotate(-90 45 45)"
+              />
+              {Array.from({ length: 8 }).map((_, i) => {
+                const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
+                return <line key={i} x1={45 + 41 * Math.cos(angle)} y1={45 + 41 * Math.sin(angle)} x2={45 + 44 * Math.cos(angle)} y2={45 + 44 * Math.sin(angle)} stroke="hsl(222 16% 28%)" strokeWidth="1.5" />;
+              })}
+              <text x="45" y="42" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "20px" }}>{completedCount}</text>
+              <text x="45" y="56" textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" style={{ fontSize: "9px" }}>of {totalCount}</text>
+            </svg>
           </div>
+
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1">{readinessTitle}</p>
-            <p className={"text-lg font-bold " + (isInvestorReady ? "text-emerald" : overall >= 70 ? "text-electric" : "text-yellow-400")}>
-              {levelLabel}
-            </p>
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5 mb-1">
-              {isInvestorReady
-                ? "This narrative is ready for the room."
-                : overall >= 70
-                ? "Strong foundation. A few gaps your audience would flag."
-                : overall >= 55
-                ? "The core story is there. Needs sharper evidence."
-                : "Narrative needs more work before presenting."}
-            </p>
-            <p className="text-xs text-foreground/75 mt-1.5 leading-relaxed">
-              {isInvestorReady
-                ? (gaps.length > 0
-                  ? gaps.length + " refinement" + (gaps.length > 1 ? "s" : "") + " available"
-                  : "No significant gaps. Strong across the board.")
-                : (primaryGaps.length > 0
-                  ? primaryGaps.length + " critical gap" + (primaryGaps.length > 1 ? "s" : "") + (lowestEntry ? " · Lowest: " + getLabel(lowestEntry[0]) + " (" + lowestEntry[1] + ")" : "")
-                  : (lowestEntry ? "Biggest opportunity: " + getLabel(lowestEntry[0]) + " (" + lowestEntry[1] + ")" : ""))}
-            </p>
+            <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1">Narrative Strength</p>
+            <p className={`text-lg font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 mb-2">{strength.tierDescription}</p>
+            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-700 ${getProgressColor(strength.percentage)}`} style={{ width: `${strength.percentage}%` }} />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{completedCount} of {totalCount} areas covered</p>
           </div>
-          {(showRescore || appliedCount > 0) && (
-            <button
-              onClick={onRescore}
-              disabled={isRescoring || !hasPendingImprovements}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-electric bg-electric/20 border border-electric/30 rounded-sm hover:bg-electric/30 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={"h-3 w-3 " + (isRescoring ? "animate-spin" : "")} />
-              {isRescoring ? "Scoring…" : appliedCount >= gaps.length && gaps.length > 0 ? "Re-score: all gaps addressed" : appliedCount > 0 ? "Re-score (" + appliedCount + ")" : "Re-score"}
-            </button>
-          )}
         </div>
       </div>
 
-      {/* GAPS */}
-      {hasGaps && (
+      {/* OPPORTUNITIES */}
+      {allOpportunities.length > 0 && (
         <div className="relative card-gradient rounded-sm border border-border p-5 pb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
-              {isInvestorReady ? "Refinements" : "Gaps to address"}
-              {!isInvestorReady && primaryGaps.length > 0 && gaps.every((_, i) => appliedSuggestions.has(`score-${i}`)) && (
-                <span className="ml-2 text-[10px] font-normal text-emerald normal-case tracking-normal">
-                  All gaps addressed. Ready to rescore.
-                </span>
-              )}
-            </h3>
-            {!isFree && gaps.some((_, i) => !appliedSuggestions.has(`score-${i}`) && improvements[i]) && (
-              <button
-                onClick={handleApplyAll}
-                disabled={applyingAll || checkedGaps.size === 0}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
-              >
-                {applyingAll ? <><Loader2 className="h-3 w-3 animate-spin" />Applying {checkedGaps.size} fixes…</> : `Apply All (${[...checkedGaps].filter(i => !appliedSuggestions.has(`score-${i}`)).length})`}
-              </button>
-            )}
-          </div>
-          <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? {filter:"blur(5px)",opacity:0.45} : {}}>
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3">
+            Strengthen your narrative
+          </h3>
+          <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}>
             <div className="space-y-2">
-              {sortedGapIndices.map(({ i }) => {
-                const gap = gaps[i];
-                const howToFix = improvements[i];
-                const gapText = normalizeGap(gap);
-                const tier = getGapTier(gap);
-                const styles = gapSeverityStyles(tier);
-                const expanded = expandedImprovement === i;
-                const isApplied = appliedSuggestions.has("score-" + i);
-                const isChecked = checkedGaps.has(i);
-                return isApplied ? (
-                  <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-start gap-2">
-                    <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />
-                    <span className="text-xs text-foreground/60 flex-1">{gapText}</span>
-                    <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">Applied</Badge>
-                  </div>
-                ) : (
-                  <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
-                    <div className="flex items-start">
-                      {/* Styled checkbox toggle */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleGapCheck(i); }}
-                        className="shrink-0 flex items-center justify-center w-8 pt-4 pl-3"
-                      >
-                        <span className={`inline-block w-3.5 h-3.5 rounded-sm border transition-colors ${
-                          isChecked ? "bg-electric border-electric" : "border-muted-foreground/40 bg-transparent"
-                        }`}>
-                          {isChecked && (
-                            <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-primary-foreground">
-                              <path d="M3 6l2 2 4-4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => setExpandedImprovement(expanded ? null : i)}
-                        className="flex-1 flex items-start justify-between px-3 py-3.5 text-left hover:bg-muted/20 transition-colors"
-                      >
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
-                          <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
+              {allOpportunities.map((op) => {
+                const expanded = expandedOp === op.id;
+                const hasAiResult = !!aiResults[op.id];
+                const isLoading = loadingAi === op.id;
+                const isApplying = applyingOp === op.id;
+
+                return (
+                  <div key={op.id} className="rounded-sm border border-border/60 bg-card/30 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedOp(expanded ? null : op.id)}
+                      className="w-full flex items-start justify-between px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"
+                    >
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-medium text-foreground/90">{op.label}</span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{op.description}</p>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-3 mt-0.5">
-                          <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
-                            {styles.label}
-                          </span>
-                          <div className="w-4 flex justify-center">
-                            {howToFix && (expanded
-                              ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                              : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
+                        <span className="text-[9px] font-semibold text-electric/60 bg-electric/10 px-1.5 py-0.5 rounded-full">+{op.points}</span>
+                        {expanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    </button>
+
+                    {expanded && (
+                      <div className="px-4 pb-4 border-t border-border/50 pt-3 animate-fade-in space-y-3">
+                        <div>
+                          <textarea
+                            value={userInputs[op.id] || ""}
+                            onChange={(e) => setUserInputs(prev => ({ ...prev, [op.id]: e.target.value }))}
+                            placeholder={op.prompt}
+                            className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none focus:border-electric/50 transition-colors"
+                            rows={2}
+                          />
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {op.aiAssistAvailable && !hasAiResult && (
+                                <button
+                                  onClick={() => handleAiAssist(op)}
+                                  disabled={isLoading}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50"
+                                >
+                                  {isLoading ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
+                                </button>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleApplyUserInput(op)}
+                              disabled={!userInputs[op.id]?.trim() || isApplying}
+                              className="inline-flex items-center gap-1 px-3 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
+                            >
+                              {isApplying ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                            </button>
                           </div>
                         </div>
-                      </button>
-                    </div>
-                    {expanded && howToFix && (
-                      <div className="px-4 pb-3 border-t border-border/50 pt-3 animate-fade-in">
-                        <div className="flex items-start gap-2">
-                          <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-[10px] text-electric uppercase tracking-wider font-semibold mb-1">How to fix</p>
-                            <p className="text-xs text-foreground/80 leading-relaxed">{howToFix}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex items-center justify-end">
-                          {(() => {
-                            const relevantSlide = detectRelevantSlide(gapText);
-                            const hasSlide = relevantSlide !== null && slides[relevantSlide];
-                            const cat = hasSlide ? (slides[relevantSlide].categoryLabel || "") : "";
-                            const label = hasSlide
-                              ? `Apply to ${cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : "Slide"} Slide`
-                              : "Apply to Narrative";
-                            return (
+
+                        {hasAiResult && (
+                          <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3 space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3 w-3 text-electric" />
+                              <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">AI Suggestion</span>
+                            </div>
+                            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[op.id]}</p>
+                            <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => handleApply(i, howToFix)}
-                                disabled={applyingIndex === i}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric hover:text-foreground border border-electric/20 hover:border-electric/40 bg-electric/5 transition-colors disabled:opacity-50"
+                                onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}
+                                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
                               >
-                                {applyingIndex === i ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : label}
+                                Dismiss
                               </button>
-                            );
-                          })()}
-                        </div>
+                              <button
+                                onClick={() => handleApplyAiSuggestion(op)}
+                                disabled={isApplying}
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
+                              >
+                                {isApplying ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Use this"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 );
               })}
-              {improvements.slice(gaps.length).map((imp, i) => (
-                <div key={"extra-" + i} className="flex items-start gap-2.5 p-3 rounded-sm bg-electric/5 border border-electric/10">
-                  <TrendingUp className="h-3 w-3 text-electric shrink-0 mt-0.5" />
-                  <p className="text-xs text-foreground/90 leading-relaxed">{imp}</p>
-                </div>
-              ))}
             </div>
           </div>
-        {/* ADD INSIGHT */}
-        {!isFree && (
-          <div className="mt-3 rounded-sm border border-border/50 bg-card/50 p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="h-3 w-3 text-electric" />
-              <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Add insight</span>
-            </div>
-            <textarea
-              value={insightText}
-              onChange={e => setInsightText(e.target.value)}
-              placeholder="e.g. My best user is a technical founder who doesn't need a CFO"
-              className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-electric/50 transition-colors"
-              rows={2}
-            />
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {[
-                { type: "slide_framework", label: "Slides" },
-                { type: "pitch_email", label: "Email" },
-                { type: "investment_memo", label: "Memo" },
-              ].map(({ type, label }) => {
-                const active = insightOutputs.includes(type);
-                return (
-                  <button
-                    key={type}
-                    onClick={() => setInsightOutputs(prev => active ? prev.filter(t => t !== type) : [...prev, type])}
-                    className={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors " + (active ? "bg-electric/20 border-electric text-electric" : "bg-transparent border-border/50 text-foreground/50 hover:border-border hover:text-foreground/70")}
-                  >
-                    {active && <Check className="h-2.5 w-2.5" />}
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex justify-end">
-              <button
-                onClick={async () => {
-                  if (!insightText.trim()) return;
-                  setApplyingInsight(true);
-                  try {
-                    await refineSection("insight", "narrativeStructure", insightText as any);
-                    for (const outputType of insightOutputs) {
-                      await generateOutput(outputType as any);
-                    }
-                    setInsightText("");
-                  } finally {
-                    setApplyingInsight(false);
-                  }
-                }}
-                disabled={applyingInsight || !insightText.trim()}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-opacity"
-              >
-                {applyingInsight ? <><Loader2 className="h-3 w-3 animate-spin" />Applying…</> : <>Apply</>}
-              </button>
-            </div>
-          </div>
-        )}
 
           {isFree && (
             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
               <Lock className="h-5 w-5 text-electric mb-2.5" />
-              <p className="text-sm font-semibold text-foreground mb-1">Upgrade to see what's holding your score back</p>
+              <p className="text-sm font-semibold text-foreground mb-1">Upgrade to unlock narrative guidance</p>
               <p className="text-xs text-muted-foreground mb-4 text-center px-6">
-                {gaps.length} specific {gaps.length === 1 ? "area" : "areas"} identified, each with a fix
+                {allOpportunities.length} ways to strengthen your narrative, each with AI-powered assistance
               </p>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required'))}
@@ -498,47 +239,30 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
         </div>
       )}
 
-      {/* BREAKDOWN — collapsed by default */}
-      <div className="rounded-sm border border-border/60 bg-muted/5 overflow-hidden">
-        <button
-          onClick={() => setShowDetails(prev => !prev)}
-          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/10 transition-colors text-left"
-        >
-          <span className="text-sm font-medium text-foreground/80">
-            {showDetails ? "Hide breakdown" : "Show breakdown"}
-          </span>
-          {showDetails
-            ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-            : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-        </button>
-        {showDetails && (
-          <div className="border-t border-border p-5 space-y-5">
-            <div className="space-y-3.5">
-              {Object.entries(components).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-3">
-                  <span className="text-xs text-foreground/70 w-36 shrink-0">{getLabel(key)}</span>
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className={"h-full rounded-full " + getScoreColor(value)} style={{width: value + "%"}} />
-                  </div>
-                  <span className={"text-xs font-semibold tabular-nums w-7 text-right " + (value >= 80 ? "text-emerald" : value >= 60 ? "text-electric" : "text-foreground/60")}>{value}</span>
-                </div>
-              ))}
+      {/* COMPLETED */}
+      {completedCount > 0 && (
+        <div className="rounded-sm border border-emerald/20 bg-emerald/5 overflow-hidden">
+          <button
+            onClick={() => setShowCompleted(prev => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-emerald/10 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2">
+              <Check className="h-3.5 w-3.5 text-emerald" />
+              <span className="text-sm font-medium text-emerald/90">{completedCount} area{completedCount !== 1 ? "s" : ""} covered</span>
             </div>
-            {score.strengths.length > 0 && (
-              <div>
-                <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-emerald mb-2">Strengths</p>
-                <ul className="space-y-2.5">
-                  {score.strengths.map((str, i) => (
-                    <li key={i} className="text-xs text-secondary-foreground leading-relaxed flex items-start gap-1.5">
-                      <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />{str}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+            {showCompleted ? <ChevronUp className="h-3.5 w-3.5 text-emerald/60" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald/60" />}
+          </button>
+        </div>
+      )}
+
+      {/* ALL DONE state */}
+      {allOpportunities.length === 0 && completedCount > 0 && (
+        <div className="card-gradient rounded-sm border border-emerald/30 p-5 text-center">
+          <Check className="h-6 w-6 text-emerald mx-auto mb-2" />
+          <p className="text-sm font-semibold text-emerald mb-1">Your narrative is ready for the room</p>
+          <p className="text-xs text-muted-foreground">All key areas covered. Export your materials and start your conversations.</p>
+        </div>
+      )}
 
       {/* CTAs */}
       <div className="grid grid-cols-2 gap-2 pt-1">
@@ -556,7 +280,6 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
           Export Materials
         </button>
       </div>
-
     </div>
   );
 }
