@@ -1221,6 +1221,18 @@ Return JSON: { "deckFramework": [...] }`,
     }
   }, [output, rawInput, saveProject]);
 
+  // Standalone markSuggestionApplied (needed by batchApplyGaps and individual apply)
+  const markSuggestionApplied = useCallback((key: string) => {
+    setAppliedSuggestions(prev => new Set(prev).add(key));
+    setOutput((prev: any) => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+      if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
+      updated._appliedSuggestions.push(key);
+      return updated;
+    });
+  }, []);
+
   // Batch apply multiple gap fixes: one narrative refine + targeted slide refines in parallel
   const batchApplyGaps = useCallback(async (
     gapsToApply: { index: number; howToFix: string; gapText: string }[],
@@ -1720,16 +1732,7 @@ No markdown fences. No commentary outside the JSON.`;
         isGeneratingOutputs,
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
-        appliedSuggestions, markSuggestionApplied: useCallback((key: string) => {
-          setAppliedSuggestions(prev => new Set(prev).add(key));
-          setOutput((prev: any) => {
-            if (!prev) return prev;
-            const updated = { ...prev };
-            if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
-            updated._appliedSuggestions.push(key);
-            return updated;
-          });
-        }, []),
+        appliedSuggestions, markSuggestionApplied,
         applyDeckSuggestion, rescoreNarrative,
         dismissedSuggestions, dismissSuggestion,
       }}
