@@ -56,13 +56,6 @@ function getGapTier(gap: any): "primary" | "secondary" | "minor" {
   return "secondary";
 }
 
-function getApplyButtonLabel(gap: string, howToFix: string): string {
-  const deckKeywords = /\b(slide|deck|body content|bodyContent|headline|speaker note|layout|slide framework)\b/i;
-  const combined = `${gap} ${howToFix}`;
-  if (deckKeywords.test(combined)) return "Edit slide framework";
-  return "Apply to narrative";
-}
-
 function gapSeverityStyles(tier: string) {
   if (tier === "primary") return {
     border: "border-destructive/30",
@@ -141,29 +134,61 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
   const [animated, setAnimated] = useState(false);
   const [expandedImprovement, setExpandedImprovement] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const [applyingAll, setApplyingAll] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree, generateOutput } = useDecksmith();
+  const { appliedSuggestions, markSuggestionApplied, refineSection, output, refiningSection, isFree, generateOutput, batchApplyGaps } = useDecksmith();
 
   const [insightText, setInsightText] = useState("");
   const [applyingInsight, setApplyingInsight] = useState(false);
   const [insightOutputs, setInsightOutputs] = useState<string[]>(["slide_framework", "pitch_email", "investment_memo"]);
 
-  // Detect which slide index is most relevant to a gap based on keyword overlap
+  // All gaps checked by default, user can opt out
+  const [checkedGaps, setCheckedGaps] = useState<Set<number>>(new Set(score.gaps?.map((_, i) => i) || []));
+  // Reset checked state when gaps change (new score)
+  useEffect(() => {
+    setCheckedGaps(new Set(score.gaps?.map((_, i) => i) || []));
+  }, [score.gaps]);
+
+  const toggleGapCheck = (index: number) => {
+    setCheckedGaps(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  // Apply All: batch all checked, unapplied gaps
+  const handleApplyAll = async () => {
+    const gaps = score.gaps || [];
+    const improvements = score.improvements || [];
+    const toApply = [...checkedGaps]
+      .filter(i => !appliedSuggestions.has(`score-${i}`) && improvements[i])
+      .map(i => ({ index: i, howToFix: improvements[i], gapText: normalizeGap(gaps[i]) }));
+    if (toApply.length === 0) return;
+    setApplyingAll(true);
+    try {
+      await batchApplyGaps(toApply, slides);
+    } catch {
+      // batchApplyGaps shows toast on error
+    } finally {
+      setApplyingAll(false);
+    }
+  };
+
+  // Individual apply (single gap)
   const handleApply = async (index: number, howToFix: string) => {
     setApplyingIndex(index);
     try {
-      // Apply to core narrative first
       await refineSection(`improvement-${index}`, "narrativeStructure", howToFix as any);
-      // Also regenerate slide framework if a relevant slide exists
       const relevantSlide = detectRelevantSlide(normalizeGap(gaps[index]));
       if (relevantSlide !== null && slides[relevantSlide]) {
-        await generateOutput("slide_framework" as any);
+        await refineSection(`slide-${relevantSlide}`, `deckFramework.${relevantSlide}`, howToFix as any);
       }
-      // Only mark as applied AFTER all work completes successfully
       markSuggestionApplied(`score-${index}`);
       setExpandedImprovement(null);
     } catch {
-      // refineSection/generateOutput show toast on error
+      // refineSection shows toast on error
     } finally {
       setApplyingIndex(null);
     }
@@ -283,14 +308,25 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
       {/* GAPS */}
       {hasGaps && (
         <div className="relative card-gradient rounded-sm border border-border p-5 pb-6">
-          <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3">
-            {isInvestorReady ? "Refinements" : "Gaps to address"}
-            {!isInvestorReady && primaryGaps.length > 0 && gaps.every((_, i) => appliedSuggestions.has(`score-${i}`)) && (
-              <span className="ml-2 text-[10px] font-normal text-emerald normal-case tracking-normal">
-                All critical gaps addressed. Ready to rescore.
-              </span>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
+              {isInvestorReady ? "Refinements" : "Gaps to address"}
+              {!isInvestorReady && primaryGaps.length > 0 && gaps.every((_, i) => appliedSuggestions.has(`score-${i}`)) && (
+                <span className="ml-2 text-[10px] font-normal text-emerald normal-case tracking-normal">
+                  All gaps addressed. Ready to rescore.
+                </span>
+              )}
+            </h3>
+            {!isFree && gaps.some((_, i) => !appliedSuggestions.has(`score-${i}`) && improvements[i]) && (
+              <button
+                onClick={handleApplyAll}
+                disabled={applyingAll || checkedGaps.size === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
+              >
+                {applyingAll ? <><Loader2 className="h-3 w-3 animate-spin" />Applying {checkedGaps.size} fixes…</> : `Apply All (${[...checkedGaps].filter(i => !appliedSuggestions.has(`score-${i}`)).length})`}
+              </button>
             )}
-          </h3>
+          </div>
           <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? {filter:"blur(5px)",opacity:0.45} : {}}>
             <div className="space-y-2">
               {sortedGapIndices.map(({ i }) => {
@@ -301,35 +337,51 @@ export function ScoreTab({ score, mode, showRescore, onRescore, isRescoring, has
                 const styles = gapSeverityStyles(tier);
                 const expanded = expandedImprovement === i;
                 const isApplied = appliedSuggestions.has("score-" + i);
-                const applyLabel = howToFix ? getApplyButtonLabel(gapText, howToFix) : "Apply to narrative";
+                const isChecked = checkedGaps.has(i);
                 return isApplied ? (
                   <div key={i} className="rounded-sm border border-emerald/20 bg-emerald/5 px-4 py-3 flex items-start gap-2">
-                    <Check className="h-3 w-3 text-emerald shrink-0" />
+                    <Check className="h-3 w-3 text-emerald shrink-0 mt-0.5" />
                     <span className="text-xs text-foreground/60 flex-1">{gapText}</span>
                     <Badge variant="secondary" className="bg-emerald/15 text-emerald border-0 text-[10px] px-1.5 py-0 h-4 shrink-0">Applied</Badge>
-                    <div className="w-4" />
                   </div>
                 ) : (
                   <div key={i} className={"rounded-sm border " + styles.border + " " + styles.bg + " overflow-hidden"}>
-                    <button
-                      onClick={() => setExpandedImprovement(expanded ? null : i)}
-                      className="w-full flex items-start justify-between px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"
-                    >
-                      <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
-                        <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-3 mt-0.5">
-                        <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
-                          {styles.label}
+                    <div className="flex items-start">
+                      {/* Styled checkbox toggle */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleGapCheck(i); }}
+                        className="shrink-0 flex items-center justify-center w-8 pt-4 pl-3"
+                      >
+                        <span className={`inline-block w-3.5 h-3.5 rounded-sm border transition-colors ${
+                          isChecked ? "bg-electric border-electric" : "border-muted-foreground/40 bg-transparent"
+                        }`}>
+                          {isChecked && (
+                            <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-primary-foreground">
+                              <path d="M3 6l2 2 4-4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
                         </span>
-                        <div className="w-4 flex justify-center">
-                          {howToFix && (expanded
-                            ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                            : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
+                      </button>
+                      <button
+                        onClick={() => setExpandedImprovement(expanded ? null : i)}
+                        className="flex-1 flex items-start justify-between px-3 py-3.5 text-left hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <AlertTriangle className={"h-3 w-3 " + styles.icon + " shrink-0 mt-0.5"} />
+                          <span className="text-xs text-foreground/90 leading-relaxed">{gapText}</span>
                         </div>
-                      </div>
-                    </button>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-3 mt-0.5">
+                          <span className={"text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full " + styles.labelClass}>
+                            {styles.label}
+                          </span>
+                          <div className="w-4 flex justify-center">
+                            {howToFix && (expanded
+                              ? <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                              : <ChevronDown className="h-3 w-3 text-muted-foreground" />)}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
                     {expanded && howToFix && (
                       <div className="px-4 pb-3 border-t border-border/50 pt-3 animate-fade-in">
                         <div className="flex items-start gap-2">
