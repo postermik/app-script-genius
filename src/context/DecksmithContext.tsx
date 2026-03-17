@@ -323,6 +323,13 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     // If it doesn't start with {, try to extract JSON
     if (!cleaned.startsWith("{")) cleaned = extractJSON(cleaned);
     cleaned = cleaned.replace(/,\s*$/, "");
+
+    // Pre-repair: fix common model JSON errors
+    // Fix "metadata":value" -> "metadata": { "slideType": "value" (missing object wrapper)
+    cleaned = cleaned.replace(/"metadata"\s*:\s*([a-zA-Z_-]+)"/g, '"metadata": { "slideType": "$1"');
+    // Fix trailing commas before closing braces/brackets
+    cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+
     try { return JSON.parse(cleaned); } catch {}
     // Strip trailing partial key-value pairs
     const lastGoodPatterns = [/,\s*"[^"]*"\s*$/, /,\s*"[^"]*":\s*"[^"]*$/, /,\s*"[^"]*":\s*$/];

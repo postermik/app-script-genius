@@ -45,21 +45,27 @@ function detectFromInput(input: string): IntakeSelections {
     /\bokr\b/i,
   ];
 
-  const fundraisingSignals = [
-    /rais(ing|e)|fundrais|investor|pre.?seed|seed round|series\s*[abcde]|\bsafe\b|valuation|pitch deck|pitch email|\bcapital\b|\bventure\b|\bvc\b/i,
-  ];
 
-  const isBoardMeeting = boardSignals.some(re => re.test(input));
-  const isStrategy = !isBoardMeeting && strategySignals.some(re => re.test(input));
-  const isFundraising = fundraisingSignals.some(re => re.test(input));
+  // Count signal matches per purpose (more matches = stronger signal)
+  const boardScore = boardSignals.filter(re => re.test(input)).length;
+  const strategyScore = strategySignals.filter(re => re.test(input)).length;
+
+  // Count individual fundraising keyword hits
+  const fundraisingKeywords = [
+    /rais(ing|e)/i, /fundrais/i, /investor/i, /pre.?seed/i, /seed round/i,
+    /series\s*[abcde]/i, /\bsafe\b/i, /valuation/i, /pitch deck/i,
+    /pitch email/i, /\bcapital\b/i, /\bventure\b/i, /\bvc\b/i,
+  ];
+  const fundraisingScore = fundraisingKeywords.filter(re => re.test(input)).length;
 
   let purpose: IntakePurpose;
-  if (isBoardMeeting) {
+  if (fundraisingScore > 0 && fundraisingScore >= boardScore) {
+    purpose = "fundraising";
+  } else if (boardScore > strategyScore && boardScore > 0) {
     purpose = "board_meeting";
-  } else if (isStrategy && !isFundraising) {
+  } else if (strategyScore > 0) {
     purpose = "strategy";
   } else {
-    // Default to fundraising — correct for the vast majority of users
     purpose = "fundraising";
   }
 
