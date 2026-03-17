@@ -326,8 +326,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     cleaned = cleaned.replace(/,\s*$/, "");
 
     // Pre-repair: fix common model JSON errors
-    // Fix "metadata":value" -> "metadata": { "slideType": "value" (missing object wrapper)
-    cleaned = cleaned.replace(/"metadata"\s*:\s*([a-zA-Z_-]+)"/g, '"metadata": { "slideType": "$1"');
+    // Fix "metadata":value" -> "metadata": { "slideType": "value" (model drops opening brace and quotes)
+    // The pattern is: "metadata":slideType", followed by other object fields on subsequent lines
+    cleaned = cleaned.replace(/"metadata"\s*:\s*([a-zA-Z_-]+)"\s*,/g, '"metadata": { "slideType": "$1",');
     // Fix trailing commas before closing braces/brackets
     cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
 
