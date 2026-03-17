@@ -384,6 +384,62 @@ export function OutputView() {
     }
   };
 
+  // Generic debounced save for inline edits on any output type
+  const editSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveOutputEdit = (outputKey: string, updater: (existing: any) => any) => {
+    if (!currentProjectId) return;
+    if (editSaveTimer.current) clearTimeout(editSaveTimer.current);
+    editSaveTimer.current = setTimeout(() => {
+      supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data }) => {
+        const existing = (data?.output_data as any) || {};
+        const updatedOutputData = { ...existing, [outputKey]: updater(existing[outputKey] || {}) };
+        supabase.from("projects").update({ output_data: updatedOutputData as any }).eq("id", currentProjectId).then(() => {
+          console.log(`[Persistence] ${outputKey} edits saved`);
+        });
+      });
+    }, 500);
+  };
+
+  // Core Narrative edit
+  const handleEditCoreSection = (index: number, content: string) => {
+    if (!coreNarrative) return;
+    const updated = { ...coreNarrative, sections: coreNarrative.sections.map((s: any, i: number) => i === index ? { ...s, content } : s) };
+    // Update context state directly via setCoreNarrative if available, otherwise just persist
+    saveOutputEdit("core_narrative", () => updated);
+  };
+
+  // Elevator Pitch edit
+  const handleEditPitch = (field: string, value: string) => {
+    saveOutputEdit("elevator_pitch", (existing: any) => ({ ...existing, [field]: value }));
+  };
+
+  // Investor Q&A edit
+  const handleEditQAItem = (index: number, field: string, value: string) => {
+    saveOutputEdit("investor_qa", (existing: any) => {
+      const items = [...(existing.investorQA || [])];
+      if (items[index]) items[index] = { ...items[index], [field]: value };
+      return { ...existing, investorQA: items };
+    });
+  };
+
+  // Pitch Email edit
+  const handleEditEmailVariant = (index: number, field: string, value: string) => {
+    saveOutputEdit("pitch_email", (existing: any) => {
+      const variants = [...(existing.pitchEmails || [])];
+      if (variants[index]) variants[index] = { ...variants[index], [field]: value };
+      return { ...existing, pitchEmails: variants };
+    });
+  };
+
+  // Investment Memo edit
+  const handleEditMemoSection = (index: number, content: string) => {
+    saveOutputEdit("investment_memo", (existing: any) => {
+      const sections = [...(existing.sections || [])];
+      if (sections[index]) sections[index] = { ...sections[index], content };
+      return { ...existing, sections };
+    });
+  };
+
   const renderSlideFramework = () => {
     if (deliverable?.type === "deck" && deliverable.deckFramework?.length) {
       return (
@@ -471,7 +527,7 @@ export function OutputView() {
   const getShimmerForTab = (tab: OutputDeliverable) => {
     switch (tab) {
       case "core_narrative": {
-        if (coreNarrative) return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+        if (coreNarrative) return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} onEditSection={handleEditCoreSection} />;
         const partial = parsePartialCoreNarrative(streamingText);
         if (partial) return <CoreNarrativeView data={partial} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} isStreaming={true} />;
         return <CoreNarrativeShimmer />;
@@ -541,7 +597,7 @@ export function OutputView() {
           }
           return <p className="text-sm text-muted-foreground text-center py-12">No core narrative available.</p>;
         }
-        return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} />;
+        return <CoreNarrativeView data={coreNarrative} onRefineSection={handleRefineCoreSection} refiningIndex={refiningCoreIndex} onEditSection={handleEditCoreSection} />;
       }
       case "slide_framework":
         return renderSlideFramework();
@@ -549,25 +605,25 @@ export function OutputView() {
         if (isGeneratingOutputs && !completedOutputs.has("elevator_pitch")) return <PitchShimmer />;
         const pitchData = synthesizeElevatorPitch(output, outputData);
         if (!pitchData) return <p className="text-sm text-muted-foreground text-center py-12">No pitch data available.</p>;
-        return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} />;
+        return <ElevatorPitchView data={pitchData} onRefine={handleRefinePitch} isRefining={isRefiningPitch} onEdit={handleEditPitch} />;
       }
       case "investor_qa": {
         if (isGeneratingOutputs && !completedOutputs.has("investor_qa")) return <QAShimmer />;
         const qaItems = synthesizeInvestorQA(output, outputData);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
-        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} />;
+        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} onEditItem={handleEditQAItem} />;
       }
       case "pitch_email": {
         if (isGeneratingOutputs && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
         const emails = synthesizePitchEmails(output, outputData);
         if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
-        return <PitchEmailView variants={emails} />;
+        return <PitchEmailView variants={emails} onEditVariant={handleEditEmailVariant} />;
       }
       case "investment_memo": {
         if (isGeneratingOutputs && !completedOutputs.has("investment_memo")) return <MemoShimmer />;
         const memo = synthesizeInvestmentMemo(output, outputData);
         if (!memo) return <p className="text-sm text-muted-foreground text-center py-12">No memo data available.</p>;
-        return <InvestmentMemoView data={memo} />;
+        return <InvestmentMemoView data={memo} onEditSection={handleEditMemoSection} />;
       }
       case "board_memo": {
         if (isGeneratingOutputs && !completedOutputs.has("board_memo")) return <MemoShimmer />;
