@@ -1237,12 +1237,14 @@ GAP RULES:
 4. tier "minor" = polish only, cap at 1.
 5. Investor-facing outputs (pitch deck, email, Q&A) carry double weight when tiering.
 
+CRITICAL RULE FOR RESCORING: A rescore MUST produce FEWER total gaps than the previous score, not more. If the user applied fixes, the narrative improved. You may only surface a NEW gap on rescore if it is genuinely critical AND was not discoverable in the previous pass. If you find yourself inventing new gaps to fill space, stop. Return fewer gaps with higher confidence.
+
 Re-evaluate gaps each time based only on what is currently in the narrative. Only include a gap if the weakness genuinely persists.${previousGaps.length > 0 ? `
 
-PREVIOUSLY SHOWN GAPS — do not repeat these unless the weakness is still clearly present in a meaningfully different form:
+PREVIOUSLY SHOWN GAPS (${previousGaps.length} total) — do not repeat these. Do not rephrase them. Do not surface variations of them. They have been addressed:
 ${previousGaps.map((g: any, i: number) => `${i + 1}. ${typeof g === "string" ? g : g.text}`).join("\n")}` : ""}
 
-Do not invent new gaps to replace ones the user fixed. Do not paraphrase a previous gap to make it look new.
+Do not invent new gaps to replace ones the user fixed. Do not paraphrase a previous gap to make it look new. If no meaningful gaps remain, return an empty gaps array.
 
 Return ONLY valid JSON with this exact shape:
 {
