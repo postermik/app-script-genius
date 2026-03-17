@@ -1385,54 +1385,36 @@ Return JSON: { "deckFramework": [...] }`,
     const opportunities: NarrativeOpportunity[] = [];
 
     if (purpose === "fundraising") {
-      // Content depth checks
       opportunities.push({
-        id: "specific_pain",
-        label: "Quantify the problem",
-        description: "Investors respond to specific numbers. What does this problem actually cost your customers?",
+        id: "specific_pain", label: "Quantify the problem",
+        description: "Investors respond to specific numbers. What does this problem actually cost?",
         prompt: "What's the biggest cost or time waste your customers face? (e.g. $15K per project, 6 weeks wasted)",
         completed: /\$[\d,]+|\d+%|\d+x|\d+ (hours|days|weeks|months|years)/.test(sectionText("Problem")),
-        aiAssistAvailable: true,
-        sectionHeading: "Problem",
-        category: "Problem",
-        points: 10,
+        aiAssistAvailable: true, sectionHeading: "Problem", category: "Problem", points: 10,
       });
       opportunities.push({
-        id: "product_named",
-        label: "Name your product clearly",
-        description: "Your Solution section should leave no doubt about what you're building and who it's for.",
+        id: "product_named", label: "Name your product clearly",
+        description: "Your Solution section should leave no doubt about what you're building.",
         prompt: "What's the name of your product or company?",
         completed: sectionText("Solution").length > 50,
-        aiAssistAvailable: false,
-        sectionHeading: "Solution",
-        category: "Solution",
-        points: 5,
+        aiAssistAvailable: false, sectionHeading: "Solution", category: "Solution", points: 5,
       });
       opportunities.push({
-        id: "market_figures",
-        label: "Size your market",
-        description: "Every investor will ask 'how big is this?' Having a researched answer ready is table stakes.",
+        id: "market_figures", label: "Size your market",
+        description: "Every investor asks 'how big is this?' A researched answer is table stakes.",
         prompt: "What industry are you in? We'll research the market size for you.",
         completed: /\$[\d.]+ ?(B|M|billion|million)|TAM|SAM|SOM/i.test(sectionText("Market") + " " + allText),
-        aiAssistAvailable: true,
-        sectionHeading: "Market",
-        category: "Market",
-        points: 15,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Market", points: 15,
       });
       opportunities.push({
-        id: "traction_metrics",
-        label: "Add traction data",
+        id: "traction_metrics", label: "Add traction data",
         description: "Real numbers, even small ones, build more credibility than any amount of vision.",
         prompt: "What's your current traction? (users, MRR, growth rate, waitlist size, anything)",
         completed: /\d+.*?(users|customers|MRR|ARR|revenue|growth|conversion|paying)/i.test(sectionText("Traction") + " " + allText),
-        aiAssistAvailable: false,
-        sectionHeading: "Traction",
-        category: "Traction",
-        points: 15,
+        aiAssistAvailable: false, sectionHeading: "Traction", category: "Traction", points: 15,
       });
       opportunities.push({
-        id: "competitors_named",
-        label: "Name your competitors",
+        id: "competitors_named", label: "Name your competitors",
         description: "Saying 'no competitors' is a red flag. Show you understand the landscape.",
         prompt: "Who are the existing alternatives? (companies, tools, or how people solve this today)",
         completed: (() => {
@@ -1441,66 +1423,40 @@ Return JSON: { "deckFramework": [...] }`,
           const namedCompanies = text.match(/\b[A-Z][a-z]+(?:\.[a-z]+)?\b/g)?.length || 0;
           return !!(hasCompetitorSection || namedCompanies > 3);
         })(),
-        aiAssistAvailable: true,
-        sectionHeading: "Market",
-        category: "Differentiation",
-        points: 10,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Differentiation", points: 10,
       });
       opportunities.push({
-        id: "ask_amount",
-        label: "State your raise",
+        id: "ask_amount", label: "State your raise",
         description: "Be direct about what you need. Vague asks signal uncertainty.",
         prompt: "How much are you raising? (e.g. $500K, $2M)",
         completed: /\$[\d.]+ ?(K|M|k|m|thousand|million)/i.test(allText + " " + rawInput),
-        aiAssistAvailable: false,
-        sectionHeading: "Vision",
-        category: "Ask",
-        points: 10,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 10,
       });
       opportunities.push({
-        id: "use_of_funds",
-        label: "Explain use of funds",
+        id: "use_of_funds", label: "Explain use of funds",
         description: "Investors want to know their money has a plan, not just a destination.",
         prompt: "What will you use the funds for? (e.g. hiring, product, marketing)",
         completed: /use of funds|allocated to|will fund|will be used|spend on|invest in/i.test(allText),
-        aiAssistAvailable: false,
-        sectionHeading: "Vision",
-        category: "Ask",
-        points: 5,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 5,
       });
       opportunities.push({
-        id: "why_now",
-        label: "Explain why now",
-        description: "Timing is one of the top reasons investors pass or lean in. What changed recently?",
+        id: "why_now", label: "Explain why now",
+        description: "Timing is one of the top reasons investors pass or lean in.",
         prompt: "What recent change makes this the right time? (new regulation, technology shift, market event)",
         completed: sectionText("Why Now").length > 80,
-        aiAssistAvailable: true,
-        sectionHeading: "Why Now",
-        category: "Timing",
-        points: 10,
+        aiAssistAvailable: true, sectionHeading: "Why Now", category: "Timing", points: 10,
       });
-      // Output completeness checks
       opportunities.push({
-        id: "slides_generated",
-        label: "Generate slide framework",
+        id: "slides_generated", label: "Generate slide framework",
         description: "A structured slide framework turns your narrative into a visual pitch.",
-        prompt: "",
-        completed: slideFw.length >= 5,
-        aiAssistAvailable: false,
-        sectionHeading: "",
-        category: "Materials",
-        points: 10,
+        prompt: "", completed: slideFw.length >= 5,
+        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 10,
       });
       opportunities.push({
-        id: "qa_prepared",
-        label: "Prepare for investor Q&A",
+        id: "qa_prepared", label: "Prepare for investor Q&A",
         description: "The best founders walk into meetings ready for the hard questions.",
-        prompt: "",
-        completed: qaItems.length >= 3,
-        aiAssistAvailable: false,
-        sectionHeading: "",
-        category: "Materials",
-        points: 10,
+        prompt: "", completed: qaItems.length >= 3,
+        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 10,
       });
     }
     // TODO: Add board_update and strategy opportunities in future
@@ -1557,10 +1513,8 @@ Return JSON: { "deckFramework": [...] }`,
     return data.content || "Could not generate suggestions. Please try again.";
   }, [rawInput]);
 
-  // ── Generate AI consultant summary for Guide tab ──
   const generateGuideSummary = useCallback(async (): Promise<string> => {
     const cn = coreNarrativeRef.current;
-    const od = outputDataRef.current;
     const strength = computeNarrativeStrength();
     const narrativeText = cn?.sections?.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n") || rawInput;
     const uncompletedLabels = strength.opportunities.map(o => o.label).join(", ");
@@ -1568,20 +1522,18 @@ Return JSON: { "deckFramework": [...] }`,
     const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
     const stage = intakeSelectionsRef.current?.stage || "seed";
 
-    const prompt = `You are a senior fundraising advisor reviewing a founder's narrative materials for a ${stage.replace("_", "-")} stage ${purpose} effort. Be warm, direct, and specific. No fluff.
+    const prompt = `You are a senior fundraising advisor. Give this founder a BRIEF status check on their ${stage.replace("_", "-")} ${purpose} narrative. Max 2-3 SHORT sentences total. Be specific to their content, not generic.
 
-Read their narrative and give a 2-3 sentence personalized assessment. Then identify 2-3 specific areas to strengthen next, explaining WHY each matters for their specific situation (not generic advice).
-
-What they've covered well: ${completedLabels || "just getting started"}
-What's still needed: ${uncompletedLabels || "looking strong across the board"}
+What's strong: ${completedLabels || "just getting started"}
+What's missing: ${uncompletedLabels || "looking strong"}
 
 Their narrative:
 ${narrativeText}
 
-Respond in plain text. No JSON. No bullet points. Write like you're speaking directly to the founder across a table. Do not use em dashes.`;
+RULES: Maximum 3 sentences. No lists. No bullet points. No em dashes. No headers. Speak directly to the founder. Be encouraging but honest.`;
 
     const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-      body: { mode: "refine", input: rawInput, section: "guide-summary", path: "assist", tone: prompt, currentContent: narrativeText, max_tokens: 500, model: "claude-haiku-4-5-20251001" },
+      body: { mode: "refine", input: rawInput, section: "guide-summary", path: "assist", tone: prompt, currentContent: narrativeText, max_tokens: 150, model: "claude-haiku-4-5-20251001" },
     });
     if (error) throw error;
     return data.content || "";

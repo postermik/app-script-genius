@@ -1,20 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, Compass } from "lucide-react";
+import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
-
-function getTierColor(tier: string) {
-  if (tier === "exceptional") return "text-emerald";
-  if (tier === "ready") return "text-electric";
-  if (tier === "sharpening") return "text-yellow-400";
-  return "text-muted-foreground";
-}
 
 function getGaugeStroke(pct: number) {
   if (pct >= 90) return "hsl(155 60% 45%)";
   if (pct >= 70) return "hsl(217 91% 60%)";
   if (pct >= 40) return "hsl(48 96% 53%)";
   return "hsl(222 16% 28%)";
+}
+function getTierColor(tier: string) {
+  if (tier === "exceptional") return "text-emerald";
+  if (tier === "ready") return "text-electric";
+  if (tier === "sharpening") return "text-yellow-400";
+  return "text-muted-foreground";
 }
 
 interface Props {
@@ -28,51 +28,58 @@ interface Props {
 }
 
 export function ScoreTab({ score, mode, slides = [] }: Props) {
-  const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative } = useDecksmith();
+  const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData } = useDecksmith();
 
-  const [expandedOp, setExpandedOp] = useState<string | null>(null);
+  const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
   const [aiResults, setAiResults] = useState<Record<string, string>>({});
   const [loadingAi, setLoadingAi] = useState<string | null>(null);
   const [applyingOp, setApplyingOp] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
-  const [summary, setSummary] = useState<string>("");
+  const [summary, setSummary] = useState("");
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryLoaded, setSummaryLoaded] = useState(false);
 
   const strength = computeNarrativeStrength();
   const allOpportunities = strength.opportunities;
-  const completedCount = strength.completedCount;
-  const totalCount = strength.totalCount;
+  const completedOps = strength.completedOpportunities;
 
-  // Load consultant summary on mount or when narrative changes
+  // Build the narrative section map: each core narrative section becomes a "room"
+  const rooms = useMemo(() => {
+    if (!coreNarrative?.sections?.length) return [];
+    return coreNarrative.sections.map((section: any, idx: number) => {
+      const heading = section.heading;
+      const content = section.content || "";
+      const preview = content.length > 140 ? content.slice(0, 140) + "..." : content;
+      // Find opportunities that map to this section
+      const sectionOps = allOpportunities.filter(o => o.sectionHeading.toLowerCase() === heading.toLowerCase());
+      const completedSectionOps = completedOps.filter(o => o.sectionHeading.toLowerCase() === heading.toLowerCase());
+      const needsWork = sectionOps.length > 0;
+      return { heading, preview, idx, needsWork, opportunities: sectionOps, completedOpportunities: completedSectionOps };
+    });
+  }, [coreNarrative, allOpportunities, completedOps]);
+
+  // Materials status
+  const slideFw = outputData?.slide_framework?.deckFramework || [];
+  const qaItems = outputData?.investor_qa?.investorQA || [];
+  const emailVariants = outputData?.pitch_email?.pitchEmails || [];
+  const memoSections = outputData?.investment_memo?.sections || [];
+
+  // Load consultant summary on mount
   useEffect(() => {
     if (!coreNarrative?.sections?.length || summaryLoaded) return;
     let cancelled = false;
     setLoadingSummary(true);
     generateGuideSummary().then(result => {
-      if (!cancelled) {
-        setSummary(result);
-        setSummaryLoaded(true);
-      }
-    }).catch(() => {
-      if (!cancelled) setSummary("");
-    }).finally(() => {
-      if (!cancelled) setLoadingSummary(false);
-    });
+      if (!cancelled) { setSummary(result); setSummaryLoaded(true); }
+    }).catch(() => {}).finally(() => { if (!cancelled) setLoadingSummary(false); });
     return () => { cancelled = true; };
-  }, [coreNarrative, generateGuideSummary]);
+  }, [coreNarrative, generateGuideSummary, summaryLoaded]);
 
   const refreshSummary = async () => {
     setLoadingSummary(true);
-    try {
-      const result = await generateGuideSummary();
-      setSummary(result);
-    } catch {
-      // keep existing summary
-    } finally {
-      setLoadingSummary(false);
-    }
+    try { const result = await generateGuideSummary(); setSummary(result); }
+    catch {} finally { setLoadingSummary(false); }
   };
 
   const handleAiAssist = async (op: NarrativeOpportunity) => {
@@ -81,15 +88,12 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       const result = await aiAssistOpportunity(op.id, "");
       setAiResults(prev => ({ ...prev, [op.id]: result }));
     } catch {
-      setAiResults(prev => ({ ...prev, [op.id]: "Could not generate suggestions. Please try again." }));
-    } finally {
-      setLoadingAi(null);
-    }
+      setAiResults(prev => ({ ...prev, [op.id]: "Could not generate suggestions. Try again." }));
+    } finally { setLoadingAi(null); }
   };
 
-  const handleApplyUserInput = async (op: NarrativeOpportunity) => {
-    const input = userInputs[op.id]?.trim();
-    if (!input) return;
+  const applyToNarrative = async (op: NarrativeOpportunity, content: string) => {
+    if (!content.trim()) return;
     setApplyingOp(op.id);
     try {
       const cn = coreNarrative;
@@ -98,72 +102,50 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       ) ?? -1;
 
       if (sectionIdx >= 0) {
-        await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`, `Incorporate this information naturally: ${input}` as any);
-      } else if (op.sectionHeading) {
-        await refineSection(`opportunity-${op.id}`, "narrativeStructure", `Add this to the narrative in the context of ${op.category}: ${input}` as any);
+        await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`,
+          `Incorporate this information naturally into this section. Keep existing content and weave in the new information: ${content}` as any);
+        toast.success(`Updated ${cn?.sections?.[sectionIdx]?.heading} section`);
+      } else {
+        await refineSection(`opportunity-${op.id}`, "narrativeStructure",
+          `Add to the narrative in the context of ${op.category}: ${content}` as any);
+        toast.success("Narrative updated");
       }
       setUserInputs(prev => ({ ...prev, [op.id]: "" }));
-      setExpandedOp(null);
-      // Refresh summary after applying
-      refreshSummary();
-    } catch {
-      // refineSection shows toast
-    } finally {
-      setApplyingOp(null);
-    }
-  };
-
-  const handleApplyAiSuggestion = async (op: NarrativeOpportunity) => {
-    const suggestion = aiResults[op.id];
-    if (!suggestion) return;
-    setApplyingOp(op.id);
-    try {
-      const cn = coreNarrative;
-      const sectionIdx = cn?.sections?.findIndex((s: any) =>
-        s.heading.toLowerCase() === op.sectionHeading.toLowerCase()
-      ) ?? -1;
-
-      if (sectionIdx >= 0) {
-        await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`, `Incorporate these findings naturally:\n${suggestion}` as any);
-      } else if (op.sectionHeading) {
-        await refineSection(`opportunity-${op.id}`, "narrativeStructure", `Add these findings to the narrative:\n${suggestion}` as any);
-      }
       setAiResults(prev => ({ ...prev, [op.id]: "" }));
-      setExpandedOp(null);
+      setActiveRoom(null);
       refreshSummary();
-    } catch {
-      // refineSection shows toast
-    } finally {
-      setApplyingOp(null);
-    }
+    } catch (e: any) {
+      toast.error("Failed to apply. Please try again.");
+      console.error("[Guide] Apply error:", e);
+    } finally { setApplyingOp(null); }
   };
+
+  // Find the active opportunity (for the expanded panel)
+  const activeOp = allOpportunities.find(o => {
+    const room = rooms.find(r => r.heading === activeRoom);
+    return room && o.sectionHeading.toLowerCase() === room.heading.toLowerCase();
+  });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
 
       {/* CONSULTANT SUMMARY */}
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-start gap-4">
-          {/* Subtle gauge */}
           <div className="shrink-0">
             <svg width="56" height="56" viewBox="0 0 56 56">
               <circle cx="28" cy="28" r="23" fill="none" stroke="hsl(222 16% 16%)" strokeWidth="4" />
-              <circle
-                cx="28" cy="28" r="23" fill="none"
-                stroke={getGaugeStroke(strength.percentage)}
+              <circle cx="28" cy="28" r="23" fill="none" stroke={getGaugeStroke(strength.percentage)}
                 strokeWidth="4" strokeLinecap="round"
                 strokeDasharray={String(2 * Math.PI * 23)}
                 strokeDashoffset={String(2 * Math.PI * 23 * (1 - strength.percentage / 100))}
-                transform="rotate(-90 28 28)"
-              />
-              <text x="28" y="26" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "14px" }}>{completedCount}</text>
-              <text x="28" y="38" textAnchor="middle" dominantBaseline="middle" className="fill-secondary-foreground" style={{ fontSize: "8px", fontWeight: 500 }}>of {totalCount}</text>
+                transform="rotate(-90 28 28)" />
+              <text x="28" y="25" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "14px" }}>{strength.completedCount}</text>
+              <text x="28" y="37" textAnchor="middle" dominantBaseline="middle" className="fill-secondary-foreground" style={{ fontSize: "8px", fontWeight: 500 }}>of {strength.totalCount}</text>
             </svg>
           </div>
-
-          {/* Summary */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
               {summaryLoaded && (
                 <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
@@ -172,136 +154,131 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
               )}
             </div>
             {loadingSummary && !summary ? (
-              <div className="flex items-center gap-2 py-2">
+              <div className="flex items-center gap-2 py-1">
                 <Loader2 className="h-3 w-3 animate-spin text-electric" />
                 <span className="text-xs text-muted-foreground">Reviewing your narrative...</span>
               </div>
             ) : summary ? (
               <p className="text-[13px] text-foreground/80 leading-relaxed">{summary}</p>
             ) : (
-              <p className="text-[13px] text-muted-foreground/60 leading-relaxed">{strength.tierDescription}</p>
+              <p className="text-[13px] text-muted-foreground/60">{strength.tierDescription}</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* FOCUS AREAS (uncompleted opportunities) */}
-      {allOpportunities.length > 0 && (
+      {/* NARRATIVE MAP */}
+      {rooms.length > 0 && (
         <div className="relative">
-          <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-3 px-1">
-            {allOpportunities.length === 1 ? "One area to strengthen" : `${allOpportunities.length} areas to strengthen`}
-          </p>
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your narrative</p>
           <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}>
-            <div className="space-y-2">
-              {allOpportunities.map((op) => {
-                const expanded = expandedOp === op.id;
-                const hasAiResult = !!aiResults[op.id];
-                const isLoading = loadingAi === op.id;
-                const isApplying = applyingOp === op.id;
-
+            <div className="grid grid-cols-2 gap-2">
+              {rooms.map((room) => {
+                const isActive = activeRoom === room.heading;
+                const primaryOp = room.opportunities[0];
                 return (
-                  <div key={op.id} className="card-gradient rounded-sm border border-border overflow-hidden">
-                    <button
-                      onClick={() => setExpandedOp(expanded ? null : op.id)}
-                      className="w-full flex items-start justify-between px-4 py-3.5 text-left hover:bg-muted/20 transition-colors"
-                    >
-                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                        <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-medium text-foreground/90">{op.label}</span>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{op.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3 mt-0.5">
-                        <span className="text-[9px] font-semibold text-muted-foreground/50 bg-muted/20 px-1.5 py-0.5 rounded-full">{op.category}</span>
-                        {expanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
-                      </div>
-                    </button>
-
-                    {expanded && (
-                      <div className="px-4 pb-4 border-t border-border/50 pt-3 animate-fade-in space-y-3">
-                        {/* User input */}
-                        {op.prompt && (
-                          <div>
-                            <textarea
-                              value={userInputs[op.id] || ""}
-                              onChange={(e) => setUserInputs(prev => ({ ...prev, [op.id]: e.target.value }))}
-                              placeholder={op.prompt}
-                              className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none focus:border-electric/50 transition-colors"
-                              rows={2}
-                            />
-                            <div className="mt-2 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {op.aiAssistAvailable && !hasAiResult && (
-                                  <button
-                                    onClick={() => handleAiAssist(op)}
-                                    disabled={isLoading}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50"
-                                  >
-                                    {isLoading ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
-                                  </button>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => handleApplyUserInput(op)}
-                                disabled={!userInputs[op.id]?.trim() || isApplying}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
-                              >
-                                {isApplying ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Non-input opportunities (like "generate slides") */}
-                        {!op.prompt && op.category === "Materials" && (
-                          <p className="text-xs text-muted-foreground/70">Select this output from the Outputs tab to generate it.</p>
-                        )}
-
-                        {/* AI suggestion result */}
-                        {hasAiResult && (
-                          <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3 space-y-2">
-                            <div className="flex items-center gap-1.5">
-                              <Sparkles className="h-3 w-3 text-electric" />
-                              <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
-                            </div>
-                            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[op.id]}</p>
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}
-                                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
-                              >
-                                Dismiss
-                              </button>
-                              <button
-                                onClick={() => handleApplyAiSuggestion(op)}
-                                disabled={isApplying}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-sm text-[10px] font-medium bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40"
-                              >
-                                {isApplying ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Use this"}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                  <div key={room.heading}
+                    onClick={() => room.needsWork ? setActiveRoom(isActive ? null : room.heading) : undefined}
+                    className={`rounded-sm border p-4 transition-all ${
+                      room.needsWork ? "cursor-pointer" : ""
+                    } ${
+                      isActive ? "border-electric/50 bg-electric/[0.04]" :
+                      room.needsWork ? "border-l-[3px] border-l-electric border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:border-t-border hover:border-r-border hover:border-b-border" :
+                      "border-l-[3px] border-l-emerald border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[13px] font-semibold text-foreground">{room.heading}</span>
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                        room.needsWork
+                          ? "bg-electric/10 text-electric"
+                          : "bg-emerald/10 text-emerald"
+                      }`}>
+                        {room.needsWork ? "Strengthen" : "Covered"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{room.preview}</p>
+                    {primaryOp && !isActive && (
+                      <p className="text-[11px] text-electric mt-2 flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 shrink-0" />
+                        {primaryOp.description}
+                      </p>
                     )}
                   </div>
                 );
               })}
             </div>
+
+            {/* EXPANDED PANEL (below grid) */}
+            {activeRoom && activeOp && (
+              <div className="mt-2 rounded-sm border border-electric/30 bg-[hsl(222_24%_7%)] p-4 animate-fade-in space-y-3">
+                <p className="text-xs font-semibold text-electric">{activeOp.label}</p>
+
+                {/* AI result (show first if available) */}
+                {aiResults[activeOp.id] && (
+                  <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3.5 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-electric" />
+                      <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
+                    </div>
+                    <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[activeOp.id]}</p>
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button onClick={() => setAiResults(prev => ({ ...prev, [activeOp.id]: "" }))}
+                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Dismiss</button>
+                      <button onClick={() => applyToNarrative(activeOp, aiResults[activeOp.id])}
+                        disabled={applyingOp === activeOp.id}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                        {applyingOp === activeOp.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* User input */}
+                {activeOp.prompt && (
+                  <div>
+                    <textarea
+                      value={userInputs[activeOp.id] || ""}
+                      onChange={(e) => setUserInputs(prev => ({ ...prev, [activeOp.id]: e.target.value }))}
+                      placeholder={activeOp.prompt}
+                      className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors"
+                      rows={2}
+                    />
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {activeOp.aiAssistAvailable && !aiResults[activeOp.id] && (
+                          <button onClick={() => handleAiAssist(activeOp)} disabled={loadingAi === activeOp.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50">
+                            {loadingAi === activeOp.id ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
+                          </button>
+                        )}
+                        <button onClick={() => setActiveRoom(null)}
+                          className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors px-2 py-1">Skip for now</button>
+                      </div>
+                      <button onClick={() => applyToNarrative(activeOp, userInputs[activeOp.id] || "")}
+                        disabled={!userInputs[activeOp.id]?.trim() || applyingOp === activeOp.id}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                        {applyingOp === activeOp.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Materials-type opportunity (no input) */}
+                {!activeOp.prompt && activeOp.category === "Materials" && (
+                  <p className="text-xs text-muted-foreground/60">Select this output from the Outputs tab to generate it.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {isFree && (
             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
               <Lock className="h-5 w-5 text-electric mb-2.5" />
               <p className="text-sm font-semibold text-foreground mb-1">Upgrade to unlock your narrative guide</p>
-              <p className="text-xs text-muted-foreground mb-4 text-center px-6">
-                Personalized guidance with AI-powered research to strengthen your pitch
-              </p>
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required'))}
-                className="px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity glow-blue"
-              >
+              <p className="text-xs text-muted-foreground mb-4 text-center px-6">Personalized guidance with AI-powered research</p>
+              <button onClick={() => window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required'))}
+                className="px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity glow-blue">
                 Upgrade to Hobby
               </button>
             </div>
@@ -309,35 +286,60 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
         </div>
       )}
 
-      {/* ALL DONE */}
-      {allOpportunities.length === 0 && completedCount > 0 && (
-        <div className="card-gradient rounded-sm border border-emerald/30 p-5 text-center">
-          <Check className="h-6 w-6 text-emerald mx-auto mb-2" />
-          <p className="text-sm font-semibold text-emerald mb-1">Your narrative is ready for the room</p>
-          <p className="text-xs text-muted-foreground">All key areas covered. Export your materials and start your conversations.</p>
+      {/* MATERIALS ROW */}
+      {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0 || memoSections.length > 0) && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
+          <div className="grid grid-cols-3 gap-2">
+            {slideFw.length > 0 && (
+              <div className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center">
+                <p className="text-[11px] text-muted-foreground/50 mb-1">{slideFw.length} slides</p>
+                <p className="text-xs font-medium text-foreground">Slide framework</p>
+                <p className="text-[10px] text-emerald mt-1">Ready</p>
+              </div>
+            )}
+            {qaItems.length > 0 && (
+              <div className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center">
+                <p className="text-[11px] text-muted-foreground/50 mb-1">{qaItems.length} questions</p>
+                <p className="text-xs font-medium text-foreground">Investor Q&A</p>
+                <p className="text-[10px] text-emerald mt-1">Ready</p>
+              </div>
+            )}
+            {emailVariants.length > 0 && (
+              <div className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center">
+                <p className="text-[11px] text-muted-foreground/50 mb-1">{emailVariants.length} variants</p>
+                <p className="text-xs font-medium text-foreground">Pitch emails</p>
+                <p className="text-[10px] text-emerald mt-1">Ready</p>
+              </div>
+            )}
+            {memoSections.length > 0 && (
+              <div className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center">
+                <p className="text-[11px] text-muted-foreground/50 mb-1">{memoSections.length} sections</p>
+                <p className="text-xs font-medium text-foreground">Investment memo</p>
+                <p className="text-[10px] text-emerald mt-1">Ready</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* COMPLETED AREAS */}
-      {completedCount > 0 && (
+      {/* COMPLETED LOG (collapsed by default) */}
+      {completedOps.length > 0 && allOpportunities.length > 0 && (
         <div className="rounded-sm border border-emerald/20 bg-emerald/5 overflow-hidden">
-          <button
-            onClick={() => setShowCompleted(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-emerald/10 transition-colors text-left"
-          >
+          <button onClick={() => setShowCompleted(prev => !prev)}
+            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-emerald/10 transition-colors text-left">
             <div className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-emerald" />
-              <span className="text-sm font-medium text-emerald/90">{completedCount} area{completedCount !== 1 ? "s" : ""} covered</span>
+              <Check className="h-3 w-3 text-emerald" />
+              <span className="text-xs font-medium text-emerald/80">{completedOps.length} area{completedOps.length !== 1 ? "s" : ""} covered</span>
             </div>
-            {showCompleted ? <ChevronUp className="h-3.5 w-3.5 text-emerald/60" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald/60" />}
+            {showCompleted ? <ChevronUp className="h-3 w-3 text-emerald/50" /> : <ChevronDown className="h-3 w-3 text-emerald/50" />}
           </button>
           {showCompleted && (
-            <div className="border-t border-emerald/10 px-4 py-3 space-y-2">
-              {strength.completedOpportunities.map((op) => (
-                <div key={op.id} className="flex items-center gap-2 py-1">
-                  <Check className="h-3 w-3 text-emerald shrink-0" />
-                  <span className="text-xs text-foreground/60">{op.label}</span>
-                  <span className="text-[9px] text-muted-foreground/40 ml-auto">{op.category}</span>
+            <div className="border-t border-emerald/10 px-4 py-2.5 space-y-1.5">
+              {completedOps.map((op) => (
+                <div key={op.id} className="flex items-center gap-2 py-0.5">
+                  <Check className="h-2.5 w-2.5 text-emerald shrink-0" />
+                  <span className="text-[11px] text-foreground/50">{op.label}</span>
                 </div>
               ))}
             </div>
@@ -345,19 +347,23 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
         </div>
       )}
 
+      {/* ALL DONE */}
+      {allOpportunities.length === 0 && completedOps.length > 0 && (
+        <div className="card-gradient rounded-sm border border-emerald/30 p-5 text-center">
+          <Check className="h-6 w-6 text-emerald mx-auto mb-2" />
+          <p className="text-sm font-semibold text-emerald mb-1">Your narrative is ready for the room</p>
+          <p className="text-xs text-muted-foreground">All key areas covered. Export your materials and go.</p>
+        </div>
+      )}
+
       {/* CTAs */}
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <a
-          href="/raise/investors"
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/30 rounded-sm hover:bg-muted/10 hover:border-foreground/50 transition-colors text-foreground"
-        >
-          <TrendingUp className="h-3.5 w-3.5" />
-          Go to Raise
+      <div className="grid grid-cols-2 gap-2">
+        <a href="/raise/investors"
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/30 rounded-sm hover:bg-muted/10 hover:border-foreground/50 transition-colors text-foreground">
+          <TrendingUp className="h-3.5 w-3.5" />Go to Raise
         </a>
-        <button
-          onClick={() => document.querySelector('[data-export-trigger]')?.click()}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
-        >
+        <button onClick={() => document.querySelector('[data-export-trigger]')?.click()}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity">
           Export Materials
         </button>
       </div>
