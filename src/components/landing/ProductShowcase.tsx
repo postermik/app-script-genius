@@ -1,22 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { Check, Sparkles } from "lucide-react";
 
 /* ── Scroll-triggered fade-in ── */
 function AnimatedEntry({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.15 });
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
-
   return (
-    <div
-      ref={ref}
-      className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"} ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
+    <div ref={ref} className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
       {children}
     </div>
   );
@@ -30,12 +25,7 @@ function GenerationPreview() {
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
 
-  const STEPS = [
-    "Analyzing your input",
-    "Structuring argument",
-    "Writing sections",
-    "Reviewing quality",
-  ];
+  const STEPS = ["Analyzing your input", "Structuring argument", "Writing sections", "Reviewing quality"];
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
@@ -49,11 +39,7 @@ function GenerationPreview() {
           else if (p <= 55) setActiveStep(1);
           else if (p <= 80) setActiveStep(2);
           else setActiveStep(3);
-          if (p >= 100) {
-            clearInterval(iv);
-            // After a short delay, mark final step as done
-            setTimeout(() => setAllDone(true), 1500);
-          }
+          if (p >= 100) { clearInterval(iv); setTimeout(() => setAllDone(true), 1500); }
         }, 60);
       }
     }, { threshold: 0.4 });
@@ -65,16 +51,11 @@ function GenerationPreview() {
     <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/90">
-            Generating narrative…
-          </span>
+          <span className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/90">Generating narrative...</span>
           <span className="text-xs font-bold text-electric tabular-nums">{progress}%</span>
         </div>
         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-          <div
-            className="h-full bg-electric rounded-full transition-all duration-150"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="h-full bg-electric rounded-full transition-all duration-150" style={{ width: `${progress}%` }} />
         </div>
         <div className="space-y-1.5 pt-1">
           {STEPS.map((step, i) => {
@@ -83,7 +64,7 @@ function GenerationPreview() {
             if (!allDone && i > activeStep) return null;
             return (
               <p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>
-                {done ? "✓" : "→"} {step}
+                {done ? "\u2713" : "\u2192"} {step}
               </p>
             );
           })}
@@ -93,8 +74,8 @@ function GenerationPreview() {
   );
 }
 
-/* ── Coaching Preview ── */
-function ReadinessPreview() {
+/* ── Narrative Guide Preview (replaces old ReadinessPreview) ── */
+function GuidePreview() {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -104,32 +85,58 @@ function ReadinessPreview() {
     return () => obs.disconnect();
   }, []);
 
-  const categories = [
-    { label: "Clarity", score: 92 },
-    { label: "Structure", score: 85 },
-    { label: "Specificity", score: 78 },
-    { label: "Persuasion", score: 70 },
+  const cards = [
+    { label: "Problem", covered: true },
+    { label: "Market", covered: true },
+    { label: "Differentiation", covered: false, hint: "Name your competitors" },
+    { label: "Traction", covered: true },
   ];
 
   return (
     <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
-        {categories.map((c, i) => (
-          <div key={c.label}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-foreground/85">{c.label}</span>
-              <span className={`text-xs font-medium transition-all duration-500 ${visible ? "opacity-100" : "opacity-0"} ${c.score >= 85 ? "text-emerald" : c.score >= 75 ? "text-electric" : "text-yellow-400"}`} style={{ transitionDelay: `${i * 150}ms` }}>
-                {c.score}
-              </span>
+        {/* Consultant summary */}
+        <div>
+          <p className="text-[10px] font-medium text-emerald uppercase tracking-wider mb-2">Investor Ready</p>
+          <p className="text-xs text-foreground/70 leading-relaxed">
+            Strong problem framing with real cost data. Add competitive positioning to close the last gap investors will ask about.
+          </p>
+        </div>
+        {/* Segmented progress bar */}
+        <div className="flex gap-1">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+              i < 7 ? "bg-electric" : "bg-[hsl(222_16%_16%)]"
+            }`} style={{ transitionDelay: visible ? `${i * 80}ms` : "0ms", opacity: visible ? 1 : 0 }} />
+          ))}
+        </div>
+        {/* Mini narrative cards */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {cards.map((card, i) => (
+            <div key={card.label}
+              className={`rounded-sm border p-2.5 transition-all duration-500 ${
+                card.covered
+                  ? "border-l-2 border-l-emerald border-t border-r border-b border-t-[hsl(217_33%_15%)] border-r-[hsl(217_33%_15%)] border-b-[hsl(217_33%_15%)] bg-emerald/[0.02]"
+                  : "border-l-2 border-l-electric border-t border-r border-b border-t-[hsl(217_33%_15%)] border-r-[hsl(217_33%_15%)] border-b-[hsl(217_33%_15%)] bg-electric/[0.02]"
+              }`}
+              style={{ opacity: visible ? 1 : 0, transitionDelay: `${(i + 3) * 100}ms` }}
+            >
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] font-semibold text-foreground/90">{card.label}</span>
+                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  card.covered ? "bg-emerald/10 text-emerald" : "bg-electric/10 text-electric"
+                }`}>
+                  {card.covered ? "Covered" : "Strengthen"}
+                </span>
+              </div>
+              {card.hint && (
+                <p className="text-[9px] text-electric/70 flex items-center gap-1 mt-1">
+                  <Sparkles className="h-2.5 w-2.5 shrink-0" /> {card.hint}
+                </p>
+              )}
             </div>
-            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${c.score >= 85 ? "bg-emerald" : c.score >= 75 ? "bg-electric" : "bg-yellow-400"}`}
-                style={{ width: visible ? `${c.score}%` : "0%", transitionDelay: `${i * 150}ms` }}
-              />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -148,7 +155,6 @@ function RevenueSparkline() {
   });
   const line = `M${coords.join(" L")}`;
   const area = `${line} L${w},${h} L0,${h} Z`;
-
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
       <defs>
@@ -167,40 +173,25 @@ function RevenueSparkline() {
 function FormatChartCard() {
   const TABS = ["Memo", "Pitch Deck", "Board Update", "Investor Email"];
   const ACTIVE = "Pitch Deck";
-
   return (
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
-      {/* Tab bar, static, non-interactive */}
       <div className="flex w-full border-b border-[hsl(217_33%_15%)] sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
-          <span
-            key={tab}
-            className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${
-              tab === ACTIVE
-                ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]"
-                : "text-[hsl(215_20%_44%)]"
-            }`}
-          >
+          <span key={tab} className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${
+            tab === ACTIVE ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]" : "text-[hsl(215_20%_44%)]"
+          }`}>
             {tab}
-            {tab === ACTIVE && (
-              <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />
-            )}
+            {tab === ACTIVE && <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />}
           </span>
         ))}
       </div>
-      {/* Chart content */}
       <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: 220 }}>
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-          backgroundSize: "32px 32px"
-        }} />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
         <div className="relative z-10">
           <p className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p>
           <p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p>
         </div>
-        <div className="relative z-10 flex-1 my-4">
-          <RevenueSparkline />
-        </div>
+        <div className="relative z-10 flex-1 my-4"><RevenueSparkline /></div>
         <div className="relative z-10 flex gap-8">
           <div>
             <p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">QoQ</p>
@@ -220,7 +211,6 @@ function FormatChartCard() {
 export function PresentationSlides() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
-      {/* Slide 1: Cover */}
       <AnimatedEntry delay={0}>
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
           <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
@@ -236,8 +226,6 @@ export function PresentationSlides() {
           </div>
         </div>
       </AnimatedEntry>
-
-      {/* Slide 2: Key Metrics */}
       <AnimatedEntry delay={100}>
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
           <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
@@ -246,24 +234,13 @@ export function PresentationSlides() {
               <p className="text-sm font-semibold text-foreground mt-2">Traction & Unit Economics</p>
             </div>
             <div className="grid grid-cols-3 gap-1 text-center">
-              <div className="min-w-0">
-                <p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">$1.8M</p>
-                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">ARR</p>
-              </div>
-              <div className="min-w-0">
-                <p className="font-mono text-sm sm:text-base font-bold text-emerald truncate">+34%</p>
-                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">QoQ</p>
-              </div>
-              <div className="min-w-0">
-                <p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">128%</p>
-                <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">NRR</p>
-              </div>
+              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">$1.8M</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">ARR</p></div>
+              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-emerald truncate">+34%</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">QoQ</p></div>
+              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">128%</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">NRR</p></div>
             </div>
           </div>
         </div>
       </AnimatedEntry>
-
-      {/* Slide 3: Competitive Landscape */}
       <AnimatedEntry delay={200}>
         <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
           <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
@@ -297,9 +274,8 @@ function InvestorPreview() {
   const investors = [
     { name: "Sequoia Capital", match: 94, stage: "Series A", sector: "AI / ML" },
     { name: "Andreessen Horowitz", match: 91, stage: "Series A-B", sector: "Enterprise SaaS" },
-    { name: "Founders Fund", match: 87, stage: "Seed–A", sector: "Deep Tech" },
+    { name: "Founders Fund", match: 87, stage: "Seed-A", sector: "Deep Tech" },
   ];
-
   return (
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="divide-y divide-[hsl(217_33%_15%)]/50">
@@ -322,31 +298,24 @@ export function ProductShowcase() {
   return (
     <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-24 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
-        {/* Panel 1: Left, Prompt to Output */}
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Prompt → Output</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Prompt &rarr; Output</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
-
-        {/* Panel 2: Right, Built-in Coaching */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Built-in Coaching</p>
-            <ReadinessPreview />
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">AI Narrative Guide</p>
+            <GuidePreview />
           </AnimatedEntry>
         </div>
-
-        {/* Panel 3: Left, Every Format */}
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
             <FormatChartCard />
           </AnimatedEntry>
         </div>
-
-        {/* Panel 4: Right, Investors */}
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
             <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Find Your Investors</p>

@@ -30,7 +30,13 @@ export const TIERS = {
     annualYearlyPrice: 192,
     name: "Hobby",
     description: "For active founders.",
-    features: ["Unlimited drafts", "Full coaching & readiness scoring", "Inline AI suggestions", "Score breakdown & gap analysis", "Export to PPT, DOCX & PDF"],
+    features: [
+      "Unlimited drafts",
+      "Full narrative guide with AI research",
+      "Inline AI suggestions",
+      "Inline editing & refinement",
+      "Export to PPT, DOCX & PDF",
+    ],
   },
   pro: {
     price_id: "price_1T6JwNDqdQWdRyBVnIXQc9Jn",
@@ -41,14 +47,24 @@ export const TIERS = {
     annualYearlyPrice: 960,
     name: "Pro",
     description: "Everything you need to raise.",
-    features: ["Everything in Hobby", "Investor discovery with AI matching", "Pipeline tracker", "Data room", "Priority support"],
+    features: [
+      "Everything in Hobby",
+      "Investor discovery with AI matching",
+      "Pipeline tracker",
+      "Data room",
+      "Priority support",
+    ],
   },
 } as const;
 
 export const FREE_PLAN = {
   name: "Free",
   description: "Try it out.",
-  features: ["1 narrative draft", "Readiness score", "All output modes"],
+  features: [
+    "1 narrative draft",
+    "AI narrative guide",
+    "All output modes",
+  ],
 } as const;
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
@@ -76,28 +92,19 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       if (profile?.forced_tier === "pro") {
         console.log("[Subscription] forced_tier=pro override active");
-        setState({
-          subscribed: true,
-          productId: TIERS.pro.product_id,
-          subscriptionEnd: null,
-          loading: false,
-        });
+        setState({ subscribed: true, productId: TIERS.pro.product_id, subscriptionEnd: null, loading: false });
         return;
       }
       if (profile?.forced_tier === "hobby") {
         console.log("[Subscription] forced_tier=hobby override active");
-        setState({
-          subscribed: true,
-          productId: TIERS.hobby.product_id,
-          subscriptionEnd: null,
-          loading: false,
-        });
+        setState({ subscribed: true, productId: TIERS.hobby.product_id, subscriptionEnd: null, loading: false });
         return;
       }
 
       // Fall back to Stripe subscription check
       const { data, error } = await supabase.functions.invoke("check-subscription");
       if (error) throw error;
+
       setState({
         subscribed: data.subscribed ?? false,
         productId: data.product_id ?? null,
@@ -115,10 +122,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       checkSubscription();
     });
     const interval = setInterval(checkSubscription, 60000);
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(interval);
-    };
+    return () => { subscription.unsubscribe(); clearInterval(interval); };
   }, [checkSubscription]);
 
   return (
