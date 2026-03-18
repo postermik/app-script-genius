@@ -97,6 +97,7 @@ interface DecksmithContextType {
   generateGuideSummary: () => Promise<string>;
   dismissedSuggestions: Set<number>;
   dismissSuggestion: (index: number) => void;
+  updateNarrativeSection: (sectionHeading: string, newContent: string) => Promise<void>;
   isGeneratingSlides: boolean;
   isGeneratingOutputs: boolean;
   completedOutputs: Set<string>;
@@ -1605,6 +1606,23 @@ Return JSON: { "deckFramework": [...] }`,
     };
   }, [rawInput]);
 
+  // ── Update a narrative section directly (inline editing from Guide tab) ──
+  const updateNarrativeSection = useCallback(async (sectionHeading: string, newContent: string) => {
+    const cn = coreNarrativeRef.current;
+    if (!cn?.sections?.length) return;
+    const idx = cn.sections.findIndex((s: any) => s.heading.toLowerCase() === sectionHeading.toLowerCase());
+    if (idx < 0) return;
+    const updatedSections = [...cn.sections];
+    updatedSections[idx] = { ...updatedSections[idx], content: newContent };
+    const updatedCN = { sections: updatedSections };
+    setCoreNarrative(updatedCN);
+    if (currentProjectId) {
+      const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+      const existing = (proj?.output_data as any) || {};
+      await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+    }
+  }, [currentProjectId]);
+
   // ── AI Assist for opportunities (Help me find this) ──
   const aiAssistOpportunity = useCallback(async (opportunityId: string, context: string): Promise<string> => {
     const cn = coreNarrativeRef.current;
@@ -2048,7 +2066,7 @@ No markdown fences. No commentary outside the JSON.`;
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied,
         applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
-        dismissedSuggestions, dismissSuggestion,
+        dismissedSuggestions, dismissSuggestion, updateNarrativeSection,
       }}
     >
       {children}
