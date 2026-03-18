@@ -43,11 +43,10 @@ export function LandingPage() {
         <div className="absolute inset-0 radial-glow pointer-events-none" />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
-            Craft the narrative.
+            Craft your narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
-            Pitch decks, strategy memos, board updates, and investor emails, all
-            refined by AI coaching.
+            Turn rough notes into pitch decks, board updates, and strategy memos.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
             className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2 glow-blue">
@@ -67,25 +66,27 @@ export function LandingPage() {
               <span className="text-[9px] text-muted-foreground/40 tracking-wider uppercase">Example Output</span>
             </div>
             <div className="p-4 sm:p-8">
+              {/* Elevator pitch */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Elevator Pitch</span>
                 <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready to Send</span>
               </div>
-              <p className="text-sm text-foreground/80 leading-relaxed mt-4">
+              <p className="text-[13px] text-foreground/80 leading-relaxed mt-4">
                 Sales teams waste 15 hours a week on meeting coordination. Relay automates the entire scheduling workflow, from availability to follow-up, so reps spend time selling instead of scheduling. We're live with 40 teams, growing 34% quarter over quarter, with 128% net revenue retention.
               </p>
               <div className="mt-4 bg-electric/[0.06] border border-electric/20 rounded-sm p-3 flex items-start gap-3">
                 <div className="text-electric mt-0.5 shrink-0">
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-foreground/80">Consider adding a specific customer win to make the traction claim more concrete.</p>
+                  <p className="text-[13px] text-foreground/80">Consider adding a specific customer win to make the traction claim more concrete.</p>
                 </div>
               </div>
-              {/* Slide framework preview */}
+
+              {/* Slide framework */}
               <div className="border-t border-border mt-6 pt-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric">Slide Framework</p>
+                  <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Slide Framework</span>
                   <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
@@ -97,8 +98,8 @@ export function LandingPage() {
                     <div key={slide.label} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden sm:[aspect-ratio:16/10]">
                       <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
                         <div>
-                          <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">{slide.label}</p>
-                          <p className="text-sm font-semibold text-foreground mt-2">{slide.title}</p>
+                          <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">{slide.label}</p>
+                          <p className="text-[13px] font-semibold text-foreground mt-2">{slide.title}</p>
                         </div>
                         <div className="space-y-1 select-none opacity-30">
                           <div className="h-1.5 bg-foreground/15 rounded-sm w-[70%]" />

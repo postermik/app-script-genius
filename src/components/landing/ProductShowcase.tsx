@@ -46,8 +46,8 @@ function GenerationPreview() {
     <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/90">Generating narrative...</span>
-          <span className="text-xs font-bold text-electric tabular-nums">{progress}%</span>
+          <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-foreground/90">Generating...</span>
+          <span className="text-[10px] font-bold text-electric tabular-nums">{progress}%</span>
         </div>
         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
           <div className="h-full bg-electric rounded-full transition-all duration-150" style={{ width: `${progress}%` }} />
@@ -57,7 +57,7 @@ function GenerationPreview() {
             const done = allDone ? true : i < activeStep;
             const active = !allDone && i === activeStep;
             if (!allDone && i > activeStep) return null;
-            return (<p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>{done ? "\u2713" : "\u2192"} {step}</p>);
+            return (<p key={step} className={`text-[11px] transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>{done ? "\u2713" : "\u2192"} {step}</p>);
           })}
         </div>
       </div>
@@ -65,8 +65,8 @@ function GenerationPreview() {
   );
 }
 
-/* ── Narrative Guide Preview ── */
-function GuidePreview() {
+/* ── Consultant Preview ── */
+function ConsultantPreview() {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -87,7 +87,7 @@ function GuidePreview() {
       <div className="p-5 space-y-4">
         <div>
           <p className="text-[10px] font-medium text-electric uppercase tracking-wider mb-2">Investor Ready</p>
-          <p className="text-xs text-foreground/70 leading-relaxed">
+          <p className="text-[11px] text-foreground/70 leading-relaxed">
             Strong problem framing with real cost data. Add competitive positioning and growth metrics to close the gaps investors will surface.
           </p>
         </div>
@@ -153,14 +153,17 @@ function FormatChartCard() {
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="flex w-full border-b border-[hsl(217_33%_15%)] sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
-          <span key={tab} className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${tab === ACTIVE ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]" : "text-[hsl(215_20%_44%)]"}`}>
+          <span key={tab} className={`text-[10px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${tab === ACTIVE ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]" : "text-[hsl(215_20%_44%)]"}`}>
             {tab}{tab === ACTIVE && <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />}
           </span>
         ))}
       </div>
       <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: 220 }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-        <div className="relative z-10"><p className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p><p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p></div>
+        <div className="relative z-10">
+          <p className="text-[10px] font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p>
+          <p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p>
+        </div>
         <div className="relative z-10 flex-1 my-4"><RevenueSparkline /></div>
         <div className="relative z-10 flex gap-8">
           <div><p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">QoQ</p><p className="text-base font-bold text-emerald">+34%</p></div>
@@ -183,8 +186,8 @@ function InvestorPreview() {
       <div className="divide-y divide-[hsl(217_33%_15%)]/50">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
-            <div><p className="text-sm text-foreground/90 font-medium">{inv.name}</p><p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p></div>
-            <span className="text-xs font-medium text-electric">{inv.match}% match</span>
+            <div><p className="text-[13px] text-foreground/90 font-medium">{inv.name}</p><p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p></div>
+            <span className="text-[11px] font-medium text-electric">{inv.match}% match</span>
           </div>
         ))}
       </div>
@@ -199,25 +202,25 @@ export function ProductShowcase() {
       <div className="max-w-[1000px] mx-auto">
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Prompt &rarr; Output</p>
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">From Notes to Materials</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">AI Narrative Guide</p>
-            <GuidePreview />
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Built-in Consultant</p>
+            <ConsultantPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
             <FormatChartCard />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
         </div>
