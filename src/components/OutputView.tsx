@@ -312,6 +312,15 @@ export function OutputView() {
     return () => window.removeEventListener('rhetoric:upgrade-required', handler);
   }, []);
 
+  // Listen for tab switch events from Guide tab
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail?.tab) setActiveTab(e.detail.tab);
+    };
+    window.addEventListener('rhetoric:switch-tab', handler as EventListener);
+    return () => window.removeEventListener('rhetoric:switch-tab', handler as EventListener);
+  }, []);
+
   // Show upgrade banner for free users who have used their 1 draft
   const isFirstFree = isFree && generationCount >= 1;
 

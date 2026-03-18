@@ -22,6 +22,7 @@ export interface NarrativeOpportunity {
   category: string;
   sectionHeading: string;
   points: number;
+  layer: 1 | 2 | 3;
 }
 
 export interface NarrativeStrength {
@@ -1380,38 +1381,41 @@ Return JSON: { "deckFramework": [...] }`,
     const qaItems = od?.investor_qa?.investorQA || [];
     const pitchData = od?.elevator_pitch;
     const memoData = od?.investment_memo;
+    const emailVariants = od?.pitch_email?.pitchEmails || [];
 
     // Define opportunities based on mode
     const opportunities: NarrativeOpportunity[] = [];
 
     if (purpose === "fundraising") {
+      // LAYER 1: Core content checks (does this section have substance?)
+      const L1 = 1 as const;
       opportunities.push({
         id: "specific_pain", label: "Quantify the problem",
         description: "Investors respond to specific numbers. What does this problem actually cost?",
         prompt: "What's the biggest cost or time waste your customers face? (e.g. $15K per project, 6 weeks wasted)",
         completed: /\$[\d,]+|\d+%|\d+x|\d+ (hours|days|weeks|months|years)/.test(sectionText("Problem")),
-        aiAssistAvailable: true, sectionHeading: "Problem", category: "Problem", points: 10,
+        aiAssistAvailable: true, sectionHeading: "Problem", category: "Problem", points: 12, layer: L1,
       });
       opportunities.push({
         id: "product_named", label: "Name your product clearly",
         description: "Your Solution section should leave no doubt about what you're building.",
         prompt: "What's the name of your product or company?",
         completed: sectionText("Solution").length > 50,
-        aiAssistAvailable: false, sectionHeading: "Solution", category: "Solution", points: 5,
+        aiAssistAvailable: false, sectionHeading: "Solution", category: "Solution", points: 8, layer: L1,
       });
       opportunities.push({
         id: "market_figures", label: "Size your market",
         description: "Every investor asks 'how big is this?' A researched answer is table stakes.",
         prompt: "What industry are you in? We'll research the market size for you.",
         completed: /\$[\d.]+ ?(B|M|billion|million)|TAM|SAM|SOM/i.test(sectionText("Market") + " " + allText),
-        aiAssistAvailable: true, sectionHeading: "Market", category: "Market", points: 15,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Market", points: 12, layer: L1,
       });
       opportunities.push({
         id: "traction_metrics", label: "Add traction data",
         description: "Real numbers, even small ones, build more credibility than any amount of vision.",
         prompt: "What's your current traction? (users, MRR, growth rate, waitlist size, anything)",
         completed: /\d+.*?(users|customers|MRR|ARR|revenue|growth|conversion|paying)/i.test(sectionText("Traction") + " " + allText),
-        aiAssistAvailable: false, sectionHeading: "Traction", category: "Traction", points: 15,
+        aiAssistAvailable: false, sectionHeading: "Traction", category: "Traction", points: 12, layer: L1,
       });
       opportunities.push({
         id: "competitors_named", label: "Name your competitors",
@@ -1421,43 +1425,152 @@ Return JSON: { "deckFramework": [...] }`,
           const hasCompetitorInHeading = cn?.sections?.some((s: any) => /compet|landscape|alternative/i.test(s.heading));
           const hasCompetitorInContent = /compet|landscape|alternative|incumbent|rival/i.test(allText);
           const knownTools = /slidebean|canva|pitch\.com|gamma|tome|jasper|docsend|visible|chatgpt|beautiful\.ai|footnote|method/i;
-          const hasNamedCompetitor = knownTools.test(allText);
-          return !!(hasCompetitorInHeading || hasCompetitorInContent || hasNamedCompetitor);
+          return !!(hasCompetitorInHeading || hasCompetitorInContent || knownTools.test(allText));
         })(),
-        aiAssistAvailable: true, sectionHeading: "Market", category: "Differentiation", points: 10,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Differentiation", points: 10, layer: L1,
       });
       opportunities.push({
         id: "ask_amount", label: "State your raise",
         description: "Be direct about what you need. Vague asks signal uncertainty.",
         prompt: "How much are you raising? (e.g. $500K, $2M)",
         completed: /\$[\d.]+ ?(K|M|k|m|thousand|million)/i.test(allText + " " + rawInput),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 10,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 10, layer: L1,
       });
       opportunities.push({
         id: "use_of_funds", label: "Explain use of funds",
         description: "Investors want to know their money has a plan, not just a destination.",
         prompt: "What will you use the funds for? (e.g. hiring, product, marketing)",
-        completed: /use of funds|allocated to|will fund|will be used|spend on|invest in/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 5,
+        completed: /use of funds|allocated|will fund|will be used|spend on|invest in|hiring|runway|engineering|marketing|product development/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 8, layer: L1,
       });
       opportunities.push({
         id: "why_now", label: "Explain why now",
         description: "Timing is one of the top reasons investors pass or lean in.",
         prompt: "What recent change makes this the right time? (new regulation, technology shift, market event)",
         completed: sectionText("Why Now").length > 80,
-        aiAssistAvailable: true, sectionHeading: "Why Now", category: "Timing", points: 10,
+        aiAssistAvailable: true, sectionHeading: "Why Now", category: "Timing", points: 10, layer: L1,
       });
+      // Materials (layer 1)
       opportunities.push({
         id: "slides_generated", label: "Generate slide framework",
         description: "A structured slide framework turns your narrative into a visual pitch.",
         prompt: "", completed: slideFw.length >= 5,
-        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 10,
+        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 8, layer: L1,
       });
       opportunities.push({
         id: "qa_prepared", label: "Prepare for investor Q&A",
         description: "The best founders walk into meetings ready for the hard questions.",
         prompt: "", completed: qaItems.length >= 3,
-        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 10,
+        aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 8, layer: L1,
+      });
+
+      // LAYER 2: Depth checks (only show when Layer 1 for same section is done)
+      const L2 = 2 as const;
+      const problemHasData = /\$[\d,]+|\d+%|\d+x|\d+ (hours|days|weeks|months|years)/.test(sectionText("Problem"));
+      const marketHasSize = /\$[\d.]+ ?(B|M|billion|million)|TAM|SAM|SOM/i.test(sectionText("Market") + " " + allText);
+      const tractionHasData = /\d+.*?(users|customers|MRR|ARR|revenue|growth|conversion|paying)/i.test(sectionText("Traction") + " " + allText);
+
+      if (problemHasData) {
+        opportunities.push({
+          id: "problem_specific_audience", label: "Specify who suffers most",
+          description: "Not everyone has this problem equally. Who feels it the most?",
+          prompt: "Who is your ideal customer? (e.g. solo technical founders raising pre-seed, mid-market SaaS companies)",
+          completed: /founder|startup|enterprise|SMB|consumer|developer|technical|non-technical|solo|first-time/i.test(sectionText("Problem")),
+          aiAssistAvailable: true, sectionHeading: "Problem", category: "Problem", points: 6, layer: L2,
+        });
+      }
+      if (marketHasSize) {
+        opportunities.push({
+          id: "market_growth_rate", label: "Show market momentum",
+          description: "A growing market is more investable than a large static one.",
+          prompt: "Is your market growing? What's driving that growth?",
+          completed: /growing|growth rate|CAGR|expanding|projected|forecast|increasing/i.test(sectionText("Market") + " " + allText),
+          aiAssistAvailable: true, sectionHeading: "Market", category: "Market", points: 6, layer: L2,
+        });
+      }
+      if (tractionHasData) {
+        opportunities.push({
+          id: "traction_trajectory", label: "Show growth trajectory",
+          description: "Investors care more about direction than magnitude. Show the trend.",
+          prompt: "How has your key metric changed over time? (e.g. 3 users in month 1, 15 in month 2)",
+          completed: /month over month|MoM|week over week|grew from|increased from|doubled|tripled|trajectory/i.test(sectionText("Traction")),
+          aiAssistAvailable: false, sectionHeading: "Traction", category: "Traction", points: 6, layer: L2,
+        });
+      }
+
+      // LAYER 3: Material quality (only when most Layer 1 items are done)
+      const layer1Done = opportunities.filter(o => o.layer === 1 && o.completed).length;
+      const layer1Total = opportunities.filter(o => o.layer === 1).length;
+      if (layer1Done >= layer1Total * 0.7) {
+        const L3 = 3 as const;
+        if (slideFw.length >= 5) {
+          opportunities.push({
+            id: "slides_have_data", label: "Strengthen slide content",
+            description: "Strong slides lead with arguments, not topic labels.",
+            prompt: "",
+            completed: slideFw.filter((s: any) => (s.bodyContent?.length || 0) >= 3).length >= slideFw.length * 0.7,
+            aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 5, layer: L3,
+          });
+        }
+        if (pitchData) {
+          opportunities.push({
+            id: "pitch_emails_generated", label: "Generate pitch emails",
+            description: "Cold outreach templates tailored to your narrative.",
+            prompt: "", completed: emailVariants.length >= 2,
+            aiAssistAvailable: false, sectionHeading: "", category: "Materials", points: 5, layer: L3,
+          });
+        }
+      }
+    } else if (purpose === "board_meeting" || purpose === "board_update") {
+      opportunities.push({
+        id: "quarterly_metrics", label: "Include key metrics",
+        description: "Board members expect to see the numbers that matter most.",
+        prompt: "What are your top 3-5 metrics this quarter? (revenue, growth, burn, runway, etc.)",
+        completed: /revenue|ARR|MRR|burn|runway|growth|churn|NRR|users|customers/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Traction", category: "Metrics", points: 15, layer: 1,
+      });
+      opportunities.push({
+        id: "risks_flagged", label: "Flag key risks",
+        description: "Boards respect transparency. Surface what keeps you up at night.",
+        prompt: "What are the top 2-3 risks or challenges right now?",
+        completed: /risk|challenge|concern|threat|headwind|obstacle/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Problem", category: "Risks", points: 15, layer: 1,
+      });
+      opportunities.push({
+        id: "board_asks", label: "State your asks",
+        description: "Every board meeting should end with clear asks for the board.",
+        prompt: "What do you need from the board? (introductions, approval, guidance)",
+        completed: /ask|request|need from|approval|decision|guidance|introduction/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Asks", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "next_milestones", label: "Define next milestones",
+        description: "What will you accomplish before the next board meeting?",
+        prompt: "What are your key milestones for the next quarter?",
+        completed: /milestone|next quarter|goal|target|plan to|aim to|objective/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Plan", points: 10, layer: 1,
+      });
+    } else if (purpose === "strategy") {
+      opportunities.push({
+        id: "strategic_context", label: "Set the context",
+        description: "What's changed that requires a strategic response?",
+        prompt: "What market shift, competitive move, or internal change prompted this strategy?",
+        completed: sectionText("Problem").length > 80,
+        aiAssistAvailable: true, sectionHeading: "Problem", category: "Context", points: 15, layer: 1,
+      });
+      opportunities.push({
+        id: "strategic_options", label: "Present options",
+        description: "Strong strategy documents show the alternatives considered, not just the chosen path.",
+        prompt: "What are the 2-3 strategic options you're weighing?",
+        completed: /option|alternative|approach|path|scenario|strategy.*or/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Solution", category: "Options", points: 15, layer: 1,
+      });
+      opportunities.push({
+        id: "execution_plan", label: "Define execution plan",
+        description: "Strategy without execution is just a slide deck.",
+        prompt: "What are the key execution steps and who owns them?",
+        completed: /timeline|phase|milestone|owner|responsible|execute|implement/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Execution", points: 12, layer: 1,
       });
     }
     // TODO: Add board_update and strategy opportunities in future

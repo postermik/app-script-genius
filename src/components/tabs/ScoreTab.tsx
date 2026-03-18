@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
 
-function getGaugeStroke(pct: number) {
-  if (pct >= 90) return "hsl(155 60% 45%)";
-  if (pct >= 70) return "hsl(217 91% 60%)";
-  if (pct >= 40) return "hsl(48 96% 53%)";
-  return "hsl(222 16% 28%)";
+function getBarColor(pct: number) {
+  if (pct >= 90) return "bg-emerald";
+  if (pct >= 70) return "bg-electric";
+  if (pct >= 40) return "bg-yellow-400";
+  return "bg-muted-foreground/40";
 }
 function getTierColor(tier: string) {
   if (tier === "exceptional") return "text-emerald";
@@ -45,7 +45,6 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
   const allOpportunities = strength.opportunities;
   const completedOps = strength.completedOpportunities;
 
-  // Build narrative section map
   const rooms = useMemo(() => {
     if (!coreNarrative?.sections?.length) return [];
     return coreNarrative.sections.map((section: any, idx: number) => {
@@ -53,20 +52,17 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       const content = section.content || "";
       const preview = content.length > 140 ? content.slice(0, 140) + "..." : content;
       const sectionOps = allOpportunities.filter(o => o.sectionHeading.toLowerCase() === heading.toLowerCase());
-      const completedSectionOps = completedOps.filter(o => o.sectionHeading.toLowerCase() === heading.toLowerCase());
       const allOpsApplied = sectionOps.length > 0 && sectionOps.every(o => manuallyApplied.has(o.id));
       const needsWork = sectionOps.length > 0 && !allOpsApplied;
-      return { heading, content, preview, idx, needsWork, allOpsApplied, opportunities: sectionOps, completedOpportunities: completedSectionOps };
+      return { heading, content, preview, idx, needsWork, allOpsApplied, opportunities: sectionOps };
     });
-  }, [coreNarrative, allOpportunities, completedOps, manuallyApplied]);
+  }, [coreNarrative, allOpportunities, manuallyApplied]);
 
-  // Materials
   const slideFw = outputData?.slide_framework?.deckFramework || [];
   const qaItems = outputData?.investor_qa?.investorQA || [];
   const emailVariants = outputData?.pitch_email?.pitchEmails || [];
   const memoSections = outputData?.investment_memo?.sections || [];
 
-  // Load consultant summary
   useEffect(() => {
     if (!coreNarrative?.sections?.length || summaryLoaded) return;
     let cancelled = false;
@@ -96,13 +92,11 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
   const applyToNarrative = async (op: NarrativeOpportunity, content: string) => {
     if (!content.trim()) return;
     setApplyingOp(op.id);
-    console.log("[Guide] Applying:", op.id, op.sectionHeading);
     try {
       const cn = coreNarrative;
       const sectionIdx = cn?.sections?.findIndex((s: any) =>
         s.heading.toLowerCase() === op.sectionHeading.toLowerCase()
       ) ?? -1;
-
       if (sectionIdx >= 0) {
         await refineSection(`opportunity-${op.id}`, `coreNarrative.sections.${sectionIdx}.content`,
           `Incorporate this information naturally into this section. Keep existing content and weave in the new information: ${content}` as any);
@@ -123,7 +117,6 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
     } finally { setApplyingOp(null); }
   };
 
-  // Switch to Outputs tab
   const switchToOutputs = () => {
     window.dispatchEvent(new CustomEvent('rhetoric:switch-tab', { detail: { tab: 'outputs' } }));
   };
@@ -131,41 +124,32 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* CONSULTANT SUMMARY */}
+      {/* CONSULTANT HEADER */}
       <div className="card-gradient rounded-sm border border-border p-5">
-        <div className="flex items-start gap-4">
-          <div className="shrink-0">
-            <svg width="56" height="56" viewBox="0 0 56 56">
-              <circle cx="28" cy="28" r="23" fill="none" stroke="hsl(222 16% 16%)" strokeWidth="4" />
-              <circle cx="28" cy="28" r="23" fill="none" stroke={getGaugeStroke(strength.percentage)}
-                strokeWidth="4" strokeLinecap="round"
-                strokeDasharray={String(2 * Math.PI * 23)}
-                strokeDashoffset={String(2 * Math.PI * 23 * (1 - strength.percentage / 100))}
-                transform="rotate(-90 28 28)" />
-              <text x="28" y="25" textAnchor="middle" dominantBaseline="middle" className="fill-foreground font-bold" style={{ fontSize: "14px" }}>{strength.completedCount}</text>
-              <text x="28" y="37" textAnchor="middle" dominantBaseline="middle" className="fill-secondary-foreground" style={{ fontSize: "8px", fontWeight: 500 }}>of {strength.totalCount}</text>
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
-              {summaryLoaded && (
-                <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
-                  <Compass className={`h-3 w-3 ${loadingSummary ? "animate-spin" : ""}`} />
-                </button>
-              )}
-            </div>
-            {loadingSummary && !summary ? (
-              <div className="flex items-center gap-2 py-1">
-                <Loader2 className="h-3 w-3 animate-spin text-electric" />
-                <span className="text-xs text-muted-foreground">Reviewing your narrative...</span>
-              </div>
-            ) : summary ? (
-              <p className="text-[13px] text-foreground/80 leading-relaxed">{summary}</p>
-            ) : (
-              <p className="text-[13px] text-muted-foreground/60">{strength.tierDescription}</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
+          <div className="flex items-center gap-2">
+            {summaryLoaded && (
+              <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
+                <Compass className={`h-3 w-3 ${loadingSummary ? "animate-spin" : ""}`} />
+              </button>
             )}
           </div>
+        </div>
+        {loadingSummary && !summary ? (
+          <div className="flex items-center gap-2 py-1 mb-3">
+            <Loader2 className="h-3 w-3 animate-spin text-electric" />
+            <span className="text-xs text-muted-foreground">Reviewing your narrative...</span>
+          </div>
+        ) : summary ? (
+          <p className="text-[13px] text-foreground/80 leading-relaxed mb-3">{summary}</p>
+        ) : (
+          <p className="text-[13px] text-muted-foreground/60 mb-3">{strength.tierDescription}</p>
+        )}
+        {/* Progress bar */}
+        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-700 ease-out ${getBarColor(strength.percentage)}`}
+            style={{ width: `${strength.percentage}%` }} />
         </div>
       </div>
 
@@ -184,7 +168,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                     onClick={() => setActiveRoom(isActive ? null : room.heading)}
                     className={`rounded-sm border p-4 cursor-pointer transition-all duration-200 ${
                       isActive
-                        ? (showAsComplete ? "border-emerald/40 bg-emerald/[0.03]" : "border-electric/50 bg-electric/[0.04]")
+                        ? showAsComplete ? "border-emerald/40 bg-emerald/[0.03]" : "border-electric/50 bg-electric/[0.04]"
                         : showAsComplete
                         ? "border-l-[3px] border-l-emerald border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
                         : "border-l-[3px] border-l-electric border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
@@ -213,99 +197,97 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
             </div>
 
             {/* EXPANDED PANEL */}
-            <div className={`grid transition-all duration-300 ease-out ${activeRoom ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0 mt-0"}`}>
-              <div className="overflow-hidden">
-                {activeRoom && (() => {
-                  const room = rooms.find(r => r.heading === activeRoom);
-                  if (!room) return null;
-                  const op = room.needsWork ? room.opportunities[0] : null;
-                  const fullContent = coreNarrative?.sections?.find((s: any) => s.heading === activeRoom)?.content || "";
+            <div className={`transition-all duration-300 ease-out overflow-hidden ${activeRoom ? "max-h-[800px] opacity-100 mt-2" : "max-h-0 opacity-0 mt-0"}`}>
+              {activeRoom && (() => {
+                const room = rooms.find(r => r.heading === activeRoom);
+                if (!room) return null;
+                const op = room.needsWork ? room.opportunities[0] : null;
 
-                  // Covered or Applied room: show full content with edit hint
-                  if (!op) {
-                    return (
-                      <div className="rounded-sm border border-emerald/20 bg-[hsl(222_24%_7%)] p-5">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs font-semibold text-emerald flex items-center gap-1.5">
-                            <Check className="h-3 w-3" /> {room.heading}
-                          </p>
-                          <button onClick={() => setActiveRoom(null)}
-                            className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">Close</button>
-                        </div>
-                        <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">{fullContent}</p>
-                        <p className="text-[10px] text-muted-foreground/40 mt-3 flex items-center gap-1">
-                          <Pencil className="h-2.5 w-2.5" /> Edit this section in the Outputs tab
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  // Strengthen room: input + AI assist
+                // Covered or Applied: show full content
+                if (!op) {
                   return (
-                    <div className="rounded-sm border border-electric/30 bg-[hsl(222_24%_7%)] p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-electric">{op.label}</p>
-                        <button onClick={() => setActiveRoom(null)}
+                    <div className="rounded-sm border border-emerald/20 bg-[hsl(222_24%_7%)] p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-emerald flex items-center gap-1.5">
+                          <Check className="h-3 w-3" /> {room.heading}
+                        </p>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
                           className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">Close</button>
                       </div>
-
-                      {/* AI result */}
-                      {aiResults[op.id] && (
-                        <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3.5 space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <Sparkles className="h-3 w-3 text-electric" />
-                            <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
-                          </div>
-                          <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[op.id]}</p>
-                          <div className="flex items-center justify-end gap-2 pt-1">
-                            <button onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}
-                              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Dismiss</button>
-                            <button onClick={() => applyToNarrative(op, aiResults[op.id])}
-                              disabled={applyingOp === op.id}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
-                              {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* User input */}
-                      {op.prompt && (
-                        <div>
-                          <textarea
-                            value={userInputs[op.id] || ""}
-                            onChange={(e) => setUserInputs(prev => ({ ...prev, [op.id]: e.target.value }))}
-                            placeholder={op.prompt}
-                            className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors"
-                            rows={2}
-                          />
-                          <div className="mt-2 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {op.aiAssistAvailable && !aiResults[op.id] && (
-                                <button onClick={() => handleAiAssist(op)} disabled={loadingAi === op.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50">
-                                  {loadingAi === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
-                                </button>
-                              )}
-                              <button onClick={() => setActiveRoom(null)}
-                                className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors px-2 py-1">Skip for now</button>
-                            </div>
-                            <button onClick={() => applyToNarrative(op, userInputs[op.id] || "")}
-                              disabled={!userInputs[op.id]?.trim() || applyingOp === op.id}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
-                              {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {!op.prompt && op.category === "Materials" && (
-                        <p className="text-xs text-muted-foreground/60">Select this output from the Outputs tab to generate it.</p>
-                      )}
+                      <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">{room.content}</p>
+                      <button onClick={switchToOutputs}
+                        className="mt-3 text-[10px] text-muted-foreground/40 hover:text-electric transition-colors flex items-center gap-1">
+                        <Pencil className="h-2.5 w-2.5" /> Edit in Outputs tab
+                      </button>
                     </div>
                   );
-                })()}
-              </div>
+                }
+
+                // Strengthen: input + AI
+                return (
+                  <div className="rounded-sm border border-electric/30 bg-[hsl(222_24%_7%)] p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-electric">{op.label}</p>
+                      <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
+                        className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">Close</button>
+                    </div>
+
+                    {aiResults[op.id] && (
+                      <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3.5 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3 text-electric" />
+                          <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
+                        </div>
+                        <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[op.id]}</p>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Dismiss</button>
+                          <button onClick={() => applyToNarrative(op, aiResults[op.id])}
+                            disabled={applyingOp === op.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                            {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {op.prompt && (
+                      <div>
+                        <textarea
+                          value={userInputs[op.id] || ""}
+                          onChange={(e) => setUserInputs(prev => ({ ...prev, [op.id]: e.target.value }))}
+                          placeholder={op.prompt}
+                          className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors"
+                          rows={2}
+                        />
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {op.aiAssistAvailable && !aiResults[op.id] && (
+                              <button onClick={() => handleAiAssist(op)} disabled={loadingAi === op.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50">
+                                {loadingAi === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
+                              </button>
+                            )}
+                            <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
+                              className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors px-2 py-1">Skip for now</button>
+                          </div>
+                          <button onClick={() => applyToNarrative(op, userInputs[op.id] || "")}
+                            disabled={!userInputs[op.id]?.trim() || applyingOp === op.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                            {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!op.prompt && op.category === "Materials" && (
+                      <button onClick={switchToOutputs} className="text-xs text-electric/70 hover:text-electric transition-colors">
+                        Go to Outputs tab to generate this
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -323,11 +305,11 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
         </div>
       )}
 
-      {/* MATERIALS ROW */}
+      {/* MATERIALS */}
       {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0 || memoSections.length > 0) && (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${[slideFw, qaItems, emailVariants, memoSections].filter(a => a.length > 0).length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {slideFw.length > 0 && (
               <div onClick={switchToOutputs} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
                 <p className="text-[11px] text-muted-foreground/50 mb-1">{slideFw.length} slides</p>
@@ -386,12 +368,12 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
         </div>
       )}
 
-      {/* CTAs - adaptive based on state */}
+      {/* ADAPTIVE CTA */}
       <div className="pt-1">
         {allOpportunities.length > 0 ? (
-          <p className="text-[11px] text-muted-foreground/50 text-center leading-relaxed">
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
             Continue strengthening above, or{" "}
-            <button onClick={switchToOutputs} className="text-electric/70 hover:text-electric transition-colors">review your materials</button>
+            <button onClick={switchToOutputs} className="text-electric hover:underline transition-colors">review your materials</button>
             {" "}when ready.
           </p>
         ) : (
