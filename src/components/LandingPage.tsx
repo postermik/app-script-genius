@@ -8,7 +8,7 @@ import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 
 const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
-  { icon: BarChart3, text: "Built on real fundraising frameworks" },
+  { icon: BarChart3, text: "Trained on narratives that raised $7B+" },
   { icon: Users, text: "Built by operators, not prompt engineers" },
 ];
 
