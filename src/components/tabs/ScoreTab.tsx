@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, Compass, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
@@ -30,48 +30,64 @@ interface Props {
 export function ScoreTab({ score, mode, slides = [] }: Props) {
   const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData } = useDecksmith();
 
-  const [activeRoom, setActiveRoom] = useState<string | null>(null);
+  const [activeCard, setActiveCard] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
   const [aiResults, setAiResults] = useState<Record<string, string>>({});
   const [loadingAi, setLoadingAi] = useState<string | null>(null);
   const [applyingOp, setApplyingOp] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
   const [summary, setSummary] = useState("");
   const [loadingSummary, setLoadingSummary] = useState(false);
-  const [summaryLoaded, setSummaryLoaded] = useState(false);
   const [manuallyApplied, setManuallyApplied] = useState<Set<string>>(new Set());
 
   const strength = computeNarrativeStrength();
   const allOpportunities = strength.opportunities;
   const completedOps = strength.completedOpportunities;
 
-  const rooms = useMemo(() => {
-    if (!coreNarrative?.sections?.length) return [];
-    return coreNarrative.sections.map((section: any, idx: number) => {
-      const heading = section.heading;
-      const content = section.content || "";
-      const preview = content.length > 140 ? content.slice(0, 140) + "..." : content;
-      const sectionOps = allOpportunities.filter(o => o.sectionHeading.toLowerCase() === heading.toLowerCase());
-      const allOpsApplied = sectionOps.length > 0 && sectionOps.every(o => manuallyApplied.has(o.id));
-      const needsWork = sectionOps.length > 0 && !allOpsApplied;
-      return { heading, content, preview, idx, needsWork, allOpsApplied, opportunities: sectionOps };
-    });
-  }, [coreNarrative, allOpportunities, manuallyApplied]);
+  // Build cards from CATEGORIES, not from narrative sections
+  // Each unique category becomes a card with its opportunities grouped
+  const cards = useMemo(() => {
+    const allOps = [...completedOps, ...allOpportunities];
+    const categoryMap = new Map<string, { ops: NarrativeOpportunity[]; completed: NarrativeOpportunity[]; uncompleted: NarrativeOpportunity[] }>();
 
+    for (const op of allOps) {
+      const cat = op.category;
+      if (!categoryMap.has(cat)) categoryMap.set(cat, { ops: [], completed: [], uncompleted: [] });
+      const entry = categoryMap.get(cat)!;
+      entry.ops.push(op);
+      if (op.completed || manuallyApplied.has(op.id)) entry.completed.push(op);
+      else entry.uncompleted.push(op);
+    }
+
+    return [...categoryMap.entries()].map(([category, data]) => {
+      const allDone = data.uncompleted.length === 0;
+      const sectionHeading = data.ops[0]?.sectionHeading || "";
+      const sectionContent = coreNarrative?.sections?.find((s: any) => s.heading.toLowerCase() === sectionHeading.toLowerCase())?.content || "";
+      const preview = sectionContent.length > 120 ? sectionContent.slice(0, 120) + "..." : sectionContent;
+      return {
+        category, sectionHeading, preview, allDone,
+        opportunities: data.uncompleted,
+        completedOpportunities: data.completed,
+        primaryOp: data.uncompleted[0] || null,
+      };
+    });
+  }, [allOpportunities, completedOps, manuallyApplied, coreNarrative]);
+
+  // Materials
   const slideFw = outputData?.slide_framework?.deckFramework || [];
   const qaItems = outputData?.investor_qa?.investorQA || [];
   const emailVariants = outputData?.pitch_email?.pitchEmails || [];
-  const memoSections = outputData?.investment_memo?.sections || [];
 
+  // Load summary ONCE, not on every coreNarrative change
+  const summaryLoadedRef = useRef(false);
   useEffect(() => {
-    if (!coreNarrative?.sections?.length || summaryLoaded) return;
-    let cancelled = false;
+    if (!coreNarrative?.sections?.length || summaryLoadedRef.current) return;
+    summaryLoadedRef.current = true;
     setLoadingSummary(true);
-    generateGuideSummary().then(result => {
-      if (!cancelled) { setSummary(result); setSummaryLoaded(true); }
-    }).catch(() => {}).finally(() => { if (!cancelled) setLoadingSummary(false); });
-    return () => { cancelled = true; };
-  }, [coreNarrative, generateGuideSummary, summaryLoaded]);
+    generateGuideSummary()
+      .then(result => setSummary(result))
+      .catch(() => {})
+      .finally(() => setLoadingSummary(false));
+  }, [!!coreNarrative?.sections?.length]);
 
   const refreshSummary = async () => {
     setLoadingSummary(true);
@@ -109,7 +125,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       setManuallyApplied(prev => new Set(prev).add(op.id));
       setUserInputs(prev => ({ ...prev, [op.id]: "" }));
       setAiResults(prev => ({ ...prev, [op.id]: "" }));
-      setActiveRoom(null);
+      setActiveCard(null);
       refreshSummary();
     } catch (e: any) {
       toast.error("Failed to apply. Please try again.");
@@ -117,9 +133,15 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
     } finally { setApplyingOp(null); }
   };
 
-  const switchToOutputs = () => {
-    window.dispatchEvent(new CustomEvent('rhetoric:switch-tab', { detail: { tab: 'outputs' } }));
+  const switchToOutputs = (outputTab?: string) => {
+    window.dispatchEvent(new CustomEvent('rhetoric:switch-tab', {
+      detail: { tab: 'outputs', outputTab: outputTab || 'core_narrative' }
+    }));
   };
+
+  // Segment count for progress bar
+  const totalSegments = 10;
+  const filledSegments = Math.round((strength.percentage / 100) * totalSegments);
 
   return (
     <div className="space-y-5">
@@ -128,13 +150,11 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       <div className="card-gradient rounded-sm border border-border p-5">
         <div className="flex items-center justify-between mb-2">
           <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
-          <div className="flex items-center gap-2">
-            {summaryLoaded && (
-              <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
-                <Compass className={`h-3 w-3 ${loadingSummary ? "animate-spin" : ""}`} />
-              </button>
-            )}
-          </div>
+          {summary && (
+            <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
+              <Compass className={`h-3 w-3 ${loadingSummary ? "animate-spin" : ""}`} />
+            </button>
+          )}
         </div>
         {loadingSummary && !summary ? (
           <div className="flex items-center gap-2 py-1 mb-3">
@@ -142,53 +162,54 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
             <span className="text-xs text-muted-foreground">Reviewing your narrative...</span>
           </div>
         ) : summary ? (
-          <p className="text-[13px] text-foreground/80 leading-relaxed mb-3">{summary}</p>
+          <p className="text-[13px] text-foreground/80 leading-relaxed mb-4">{summary}</p>
         ) : (
-          <p className="text-[13px] text-muted-foreground/60 mb-3">{strength.tierDescription}</p>
+          <p className="text-[13px] text-muted-foreground/60 mb-4">{strength.tierDescription}</p>
         )}
-        {/* Progress bar */}
-        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-700 ease-out ${getBarColor(strength.percentage)}`}
-            style={{ width: `${strength.percentage}%` }} />
+        {/* Segmented progress bar */}
+        <div className="flex gap-1">
+          {Array.from({ length: totalSegments }).map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+              i < filledSegments ? getBarColor(strength.percentage) : "bg-muted/40"
+            }`} />
+          ))}
         </div>
       </div>
 
-      {/* NARRATIVE MAP */}
-      {rooms.length > 0 && (
+      {/* NARRATIVE CARDS (built from categories) */}
+      {cards.length > 0 && (
         <div className="relative">
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your narrative</p>
           <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}>
             <div className="grid grid-cols-2 gap-2">
-              {rooms.map((room) => {
-                const isActive = activeRoom === room.heading;
-                const primaryOp = room.opportunities[0];
-                const showAsComplete = !room.needsWork;
+              {cards.filter(c => c.category !== "Materials").map((card) => {
+                const isActive = activeCard === card.category;
                 return (
-                  <div key={room.heading}
-                    onClick={() => setActiveRoom(isActive ? null : room.heading)}
+                  <div key={card.category}
+                    onClick={() => setActiveCard(isActive ? null : card.category)}
                     className={`rounded-sm border p-4 cursor-pointer transition-all duration-200 ${
                       isActive
-                        ? showAsComplete ? "border-emerald/40 bg-emerald/[0.03]" : "border-electric/50 bg-electric/[0.04]"
-                        : showAsComplete
+                        ? card.allDone ? "border-emerald/40 bg-emerald/[0.03]" : "border-electric/50 bg-electric/[0.04]"
+                        : card.allDone
                         ? "border-l-[3px] border-l-emerald border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
                         : "border-l-[3px] border-l-electric border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-semibold text-foreground">{room.heading}</span>
+                      <span className="text-[13px] font-semibold text-foreground">{card.category}</span>
                       <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
-                        room.allOpsApplied ? "bg-emerald/10 text-emerald" :
-                        room.needsWork ? "bg-electric/10 text-electric" :
-                        "bg-emerald/10 text-emerald"
+                        card.allDone ? "bg-emerald/10 text-emerald" : "bg-electric/10 text-electric"
                       }`}>
-                        {room.allOpsApplied ? "Applied" : room.needsWork ? "Strengthen" : "Covered"}
+                        {card.allDone ? "Covered" : "Strengthen"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{room.preview}</p>
-                    {primaryOp && !isActive && !room.allOpsApplied && (
+                    {card.preview && (
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{card.preview}</p>
+                    )}
+                    {card.primaryOp && !isActive && (
                       <p className="text-[11px] text-electric mt-2 flex items-center gap-1.5 opacity-80">
                         <Sparkles className="h-3 w-3 shrink-0" />
-                        {primaryOp.description}
+                        {card.primaryOp.description}
                       </p>
                     )}
                   </div>
@@ -197,25 +218,28 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
             </div>
 
             {/* EXPANDED PANEL */}
-            <div className={`transition-all duration-300 ease-out overflow-hidden ${activeRoom ? "max-h-[800px] opacity-100 mt-2" : "max-h-0 opacity-0 mt-0"}`}>
-              {activeRoom && (() => {
-                const room = rooms.find(r => r.heading === activeRoom);
-                if (!room) return null;
-                const op = room.needsWork ? room.opportunities[0] : null;
+            <div className={`transition-all duration-300 ease-out overflow-hidden ${activeCard ? "max-h-[800px] opacity-100 mt-2" : "max-h-0 opacity-0 mt-0"}`}>
+              {activeCard && (() => {
+                const card = cards.find(c => c.category === activeCard);
+                if (!card) return null;
+                const op = card.primaryOp;
 
-                // Covered or Applied: show full content
+                // Covered card: show content
                 if (!op) {
+                  const fullContent = coreNarrative?.sections?.find((s: any) =>
+                    s.heading.toLowerCase() === card.sectionHeading.toLowerCase()
+                  )?.content || "";
                   return (
                     <div className="rounded-sm border border-emerald/20 bg-[hsl(222_24%_7%)] p-5">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-semibold text-emerald flex items-center gap-1.5">
-                          <Check className="h-3 w-3" /> {room.heading}
+                          <Check className="h-3 w-3" /> {card.category}
                         </p>
-                        <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
+                        <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }}
                           className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">Close</button>
                       </div>
-                      <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">{room.content}</p>
-                      <button onClick={switchToOutputs}
+                      {fullContent && <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">{fullContent}</p>}
+                      <button onClick={() => switchToOutputs('core_narrative')}
                         className="mt-3 text-[10px] text-muted-foreground/40 hover:text-electric transition-colors flex items-center gap-1">
                         <Pencil className="h-2.5 w-2.5" /> Edit in Outputs tab
                       </button>
@@ -223,12 +247,12 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                   );
                 }
 
-                // Strengthen: input + AI
+                // Strengthen card
                 return (
                   <div className="rounded-sm border border-electric/30 bg-[hsl(222_24%_7%)] p-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-electric">{op.label}</p>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
+                      <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }}
                         className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">Close</button>
                     </div>
 
@@ -268,7 +292,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                                 {loadingAi === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
                               </button>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); setActiveRoom(null); }}
+                            <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); }}
                               className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors px-2 py-1">Skip for now</button>
                           </div>
                           <button onClick={() => applyToNarrative(op, userInputs[op.id] || "")}
@@ -281,7 +305,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                     )}
 
                     {!op.prompt && op.category === "Materials" && (
-                      <button onClick={switchToOutputs} className="text-xs text-electric/70 hover:text-electric transition-colors">
+                      <button onClick={() => switchToOutputs()} className="text-xs text-electric/70 hover:text-electric transition-colors">
                         Go to Outputs tab to generate this
                       </button>
                     )}
@@ -306,56 +330,32 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       )}
 
       {/* MATERIALS */}
-      {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0 || memoSections.length > 0) && (
+      {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0) && (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
-          <div className={`grid gap-2 ${[slideFw, qaItems, emailVariants, memoSections].filter(a => a.length > 0).length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div className={`grid gap-2 ${[slideFw, qaItems, emailVariants].filter(a => a.length > 0).length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {slideFw.length > 0 && (
-              <div onClick={switchToOutputs} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
+              <div onClick={() => switchToOutputs('slide_framework')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
                 <p className="text-[11px] text-muted-foreground/50 mb-1">{slideFw.length} slides</p>
                 <p className="text-xs font-medium text-foreground">Slide framework</p>
                 <p className="text-[10px] text-emerald mt-1">Ready</p>
               </div>
             )}
             {qaItems.length > 0 && (
-              <div onClick={switchToOutputs} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
+              <div onClick={() => switchToOutputs('investor_qa')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
                 <p className="text-[11px] text-muted-foreground/50 mb-1">{qaItems.length} questions</p>
                 <p className="text-xs font-medium text-foreground">Investor Q&A</p>
                 <p className="text-[10px] text-emerald mt-1">Ready</p>
               </div>
             )}
             {emailVariants.length > 0 && (
-              <div onClick={switchToOutputs} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
+              <div onClick={() => switchToOutputs('pitch_email')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
                 <p className="text-[11px] text-muted-foreground/50 mb-1">{emailVariants.length} variants</p>
                 <p className="text-xs font-medium text-foreground">Pitch emails</p>
                 <p className="text-[10px] text-emerald mt-1">Ready</p>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* COMPLETED LOG */}
-      {completedOps.length > 0 && allOpportunities.length > 0 && (
-        <div className="rounded-sm border border-emerald/20 bg-emerald/5 overflow-hidden">
-          <button onClick={() => setShowCompleted(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-emerald/10 transition-colors text-left">
-            <div className="flex items-center gap-2">
-              <Check className="h-3 w-3 text-emerald" />
-              <span className="text-xs font-medium text-emerald/80">{completedOps.length} area{completedOps.length !== 1 ? "s" : ""} covered</span>
-            </div>
-            {showCompleted ? <ChevronUp className="h-3 w-3 text-emerald/50" /> : <ChevronDown className="h-3 w-3 text-emerald/50" />}
-          </button>
-          {showCompleted && (
-            <div className="border-t border-emerald/10 px-4 py-2.5 space-y-1.5">
-              {completedOps.map((op) => (
-                <div key={op.id} className="flex items-center gap-2 py-0.5">
-                  <Check className="h-2.5 w-2.5 text-emerald shrink-0" />
-                  <span className="text-[11px] text-foreground/50">{op.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -371,9 +371,9 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       {/* ADAPTIVE CTA */}
       <div className="pt-1">
         {allOpportunities.length > 0 ? (
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          <p className="text-xs text-secondary-foreground text-center leading-relaxed">
             Continue strengthening above, or{" "}
-            <button onClick={switchToOutputs} className="text-electric hover:underline transition-colors">review your materials</button>
+            <button onClick={() => switchToOutputs()} className="text-electric hover:underline transition-colors">review your materials</button>
             {" "}when ready.
           </p>
         ) : (

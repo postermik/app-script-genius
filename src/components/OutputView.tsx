@@ -316,6 +316,7 @@ export function OutputView() {
   useEffect(() => {
     const handler = (e: CustomEvent) => {
       if (e.detail?.tab) setActiveTab(e.detail.tab);
+      if (e.detail?.outputTab) setActiveOutputTab(e.detail.outputTab);
     };
     window.addEventListener('rhetoric:switch-tab', handler as EventListener);
     return () => window.removeEventListener('rhetoric:switch-tab', handler as EventListener);
