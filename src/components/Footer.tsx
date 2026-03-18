@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 
 const PRODUCT_LINKS = [
-  { label: "Product", path: "/" },
+  { label: "Sign In", path: "/auth" },
   { label: "Pricing", path: "/pricing" },
 ];
 
@@ -25,58 +25,36 @@ export function Footer() {
             <div className="flex flex-col gap-3">
               <Logo size={24} to="/" />
               <p className="text-[11px] text-muted-foreground/50">
-                © {new Date().getFullYear()} Rhetoric. All rights reserved.
+                &copy; {new Date().getFullYear()} Rhetoric. All rights reserved.
               </p>
             </div>
-
             <div className="flex flex-wrap gap-10 sm:gap-16">
               <div>
-                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
-                  Product
-                </p>
+                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">Product</p>
                 <ul className="space-y-2.5">
                   {PRODUCT_LINKS.map((link) => (
                     <li key={link.path}>
-                      <Link
-                        to={link.path}
-                        className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
-                      >
-                        {link.label}
-                      </Link>
+                      <Link to={link.path} className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
-                  Support
-                </p>
+                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">Support</p>
                 <ul className="space-y-2.5">
                   {SUPPORT_LINKS.map((link) => (
                     <li key={link.path}>
-                      <Link
-                        to={link.path}
-                        className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
-                      >
-                        {link.label}
-                      </Link>
+                      <Link to={link.path} className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">
-                  Legal
-                </p>
+                <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">Legal</p>
                 <ul className="space-y-2.5">
                   {LEGAL_LINKS.map((link) => (
                     <li key={link.path}>
-                      <Link
-                        to={link.path}
-                        className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors"
-                      >
-                        {link.label}
-                      </Link>
+                      <Link to={link.path} className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors">{link.label}</Link>
                     </li>
                   ))}
                 </ul>

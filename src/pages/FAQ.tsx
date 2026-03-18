@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 const FAQS = [
   {
     q: "What is Rhetoric?",
@@ -13,11 +15,11 @@ const FAQS = [
   },
   {
     q: "What do I get out at the end?",
-    a: "A structured narrative with a core thesis, story arc, pitch script, deck framework, market framing, and a readiness score. Depending on the mode, you'll also get board outlines, risk articulation, and competitive positioning.",
+    a: "A complete material system: core narrative, elevator pitch, slide framework, investor Q&A, pitch emails, and investment memo. The AI Guide identifies gaps in your story and helps you strengthen each section with research and suggestions.",
   },
   {
     q: "How is this different from ChatGPT or a generic deck template?",
-    a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, scores your readiness, and builds the story arc that investors actually follow. It's opinionated by design.",
+    a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, researches competitors and market sizing for you, and builds the story arc that investors actually follow. It's opinionated by design.",
   },
   {
     q: "Does it design slides or structure the story?",
@@ -41,7 +43,7 @@ const FAQS = [
   },
   {
     q: "What does Pro include?",
-    a: "Unlimited projects, unlimited refinements, all output modes (fundraising, board, strategy), PowerPoint export, advanced deck frameworks, and priority processing.",
+    a: "Unlimited projects, unlimited refinements, all output modes (fundraising, board, strategy), PowerPoint export, investor discovery with AI matching, pipeline tracker, and priority support.",
   },
   {
     q: "Can I cancel anytime?",
@@ -50,6 +52,10 @@ const FAQS = [
 ];
 
 export default function FAQ() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="flex-1 px-6 pt-24 pb-20">
       <div className="max-w-[720px] mx-auto">
@@ -60,7 +66,6 @@ export default function FAQ() {
         <p className="text-base text-muted-foreground mb-16 max-w-[560px]">
           Everything you need to know about Rhetoric.
         </p>
-
         <div className="space-y-10">
           {FAQS.map((faq, i) => (
             <div key={i} className="border-b border-border/40 pb-8 last:border-0">

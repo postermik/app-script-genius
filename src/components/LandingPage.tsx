@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Check, Zap, BarChart3, Users, Sparkles } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
-import { ProductShowcase, PresentationSlides } from "@/components/landing/ProductShowcase";
+import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
 
@@ -16,7 +16,7 @@ const FAQ_ITEMS = [
   { q: "What is Rhetoric?", a: "Rhetoric is an AI-powered narrative builder for founders and operators. You paste in your raw thinking: notes, bullet points, a rough thesis. Rhetoric structures it into an investor-grade pitch narrative, board update, or strategy memo. It focuses on argument, not aesthetics." },
   { q: "Who is it for?", a: "Founders raising capital, preparing board decks, or aligning a team around strategy. If you need to make a case that holds up in serious rooms, Rhetoric is built for you." },
   { q: "What do I paste in to start?", a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance, even if it's messy." },
-  { q: "What do I get out at the end?", a: "A complete fundraising material system: core narrative, elevator pitch, slide framework, investor Q&A, pitch emails, and investment memo. The AI Guide identifies gaps in your story and helps you strengthen each section." },
+  { q: "What do I get out at the end?", a: "A complete material system: core narrative, elevator pitch, slide framework, investor Q&A, pitch emails, and investment memo. The AI Guide identifies gaps in your story and helps you strengthen each section." },
   { q: "How is this different from ChatGPT or a generic deck template?", a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, researches competitors and market sizing for you, and builds the story arc that investors actually follow. It's opinionated by design." },
 ];
 
@@ -46,7 +46,8 @@ export function LandingPage() {
             Craft the narrative.
           </h1>
           <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
-            Pitch decks, strategy memos, board updates, and investor emails, all refined by AI coaching.
+            Pitch decks, strategy memos, board updates, and investor emails, all
+            refined by AI coaching.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
             className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2 glow-blue">
@@ -57,11 +58,13 @@ export function LandingPage() {
         {/* Hero product preview */}
         <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="bg-card/80 border border-border rounded-sm overflow-hidden shadow-2xl backdrop-blur-sm">
-            <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border">
-              <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald/60" />
-              <span className="ml-3 text-[10px] text-muted-foreground tracking-wider uppercase">Rhetoric · Narrative Generation</span>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald/60" />
+              </div>
+              <span className="text-[9px] text-muted-foreground/40 tracking-wider uppercase">Example Output</span>
             </div>
             <div className="p-4 sm:p-8">
               <div className="flex items-center gap-2 mb-1">
@@ -79,13 +82,32 @@ export function LandingPage() {
                   <p className="text-sm text-foreground/80">Consider adding a specific customer win to make the traction claim more concrete.</p>
                 </div>
               </div>
-              {/* Divider */}
+              {/* Slide framework preview */}
               <div className="border-t border-border mt-6 pt-5">
                 <div className="flex items-center gap-2 mb-4">
                   <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric">Slide Framework</p>
                   <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-sm">Ready</span>
                 </div>
-                <PresentationSlides />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
+                  {[
+                    { label: "Cover Slide", title: "Relay Pre-Seed Pitch" },
+                    { label: "Key Metrics", title: "Traction & Unit Economics" },
+                    { label: "Landscape", title: "Competitive Position" },
+                  ].map((slide) => (
+                    <div key={slide.label} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden sm:[aspect-ratio:16/10]">
+                      <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
+                        <div>
+                          <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">{slide.label}</p>
+                          <p className="text-sm font-semibold text-foreground mt-2">{slide.title}</p>
+                        </div>
+                        <div className="space-y-1 select-none opacity-30">
+                          <div className="h-1.5 bg-foreground/15 rounded-sm w-[70%]" />
+                          <div className="h-1.5 bg-foreground/15 rounded-sm w-[50%]" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -166,8 +188,12 @@ export function LandingPage() {
           <Accordion type="single" collapsible className="space-y-2">
             {FAQ_ITEMS.map((item, i) => (
               <AccordionItem key={i} value={`faq-${i}`} className="border border-border rounded-sm px-5 bg-card/30">
-                <AccordionTrigger className="text-sm text-foreground/90 hover:no-underline py-4">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-sm text-foreground/70 leading-relaxed pb-4">{item.a}</AccordionContent>
+                <AccordionTrigger className="text-sm text-foreground/90 hover:no-underline py-4 text-left">
+                  {item.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-foreground/70 leading-relaxed pb-4">
+                  {item.a}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

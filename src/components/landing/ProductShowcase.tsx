@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Sparkles, AlertTriangle } from "lucide-react";
 
 /* ── Scroll-triggered fade-in ── */
 function AnimatedEntry({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -17,14 +17,13 @@ function AnimatedEntry({ children, className = "", delay = 0 }: { children: Reac
   );
 }
 
-/* ── Generation Experience (animated progress bar) ── */
+/* ── Generation Experience ── */
 function GenerationPreview() {
   const [progress, setProgress] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [allDone, setAllDone] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
-
   const STEPS = ["Analyzing your input", "Structuring argument", "Writing sections", "Reviewing quality"];
 
   useEffect(() => {
@@ -33,12 +32,8 @@ function GenerationPreview() {
         started.current = true;
         let p = 0;
         const iv = setInterval(() => {
-          p += 2;
-          setProgress(Math.min(p, 100));
-          if (p <= 25) setActiveStep(0);
-          else if (p <= 55) setActiveStep(1);
-          else if (p <= 80) setActiveStep(2);
-          else setActiveStep(3);
+          p += 2; setProgress(Math.min(p, 100));
+          if (p <= 25) setActiveStep(0); else if (p <= 55) setActiveStep(1); else if (p <= 80) setActiveStep(2); else setActiveStep(3);
           if (p >= 100) { clearInterval(iv); setTimeout(() => setAllDone(true), 1500); }
         }, 60);
       }
@@ -62,11 +57,7 @@ function GenerationPreview() {
             const done = allDone ? true : i < activeStep;
             const active = !allDone && i === activeStep;
             if (!allDone && i > activeStep) return null;
-            return (
-              <p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>
-                {done ? "\u2713" : "\u2192"} {step}
-              </p>
-            );
+            return (<p key={step} className={`text-xs transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>{done ? "\u2713" : "\u2192"} {step}</p>);
           })}
         </div>
       </div>
@@ -74,68 +65,63 @@ function GenerationPreview() {
   );
 }
 
-/* ── Narrative Guide Preview (replaces old ReadinessPreview) ── */
+/* ── Narrative Guide Preview ── */
 function GuidePreview() {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: 0.3 });
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
 
-  const cards = [
-    { label: "Problem", covered: true },
-    { label: "Market", covered: true },
-    { label: "Differentiation", covered: false, hint: "Name your competitors" },
-    { label: "Traction", covered: true },
+  const cards: { label: string; state: "covered" | "strengthen" | "missing"; hint?: string }[] = [
+    { label: "Problem", state: "covered" },
+    { label: "Market", state: "covered" },
+    { label: "Traction", state: "strengthen", hint: "Add growth metrics" },
+    { label: "Differentiation", state: "missing", hint: "Name your competitors" },
   ];
 
   return (
     <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
-        {/* Consultant summary */}
         <div>
-          <p className="text-[10px] font-medium text-emerald uppercase tracking-wider mb-2">Investor Ready</p>
+          <p className="text-[10px] font-medium text-electric uppercase tracking-wider mb-2">Investor Ready</p>
           <p className="text-xs text-foreground/70 leading-relaxed">
-            Strong problem framing with real cost data. Add competitive positioning to close the last gap investors will ask about.
+            Strong problem framing with real cost data. Add competitive positioning and growth metrics to close the gaps investors will surface.
           </p>
         </div>
-        {/* Segmented progress bar */}
         <div className="flex gap-1">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-              i < 7 ? "bg-electric" : "bg-[hsl(222_16%_16%)]"
+              i < 6 ? "bg-electric" : "bg-[hsl(222_16%_16%)]"
             }`} style={{ transitionDelay: visible ? `${i * 80}ms` : "0ms", opacity: visible ? 1 : 0 }} />
           ))}
         </div>
-        {/* Mini narrative cards */}
         <div className="grid grid-cols-2 gap-1.5">
-          {cards.map((card, i) => (
-            <div key={card.label}
-              className={`rounded-sm border p-2.5 transition-all duration-500 ${
-                card.covered
-                  ? "border-l-2 border-l-emerald border-t border-r border-b border-t-[hsl(217_33%_15%)] border-r-[hsl(217_33%_15%)] border-b-[hsl(217_33%_15%)] bg-emerald/[0.02]"
-                  : "border-l-2 border-l-electric border-t border-r border-b border-t-[hsl(217_33%_15%)] border-r-[hsl(217_33%_15%)] border-b-[hsl(217_33%_15%)] bg-electric/[0.02]"
-              }`}
-              style={{ opacity: visible ? 1 : 0, transitionDelay: `${(i + 3) * 100}ms` }}
-            >
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-[10px] font-semibold text-foreground/90">{card.label}</span>
-                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${
-                  card.covered ? "bg-emerald/10 text-emerald" : "bg-electric/10 text-electric"
-                }`}>
-                  {card.covered ? "Covered" : "Strengthen"}
-                </span>
+          {cards.map((card, i) => {
+            const borderColor = card.state === "covered" ? "border-l-emerald" : card.state === "strengthen" ? "border-l-electric" : "border-l-amber-400";
+            const bgColor = card.state === "covered" ? "bg-emerald/[0.02]" : card.state === "strengthen" ? "bg-electric/[0.02]" : "bg-amber-400/[0.03]";
+            const badgeColor = card.state === "covered" ? "bg-emerald/10 text-emerald" : card.state === "strengthen" ? "bg-electric/10 text-electric" : "bg-amber-400/10 text-amber-400";
+            const badgeLabel = card.state === "covered" ? "Covered" : card.state === "strengthen" ? "Strengthen" : "Missing";
+            return (
+              <div key={card.label}
+                className={`rounded-sm border border-l-2 ${borderColor} border-t border-r border-b border-t-[hsl(217_33%_15%)] border-r-[hsl(217_33%_15%)] border-b-[hsl(217_33%_15%)] ${bgColor} p-2.5 transition-all duration-500`}
+                style={{ opacity: visible ? 1 : 0, transitionDelay: `${(i + 3) * 100}ms` }}
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] font-semibold text-foreground/90">{card.label}</span>
+                  <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${badgeColor}`}>{badgeLabel}</span>
+                </div>
+                {card.hint && (
+                  <p className={`text-[9px] flex items-center gap-1 mt-1 ${card.state === "missing" ? "text-amber-400/70" : "text-electric/70"}`}>
+                    {card.state === "missing" ? <AlertTriangle className="h-2.5 w-2.5 shrink-0" /> : <Sparkles className="h-2.5 w-2.5 shrink-0" />}
+                    {card.hint}
+                  </p>
+                )}
               </div>
-              {card.hint && (
-                <p className="text-[9px] text-electric/70 flex items-center gap-1 mt-1">
-                  <Sparkles className="h-2.5 w-2.5 shrink-0" /> {card.hint}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -146,23 +132,13 @@ function GuidePreview() {
 function RevenueSparkline() {
   const points = [20, 28, 25, 38, 42, 55, 60, 72, 68, 85, 95, 100];
   const w = 280, h = 80, px = 0, py = 4;
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const coords = points.map((v, i) => {
-    const x = px + (i / (points.length - 1)) * (w - 2 * px);
-    const y = py + (1 - (v - min) / (max - min)) * (h - 2 * py);
-    return `${x},${y}`;
-  });
+  const max = Math.max(...points); const min = Math.min(...points);
+  const coords = points.map((v, i) => { const x = px + (i / (points.length - 1)) * (w - 2 * px); const y = py + (1 - (v - min) / (max - min)) * (h - 2 * py); return `${x},${y}`; });
   const line = `M${coords.join(" L")}`;
   const area = `${line} L${w},${h} L0,${h} Z`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="hsl(155 60% 45%)" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="hsl(155 60% 45%)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
+      <defs><linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(155 60% 45%)" stopOpacity="0.25" /><stop offset="100%" stopColor="hsl(155 60% 45%)" stopOpacity="0" /></linearGradient></defs>
       <path d={area} fill="url(#sparkFill)" />
       <path d={line} fill="none" stroke="hsl(155 60% 45%)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -177,94 +153,20 @@ function FormatChartCard() {
     <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="flex w-full border-b border-[hsl(217_33%_15%)] sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
-          <span key={tab} className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${
-            tab === ACTIVE ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]" : "text-[hsl(215_20%_44%)]"
-          }`}>
-            {tab}
-            {tab === ACTIVE && <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />}
+          <span key={tab} className={`font-mono text-[10px] sm:text-[11px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${tab === ACTIVE ? "text-foreground/90 bg-[hsla(217,90%,54%,0.06)]" : "text-[hsl(215_20%_44%)]"}`}>
+            {tab}{tab === ACTIVE && <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-electric" />}
           </span>
         ))}
       </div>
       <div className="bg-gradient-to-br from-card via-card to-secondary/30 p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: 220 }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
-        <div className="relative z-10">
-          <p className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p>
-          <p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p>
-        </div>
+        <div className="relative z-10"><p className="text-xs font-medium tracking-[0.12em] uppercase text-foreground/70">Annual Recurring Revenue</p><p className="text-3xl font-bold text-foreground tracking-tight mt-1">$1.8M</p></div>
         <div className="relative z-10 flex-1 my-4"><RevenueSparkline /></div>
         <div className="relative z-10 flex gap-8">
-          <div>
-            <p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">QoQ</p>
-            <p className="text-base font-bold text-emerald">+34%</p>
-          </div>
-          <div>
-            <p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">NRR</p>
-            <p className="text-base font-bold text-foreground">128%</p>
-          </div>
+          <div><p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">QoQ</p><p className="text-base font-bold text-emerald">+34%</p></div>
+          <div><p className="text-[10px] tracking-[0.1em] uppercase text-foreground/50">NRR</p><p className="text-base font-bold text-foreground">128%</p></div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Presentation-Ready Slides ── */
-export function PresentationSlides() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
-      <AnimatedEntry delay={0}>
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
-            <div>
-              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Cover Slide</p>
-              <p className="text-sm font-semibold text-foreground mt-2">Relay Pre-Seed Pitch</p>
-            </div>
-            <div>
-              <div className="w-8 h-[2px] bg-electric mb-2" />
-              <p className="text-[11px] text-[hsl(215_20%_44%)]">Relay · 2026</p>
-              <p className="text-[9px] text-[hsl(215_20%_44%)]/70">Confidential</p>
-            </div>
-          </div>
-        </div>
-      </AnimatedEntry>
-      <AnimatedEntry delay={100}>
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
-            <div>
-              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Key Metrics</p>
-              <p className="text-sm font-semibold text-foreground mt-2">Traction & Unit Economics</p>
-            </div>
-            <div className="grid grid-cols-3 gap-1 text-center">
-              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">$1.8M</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">ARR</p></div>
-              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-emerald truncate">+34%</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">QoQ</p></div>
-              <div className="min-w-0"><p className="font-mono text-sm sm:text-base font-bold text-foreground truncate">128%</p><p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]">NRR</p></div>
-            </div>
-          </div>
-        </div>
-      </AnimatedEntry>
-      <AnimatedEntry delay={200}>
-        <div className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden transition-all duration-200 hover:border-electric hover:-translate-y-[3px] sm:[aspect-ratio:16/10]">
-          <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
-            <div>
-              <p className="font-mono text-[8px] font-semibold tracking-[0.15em] uppercase text-[hsl(215_20%_44%)]">Landscape</p>
-              <p className="text-sm font-semibold text-foreground mt-2">Competitive Position</p>
-            </div>
-            <div className="relative w-full" style={{ height: 80 }}>
-              <div className="absolute inset-0 border-l border-b border-[hsl(217_33%_15%)]">
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-foreground/[0.03]" />
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-foreground/[0.03]" />
-                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "20%", top: "65%" }} />
-                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "35%", top: "45%" }} />
-                <div className="absolute w-2 h-2 rounded-full bg-[hsl(215_20%_44%)]" style={{ left: "50%", top: "70%" }} />
-                <div className="absolute w-2.5 h-2.5 rounded-full bg-electric" style={{ left: "75%", top: "20%", boxShadow: "0 0 8px hsla(217, 90%, 54%, 0.4)" }} />
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]/70">Low automation</p>
-              <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-[hsl(215_20%_44%)]/70">High automation</p>
-            </div>
-          </div>
-        </div>
-      </AnimatedEntry>
     </div>
   );
 }
@@ -281,10 +183,7 @@ function InvestorPreview() {
       <div className="divide-y divide-[hsl(217_33%_15%)]/50">
         {investors.map((inv) => (
           <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-foreground/90 font-medium">{inv.name}</p>
-              <p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p>
-            </div>
+            <div><p className="text-sm text-foreground/90 font-medium">{inv.name}</p><p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p></div>
             <span className="text-xs font-medium text-electric">{inv.match}% match</span>
           </div>
         ))}
@@ -300,25 +199,25 @@ export function ProductShowcase() {
       <div className="max-w-[1000px] mx-auto">
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Prompt &rarr; Output</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Prompt &rarr; Output</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">AI Narrative Guide</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">AI Narrative Guide</p>
             <GuidePreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Every Format, Ready to Use</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
             <FormatChartCard />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-electric mb-4">Find Your Investors</p>
+            <p className="text-xs font-mono font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
         </div>
