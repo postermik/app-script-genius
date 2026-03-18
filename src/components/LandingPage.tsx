@@ -45,7 +45,7 @@ export function LandingPage() {
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
             Craft your narrative.
           </h1>
-          <p className="text-lg text-foreground/85 max-w-[560px] mx-auto leading-relaxed mb-10">
+          <p className="text-lg text-foreground/85 max-w-[640px] mx-auto leading-relaxed mb-10">
             Turn rough notes into pitch decks, board updates, and strategy memos.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}

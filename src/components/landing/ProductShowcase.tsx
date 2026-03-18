@@ -202,25 +202,25 @@ export function ProductShowcase() {
       <div className="max-w-[1000px] mx-auto">
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">From Notes to Materials</p>
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">From Notes to Materials</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Built-in Consultant</p>
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Built-in Consultant</p>
             <ConsultantPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
             <FormatChartCard />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
+            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
             <InvestorPreview />
           </AnimatedEntry>
         </div>
