@@ -379,8 +379,8 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       {/* MATERIALS */}
       {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0) && (
         <div>
-          {/* Ready message when narrative is strong */}
-          {allOpportunities.length === 0 && completedOps.length > 0 && (
+          {/* Ready message when narrative is strong (70%+ = ready or exceptional tier) */}
+          {(strength.tier === "ready" || strength.tier === "exceptional") && (
             <p className="text-xs text-foreground/60 mb-3 leading-relaxed">
               Your narrative is ready. Export your materials or start finding investors.
             </p>
@@ -411,11 +411,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
 
       {/* ADAPTIVE CTA */}
       <div className="pt-1">
-        {allOpportunities.length > 0 ? (
-          <p className="text-xs text-secondary-foreground text-center leading-relaxed">
-            Continue strengthening your narrative above.
-          </p>
-        ) : (
+        {strength.tier === "ready" || strength.tier === "exceptional" ? (
           <div className="flex gap-2">
             <button onClick={() => switchToOutputs()}
               className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity">
@@ -426,6 +422,10 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
               Find investors
             </a>
           </div>
+        ) : (
+          <p className="text-xs text-secondary-foreground text-center leading-relaxed">
+            Continue strengthening your narrative above.
+          </p>
         )}
       </div>
     </div>
