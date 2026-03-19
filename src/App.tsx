@@ -29,6 +29,10 @@ import PitchEmailTemplate from "./pages/seo/PitchEmailTemplate";
 import FundraisingMaterials from "./pages/seo/FundraisingMaterials";
 import InvestorQAPrep from "./pages/seo/InvestorQAPrep";
 import BoardUpdateTemplate from "./pages/seo/BoardUpdateTemplate";
+import Blog from "./pages/Blog";
+import SeedMemoPost from "./pages/blog/SeedMemoPost";
+import PitchEmailPost from "./pages/blog/PitchEmailPost";
+import NarrativeVsDeckPost from "./pages/blog/NarrativeVsDeckPost";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +74,12 @@ const App = () => (
                 <Route path="/fundraising-materials-for-startups" element={<FundraisingMaterials />} />
                 <Route path="/investor-qa-prep" element={<InvestorQAPrep />} />
                 <Route path="/board-update-template" element={<BoardUpdateTemplate />} />
+
+                {/* Blog */}
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/what-investors-look-for-in-a-seed-memo" element={<SeedMemoPost />} />
+                <Route path="/blog/how-to-write-a-pitch-email-to-vcs" element={<PitchEmailPost />} />
+                <Route path="/blog/fundraising-narrative-vs-pitch-deck" element={<NarrativeVsDeckPost />} />
 
                 <Route path="*" element={<NotFound />} />
               </Route>

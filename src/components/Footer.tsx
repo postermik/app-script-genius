@@ -7,6 +7,7 @@ const PRODUCT_LINKS = [
 ];
 
 const SUPPORT_LINKS = [
+  { label: "Blog", path: "/blog" },
   { label: "FAQ", path: "/faq" },
   { label: "Contact", path: "/contact" },
 ];
