@@ -1525,73 +1525,116 @@ Return JSON: { "deckFramework": [...] }`,
     } else if (purpose === "board_meeting" || purpose === "board_update") {
       opportunities.push({
         id: "quarterly_metrics", label: "Include key metrics",
-        description: "Board members expect to see the numbers that matter most.",
-        prompt: "What are your top 3-5 metrics this quarter? (revenue, growth, burn, runway, etc.)",
+        description: "Board members expect to see the numbers that matter most, with context on what changed.",
+        prompt: "What are your top 3-5 metrics this period? (revenue, growth, burn, runway, etc.)",
         completed: /revenue|ARR|MRR|burn|runway|growth|churn|NRR|users|customers/i.test(allText),
         aiAssistAvailable: false, sectionHeading: "Traction", category: "Metrics", points: 15, layer: 1,
       });
       opportunities.push({
+        id: "progress_vs_plan", label: "Report progress against plan",
+        description: "What did you say you'd do last time? How did it go?",
+        prompt: "What were your milestones from last period and how did you perform against them?",
+        completed: /delivered|shipped|launched|completed|achieved|missed|behind|ahead|on track/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Traction", category: "Progress", points: 12, layer: 1,
+      });
+      opportunities.push({
         id: "risks_flagged", label: "Flag key risks",
-        description: "Boards respect transparency. Surface what keeps you up at night.",
+        description: "Boards respect transparency. Surface what keeps you up at night and how you're addressing it.",
         prompt: "What are the top 2-3 risks or challenges right now?",
         completed: /risk|challenge|concern|threat|headwind|obstacle/i.test(allText),
         aiAssistAvailable: false, sectionHeading: "Problem", category: "Risks", points: 15, layer: 1,
       });
       opportunities.push({
         id: "board_asks", label: "State your asks",
-        description: "Every board meeting should end with clear asks for the board.",
-        prompt: "What do you need from the board? (introductions, approval, guidance)",
+        description: "Every board meeting should end with specific, actionable asks. Not FYIs.",
+        prompt: "What do you need from the board? (introductions, approval, guidance, decisions)",
         completed: /ask|request|need from|approval|decision|guidance|introduction/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Asks", points: 12, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Asks", points: 15, layer: 1,
       });
       opportunities.push({
-        id: "next_milestones", label: "Define next milestones",
-        description: "What will you accomplish before the next board meeting?",
-        prompt: "What are your key milestones for the next quarter?",
-        completed: /milestone|next quarter|goal|target|plan to|aim to|objective/i.test(allText),
+        id: "cash_runway", label: "Report cash and runway",
+        description: "How much do you have and how long does it last? Every board wants to know.",
+        prompt: "What's your current cash position and runway in months?",
+        completed: /cash|runway|months.*remaining|bank|balance.*\$|burn.*rate/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Market", category: "Cash", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "next_milestones", label: "Define next period priorities",
+        description: "What will you accomplish before the next update? Be specific.",
+        prompt: "What are your key priorities and milestones for the next period?",
+        completed: /milestone|next quarter|next month|goal|target|plan to|aim to|objective|priority|priorities/i.test(allText),
         aiAssistAvailable: false, sectionHeading: "Vision", category: "Plan", points: 10, layer: 1,
       });
     } else if (purpose === "strategy") {
       opportunities.push({
         id: "strategic_context", label: "Set the context",
-        description: "What's changed that requires a strategic response?",
+        description: "What changed that requires a strategic response? The reader needs to feel the urgency.",
         prompt: "What market shift, competitive move, or internal change prompted this strategy?",
         completed: sectionText("Problem").length > 80,
         aiAssistAvailable: true, sectionHeading: "Problem", category: "Context", points: 15, layer: 1,
       });
       opportunities.push({
-        id: "strategic_options", label: "Present options",
-        description: "Strong strategy documents show the alternatives considered, not just the chosen path.",
+        id: "strategic_options", label: "Present options considered",
+        description: "Strong strategy documents show the alternatives, not just the chosen path.",
         prompt: "What are the 2-3 strategic options you're weighing?",
-        completed: /option|alternative|approach|path|scenario|strategy.*or/i.test(allText),
+        completed: /option|alternative|approach|path|scenario|strategy.*or|considered|evaluated/i.test(allText),
         aiAssistAvailable: false, sectionHeading: "Solution", category: "Options", points: 15, layer: 1,
       });
       opportunities.push({
+        id: "recommendation", label: "State your recommendation",
+        description: "Be clear about what you're recommending and why.",
+        prompt: "Which option do you recommend and what's the core reason?",
+        completed: /recommend|propose|suggest|our approach|chosen|decision|going with/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Solution", category: "Recommendation", points: 12, layer: 1,
+      });
+      opportunities.push({
         id: "execution_plan", label: "Define execution plan",
-        description: "Strategy without execution is just a slide deck.",
+        description: "Strategy without execution details is just a slide deck. Who does what, by when?",
         prompt: "What are the key execution steps and who owns them?",
-        completed: /timeline|phase|milestone|owner|responsible|execute|implement/i.test(allText),
+        completed: /timeline|phase|milestone|owner|responsible|execute|implement|by Q|by end of/i.test(allText),
         aiAssistAvailable: false, sectionHeading: "Vision", category: "Execution", points: 12, layer: 1,
       });
+      opportunities.push({
+        id: "success_metrics", label: "Define success metrics",
+        description: "How will you know this strategy is working? Pick 2-3 measurable indicators.",
+        prompt: "What metrics will indicate success? (e.g., revenue target, adoption rate, cost reduction)",
+        completed: /success.*metric|KPI|measure|indicator|track|target.*\d|goal.*\d/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Traction", category: "Success", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "dependencies", label: "Name dependencies and risks",
+        description: "What could block this? What's outside your control?",
+        prompt: "What external dependencies or risks could derail execution?",
+        completed: /depend|blocker|risk|assumption|require|contingent|if.*then/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Market", category: "Dependencies", points: 10, layer: 1,
+      });
     }
-    // TODO: Add board_update and strategy opportunities in future
 
     const completedOps = opportunities.filter(o => o.completed);
     const totalPoints = opportunities.reduce((sum, o) => sum + o.points, 0);
     const earnedPoints = completedOps.reduce((sum, o) => sum + o.points, 0);
     const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
+    // Tier labels adapt to the purpose
+    const isBoard = purpose === "board_meeting" || purpose === "board_update";
+    const isStrategy = purpose === "strategy";
+
     let tier: NarrativeStrength["tier"];
     let tierLabel: string;
     let tierDescription: string;
     if (percentage >= 90) {
-      tier = "exceptional"; tierLabel = "Exceptional"; tierDescription = "Your narrative is ready for any room.";
+      tier = "exceptional"; tierLabel = "Exceptional";
+      tierDescription = isBoard ? "Your update is thorough and actionable." : isStrategy ? "This memo is ready for the room." : "Your narrative is ready for any room.";
     } else if (percentage >= 70) {
-      tier = "ready"; tierLabel = "Investor Ready"; tierDescription = "Strong foundation. A few additions would make it stand out.";
+      tier = "ready";
+      tierLabel = isBoard ? "Board Ready" : isStrategy ? "Ready to Share" : "Investor Ready";
+      tierDescription = isBoard ? "Strong update. A few additions would make it complete." : isStrategy ? "Clear strategy. Tighten a few areas before sharing." : "Strong foundation. A few additions would make it stand out.";
     } else if (percentage >= 40) {
-      tier = "sharpening"; tierLabel = "Getting Sharp"; tierDescription = "Your story is taking shape. Keep building.";
+      tier = "sharpening"; tierLabel = "Getting Sharp";
+      tierDescription = isBoard ? "Your update is taking shape. Keep building." : isStrategy ? "The strategy is forming. Add more detail." : "Your story is taking shape. Keep building.";
     } else {
-      tier = "building"; tierLabel = "Story Built"; tierDescription = "Great start. Let's strengthen it together.";
+      tier = "building"; tierLabel = "Draft Started";
+      tierDescription = isBoard ? "Good start. Let's build out the key sections." : isStrategy ? "Good start. Let's flesh out the strategy." : "Great start. Let's strengthen it together.";
     }
 
     return {
