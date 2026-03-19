@@ -31,11 +31,11 @@ export const TIERS = {
     name: "Hobby",
     description: "For active founders.",
     features: [
-      "Unlimited drafts",
+      "Unlimited projects",
       "Full narrative guide with AI research",
-      "Inline AI suggestions",
       "Inline editing & refinement",
       "Export to PPT, DOCX & PDF",
+      "All output modes",
     ],
   },
   pro: {
@@ -59,11 +59,11 @@ export const TIERS = {
 
 export const FREE_PLAN = {
   name: "Free",
-  description: "Try it out.",
+  description: "See what Rhetoric builds.",
   features: [
-    "1 narrative draft",
+    "1 project",
+    "All outputs generated and visible",
     "AI narrative guide",
-    "All output modes",
   ],
 } as const;
 

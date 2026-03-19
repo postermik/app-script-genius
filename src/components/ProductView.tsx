@@ -125,8 +125,8 @@ export function ProductView() {
             {isFreeAndLocked && (
               <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
                 <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
-                <p className="text-sm font-medium text-foreground mb-2">You've used your free draft.</p>
-                <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
+                <p className="text-sm font-medium text-foreground mb-2">You've used your free project.</p>
+                <p className="text-sm text-muted-foreground mb-4">Upgrade to create unlimited projects, export materials, and edit inline.</p>
                 <button onClick={() => setUpgradeOpen(true)}
                   className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
               </div>

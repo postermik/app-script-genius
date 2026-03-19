@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: "Can it export to PowerPoint and Google Slides?",
-    a: "Pro users can export to PowerPoint (.pptx). You can then import that file into Google Slides. Direct Google Slides integration is on the roadmap.",
+    a: "Hobby and Pro users can export to PowerPoint (.pptx), Word (.docx), and PDF. You can import the PowerPoint file into Google Slides. Free users can see all generated outputs but exports are locked until you upgrade.",
   },
   {
     q: "Can I use my brand guidelines?",
@@ -43,7 +43,7 @@ const FAQS = [
   },
   {
     q: "What does Pro include?",
-    a: "Unlimited projects, unlimited refinements, all output modes (fundraising, board, strategy), PowerPoint export, investor discovery with AI matching, pipeline tracker, and priority support.",
+    a: "Everything in Hobby plus investor discovery with AI matching, pipeline tracker, data room, and priority support. Hobby gives you unlimited projects, full exports, inline editing, and AI research.",
   },
   {
     q: "Can I cancel anytime?",
