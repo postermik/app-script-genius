@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, Compass, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, Compass, X, Pencil, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
@@ -65,8 +65,10 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       const sectionHeading = data.ops[0]?.sectionHeading || "";
       const sectionContent = coreNarrative?.sections?.find((s: any) => s.heading.toLowerCase() === sectionHeading.toLowerCase())?.content || "";
       const preview = sectionContent.length > 120 ? sectionContent.slice(0, 120) + "..." : sectionContent;
+      // Missing = section has no meaningful content at all (< 30 chars) and has uncompleted ops
+      const isMissing = !allDone && sectionContent.length < 30 && category !== "Materials";
       return {
-        category, sectionHeading, sectionContent, preview, allDone,
+        category, sectionHeading, sectionContent, preview, allDone, isMissing,
         opportunities: data.uncompleted,
         completedOpportunities: data.completed,
         primaryOp: data.uncompleted[0] || null,
@@ -197,31 +199,32 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
             <div className="grid grid-cols-2 gap-2">
               {cards.filter(c => c.category !== "Materials").map((card) => {
                 const isActive = activeCard === card.category;
+                const borderColor = card.allDone ? "border-l-emerald" : card.isMissing ? "border-l-amber-400" : "border-l-electric";
                 return (
                   <div key={card.category}
                     onClick={() => { if (!isActive) { setActiveCard(card.category); setEditingSection(null); } }}
                     className={`rounded-sm border p-4 cursor-pointer transition-all duration-200 ${
                       isActive
-                        ? card.allDone ? "border-emerald/40 bg-emerald/[0.03]" : "border-electric/50 bg-electric/[0.04]"
-                        : card.allDone
-                        ? "border-l-[3px] border-l-emerald border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
-                        : "border-l-[3px] border-l-electric border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10"
+                        ? card.allDone ? "border-emerald/40 bg-emerald/[0.03]" : card.isMissing ? "border-amber-400/40 bg-amber-400/[0.03]" : "border-electric/50 bg-electric/[0.04]"
+                        : `border-l-[3px] ${borderColor} border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10`
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[13px] font-semibold text-foreground">{card.category}</span>
                       <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
-                        card.allDone ? "bg-emerald/10 text-emerald" : "bg-electric/10 text-electric"
+                        card.allDone ? "bg-emerald/10 text-emerald" :
+                        card.isMissing ? "bg-amber-400/10 text-amber-400" :
+                        "bg-electric/10 text-electric"
                       }`}>
-                        {card.allDone ? "Covered" : "Strengthen"}
+                        {card.allDone ? "Covered" : card.isMissing ? "Missing" : "Strengthen"}
                       </span>
                     </div>
                     {card.preview && (
                       <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{card.preview}</p>
                     )}
                     {card.primaryOp && !isActive && (
-                      <p className="text-[11px] text-electric mt-2 flex items-center gap-1.5 opacity-80">
-                        <Sparkles className="h-3 w-3 shrink-0" />
+                      <p className={`text-[11px] mt-2 flex items-center gap-1.5 opacity-80 ${card.isMissing ? "text-amber-400" : "text-electric"}`}>
+                        {card.isMissing ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <Sparkles className="h-3 w-3 shrink-0" />}
                         {card.primaryOp.description}
                       </p>
                     )}
@@ -288,13 +291,14 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                           </div>
                         ) : (
                           <div className="group relative">
-                            <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap cursor-text"
-                              onClick={(e) => { e.stopPropagation(); setEditingSection(card.sectionHeading); setEditBuffer(card.sectionContent); }}>
+                            <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">
                               {card.sectionContent}
                             </p>
-                            <span className="absolute top-0 right-0 text-[9px] text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
-                              click to edit
-                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingSection(card.sectionHeading); setEditBuffer(card.sectionContent); }}
+                              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 border border-transparent hover:border-border/40 transition-all">
+                              <Pencil className="h-3 w-3" /> Edit
+                            </button>
                           </div>
                         )}
                       </div>
