@@ -88,7 +88,7 @@ export default function Pricing() {
 
   const isButtonDisabled = (plan: typeof PLANS[0], current: boolean) => {
     if (!plan.tierId && current) return true;
-    if (loadingTier === plan.tierId) return true;
+    if (loadingTier && loadingTier === plan.tierId) return true;
     return false;
   };
 
@@ -159,7 +159,7 @@ export default function Pricing() {
                         ? "bg-primary text-primary-foreground hover:opacity-90 glow-blue"
                         : "border border-border text-foreground hover:border-muted-foreground/30"
                     }`}>
-                    {loadingTier === plan.tierId && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {loadingTier && loadingTier === plan.tierId && <Loader2 className="h-4 w-4 animate-spin" />}
                     {getButtonLabel(plan, current)}
                   </button>
                 </div>
