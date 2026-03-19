@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, TrendingUp, Lock, Compass, X, Pencil, AlertTriangle } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, Lock, Compass, X, Pencil, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
@@ -379,39 +379,33 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       {/* MATERIALS */}
       {(slideFw.length > 0 || qaItems.length > 0 || emailVariants.length > 0) && (
         <div>
+          {/* Ready message when narrative is strong */}
+          {allOpportunities.length === 0 && completedOps.length > 0 && (
+            <p className="text-xs text-foreground/60 mb-3 leading-relaxed">
+              Your narrative is ready. Export your materials or start finding investors.
+            </p>
+          )}
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
-          <div className={`grid gap-2 ${[slideFw, qaItems, emailVariants].filter(a => a.length > 0).length >= 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div className="flex flex-wrap gap-2 mb-4">
             {slideFw.length > 0 && (
-              <div onClick={() => switchToOutputs('slide_framework')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
-                <p className="text-[11px] text-muted-foreground/50 mb-1">{slideFw.length} slides</p>
-                <p className="text-xs font-medium text-foreground">Slide framework</p>
-                <p className="text-[10px] text-emerald mt-1">Ready</p>
-              </div>
+              <button onClick={() => switchToOutputs('slide_framework')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/></svg>
+                {slideFw.length} slides
+              </button>
             )}
             {qaItems.length > 0 && (
-              <div onClick={() => switchToOutputs('investor_qa')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
-                <p className="text-[11px] text-muted-foreground/50 mb-1">{qaItems.length} questions</p>
-                <p className="text-xs font-medium text-foreground">Investor Q&A</p>
-                <p className="text-[10px] text-emerald mt-1">Ready</p>
-              </div>
+              <button onClick={() => switchToOutputs('investor_qa')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M6 6.5c0-1.1.9-1.5 2-1.5s2 .7 2 1.5c0 1.5-2 1.5-2 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/><circle cx="8" cy="12" r="0.5" fill="currentColor" opacity="0.5"/></svg>
+                {qaItems.length} Q&A
+              </button>
             )}
             {emailVariants.length > 0 && (
-              <div onClick={() => switchToOutputs('pitch_email')} className="rounded-sm border border-border/60 border-b-2 border-b-emerald bg-card/30 p-3 text-center cursor-pointer hover:bg-muted/10 transition-colors">
-                <p className="text-[11px] text-muted-foreground/50 mb-1">{emailVariants.length} variants</p>
-                <p className="text-xs font-medium text-foreground">Pitch emails</p>
-                <p className="text-[10px] text-emerald mt-1">Ready</p>
-              </div>
+              <button onClick={() => switchToOutputs('pitch_email')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.5"/></svg>
+                {emailVariants.length} emails
+              </button>
             )}
           </div>
-        </div>
-      )}
-
-      {/* ALL DONE */}
-      {allOpportunities.length === 0 && completedOps.length > 0 && (
-        <div className="card-gradient rounded-sm border border-emerald/30 p-5 text-center">
-          <Check className="h-6 w-6 text-emerald mx-auto mb-2" />
-          <p className="text-sm font-semibold text-emerald mb-1">Your narrative is ready for the room</p>
-          <p className="text-xs text-muted-foreground">All key areas covered. Export your materials or explore investors.</p>
         </div>
       )}
 
@@ -419,20 +413,18 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
       <div className="pt-1">
         {allOpportunities.length > 0 ? (
           <p className="text-xs text-secondary-foreground text-center leading-relaxed">
-            Continue strengthening above, or{" "}
-            <button onClick={() => switchToOutputs()} className="text-electric hover:underline transition-colors">review your materials</button>
-            {" "}when ready.
+            Continue strengthening your narrative above.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <a href="/raise/investors"
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold border border-foreground/30 rounded-sm hover:bg-muted/10 hover:border-foreground/50 transition-colors text-foreground">
-              <TrendingUp className="h-3.5 w-3.5" />Find Investors
-            </a>
-            <button onClick={() => document.querySelector('[data-export-trigger]')?.click()}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity">
-              Export Materials
+          <div className="flex gap-2">
+            <button onClick={() => switchToOutputs()}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity">
+              Export materials
             </button>
+            <a href="/raise/investors"
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border/60 rounded-sm hover:bg-muted/10 hover:border-border transition-colors text-foreground/70">
+              Find investors
+            </a>
           </div>
         )}
       </div>
