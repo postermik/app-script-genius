@@ -4,7 +4,7 @@ import { useDecksmith } from "@/context/DecksmithContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { OutputView } from "@/components/OutputView";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check } from "lucide-react";
+import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, Project } from "@/types/narrative";
 import type { IntakeSelections } from "@/types/rhetoric";
@@ -16,11 +16,13 @@ import { IntakeCard } from "@/components/intake/IntakeCard";
 import { toast } from "sonner";
 
 const MODES: { value: OutputMode | "auto"; label: string }[] = [
-  { value: "auto", label: "Auto Detect" }, { value: "fundraising", label: "Fundraising" },
-  { value: "board_update", label: "Board Update" }, { value: "strategy", label: "Strategy Memo" },
-  { value: "product_vision", label: "Product Vision" }, { value: "investor_update", label: "Investor Update" },
+  { value: "auto", label: "Auto Detect" },
+  { value: "fundraising", label: "Fundraising" },
+  { value: "board_update", label: "Board Update" },
+  { value: "strategy", label: "Strategy Memo" },
+  { value: "product_vision", label: "Product Vision" },
+  { value: "investor_update", label: "Investor Update" },
 ];
-
 
 export function ProductView() {
   const navigate = useNavigate();
@@ -28,7 +30,6 @@ export function ProductView() {
   const { subscribed } = useSubscription();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [showIntake, setShowIntake] = useState(false);
-
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,17 +50,12 @@ export function ProductView() {
   };
 
   const handleIntakeGenerate = async (selections: IntakeSelections) => {
-    // Sort initial batch by speed (fastest first); subsequent adds will be appended
     const sortedOutputs = sortBySpeed(selections.outputs);
     setIntakeSelections({ ...selections, outputs: sortedOutputs });
     setShowIntake(false);
-    // Map purpose to mode
     const purposeToMode: Record<string, OutputMode | "auto"> = {
-      investor_pitch: "fundraising",
-      board_update: "board_update",
-      strategy_memo: "strategy",
-      team_alignment: "auto",
-      general_narrative: "auto",
+      investor_pitch: "fundraising", board_update: "board_update", strategy_memo: "strategy",
+      team_alignment: "auto", general_narrative: "auto",
     };
     setSelectedMode(purposeToMode[selections.purpose] || "auto");
     await generate();
@@ -76,29 +72,22 @@ export function ProductView() {
   const handleFileUpload = useCallback(async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "pdf" && ext !== "pptx" && ext !== "docx") {
-      toast.error("Please upload a PDF, PPTX, or DOCX file.");
-      return;
+      toast.error("Please upload a PDF, PPTX, or DOCX file."); return;
     }
     if (file.size > 20 * 1024 * 1024) {
-      toast.error("File is too large. Maximum size is 20MB.");
-      return;
+      toast.error("File is too large. Maximum size is 20MB."); return;
     }
     setUploadingFile(file.name);
     try {
       const extractedText = await parseDeckFile(file);
-      if (!extractedText.trim()) {
-        toast.error("No text could be extracted from this file.");
-        return;
-      }
+      if (!extractedText.trim()) { toast.error("No text could be extracted from this file."); return; }
       setUploadingFile(null);
       setRawInput(`Evaluate this document:\n\n${extractedText}`);
       toast.success(`Extracted text from ${file.name}. Review and hit Generate.`);
     } catch (e: any) {
       console.error("File parsing error:", e);
       toast.error(e.message || "Failed to parse the file.");
-    } finally {
-      setUploadingFile(null);
-    }
+    } finally { setUploadingFile(null); }
   }, [setRawInput]);
 
   if (output || isGenerating) return <OutputView />;
@@ -108,53 +97,40 @@ export function ProductView() {
       <div className="flex-1 flex flex-col items-center px-6 pt-20">
         <div className="max-w-[720px] w-full animate-fade-in">
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-12">What are you building?</h1>
-
           <div className="space-y-5">
-            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..." rows={8} disabled={isFreeAndLocked || isGenerating} className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
-
-            {/* Intake card */}
+            <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
+              placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
+              rows={8} disabled={isFreeAndLocked || isGenerating}
+              className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {showIntake && !isGenerating && (
-              <IntakeCard
-                rawInput={rawInput}
-                onGenerate={handleIntakeGenerate}
-                onCancel={() => setShowIntake(false)}
-              />
+              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => setShowIntake(false)} />
             )}
-
             {!showIntake && !isFreeAndLocked && !isGenerating && (
               <div className="space-y-3">
                 <div className="flex gap-2">
-                  <button onClick={handleShowIntake} disabled={!rawInput.trim()} className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                  <button onClick={handleShowIntake} disabled={!rawInput.trim()}
+                    className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
                     Generate
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.pptx,.docx"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                      e.target.value = "";
-                    }}
-                  />
-                  <button onClick={() => fileInputRef.current?.click()} disabled={!!uploadingFile} className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-sm hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
+                  <input ref={fileInputRef} type="file" accept=".pdf,.pptx,.docx" className="hidden"
+                    onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file); e.target.value = ""; }} />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={!!uploadingFile}
+                    className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-sm hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
                     {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {uploadingFile ? "Extracting…" : "Upload"}
+                    {uploadingFile ? "Extracting..." : "Upload"}
                   </button>
                 </div>
               </div>
             )}
-
             {isFreeAndLocked && (
               <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
                 <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
                 <p className="text-sm font-medium text-foreground mb-2">You've used your free draft.</p>
                 <p className="text-sm text-muted-foreground mb-4">Upgrade to keep generating narratives, refining sections, and exporting decks.</p>
-                <button onClick={() => setUpgradeOpen(true)} className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
+                <button onClick={() => setUpgradeOpen(true)}
+                  className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
               </div>
             )}
-
             {isGenerating && <GenerationStepper />}
           </div>
         </div>
@@ -177,21 +153,24 @@ export function ProductView() {
           </div>
         )}
       </div>
+
+      {/* Settings link - bottom left, matches project sidebar placement */}
+      <button onClick={() => navigate("/settings")}
+        className="fixed bottom-5 left-5 flex items-center gap-2 text-xs text-muted-foreground/50 hover:text-foreground/80 transition-colors z-40">
+        <Settings className="h-3.5 w-3.5" /> Settings
+      </button>
+
       <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </div>
   );
 }
 
 const MODE_LABELS: Record<string, string> = {
-  fundraising: "Fundraising",
-  board_update: "Board Meeting",
-  board_meeting: "Board Meeting",
-  strategy: "Strategy",
+  fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy",
 };
 
 function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
   const [copied, setCopied] = useState(false);
-
   const copyPrompt = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(project.raw_input || "");
@@ -199,7 +178,6 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
     toast.success("Prompt copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
-
   return (
     <div className="card-gradient border border-border rounded-sm p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all">
       <div className="flex items-start justify-between mb-1.5">
