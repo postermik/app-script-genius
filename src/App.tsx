@@ -26,6 +26,9 @@ import NotFound from "./pages/NotFound";
 import AIPitchDeckGenerator from "./pages/seo/AIPitchDeckGenerator";
 import InvestorMemoGenerator from "./pages/seo/InvestorMemoGenerator";
 import PitchEmailTemplate from "./pages/seo/PitchEmailTemplate";
+import FundraisingMaterials from "./pages/seo/FundraisingMaterials";
+import InvestorQAPrep from "./pages/seo/InvestorQAPrep";
+import BoardUpdateTemplate from "./pages/seo/BoardUpdateTemplate";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +67,9 @@ const App = () => (
                 <Route path="/ai-pitch-deck-generator" element={<AIPitchDeckGenerator />} />
                 <Route path="/investor-memo-generator" element={<InvestorMemoGenerator />} />
                 <Route path="/pitch-email-template" element={<PitchEmailTemplate />} />
+                <Route path="/fundraising-materials-for-startups" element={<FundraisingMaterials />} />
+                <Route path="/investor-qa-prep" element={<InvestorQAPrep />} />
+                <Route path="/board-update-template" element={<BoardUpdateTemplate />} />
 
                 <Route path="*" element={<NotFound />} />
               </Route>
