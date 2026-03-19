@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Check, Zap, BarChart3, Users, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Zap, BarChart3, Users, Sparkles, ShieldCheck } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
@@ -10,6 +10,7 @@ const PROOF = [
   { icon: Zap, text: "Replaces $10K pitch consultants" },
   { icon: BarChart3, text: "Trained on narratives that raised $7B+" },
   { icon: Users, text: "Built by operators, not prompt engineers" },
+  { icon: ShieldCheck, text: "Your inputs stay encrypted and private" },
 ];
 
 const FAQ_ITEMS = [
@@ -18,6 +19,7 @@ const FAQ_ITEMS = [
   { q: "What do I paste in to start?", a: "Anything that represents your current thinking: a paragraph about what your company does, bullet-point notes from a brainstorm, a rough draft of your thesis. Rhetoric works best when you bring the substance, even if it's messy." },
   { q: "What do I get out at the end?", a: "A complete material system: core narrative, elevator pitch, slide framework, investor Q&A, pitch emails, and investment memo. The AI Guide identifies gaps in your story and helps you strengthen each section." },
   { q: "How is this different from ChatGPT or a generic deck template?", a: "ChatGPT gives you text. Templates give you layout. Neither gives you argument structure. Rhetoric pressure-tests your thesis, identifies narrative gaps, researches competitors and market sizing for you, and builds the story arc that investors actually follow. It's opinionated by design." },
+  { q: "Is my data secure?", a: "Your inputs are encrypted in transit and at rest. We never use your data to train AI models. Projects are stored in your account and deletable at any time. We process your content to generate outputs. That's it." },
 ];
 
 const PLANS = [
@@ -120,9 +122,9 @@ export function LandingPage() {
 
       {/* ── Credibility Bar ── */}
       <section className="px-4 sm:px-6 py-10 sm:py-12 border-y border-border">
-        <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-12">
+        <div className="max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-10 sm:gap-y-4">
           {PROOF.map((p) => (
-            <div key={p.text} className="flex items-center gap-2.5 whitespace-nowrap">
+            <div key={p.text} className="flex items-center gap-2.5">
               <p.icon className="h-4 w-4 text-electric shrink-0" />
               <span className="font-medium text-foreground text-sm">{p.text}</span>
             </div>

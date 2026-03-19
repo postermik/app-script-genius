@@ -35,7 +35,7 @@ const FAQS = [
   },
   {
     q: "What about confidentiality and data?",
-    a: "Your inputs are never used to train models. We process your content to generate outputs and store project data in your account. You can delete your projects at any time. We use industry-standard encryption in transit and at rest.",
+    a: "Your inputs are encrypted in transit and at rest. We never use your data to train AI models. Projects are stored in your account and deletable at any time. We process your content to generate outputs. That's it.",
   },
   {
     q: "Can I collaborate with my team?",
