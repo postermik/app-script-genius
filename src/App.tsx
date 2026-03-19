@@ -33,6 +33,7 @@ import Blog from "./pages/Blog";
 import SeedMemoPost from "./pages/blog/SeedMemoPost";
 import PitchEmailPost from "./pages/blog/PitchEmailPost";
 import NarrativeVsDeckPost from "./pages/blog/NarrativeVsDeckPost";
+import Promo from "./pages/Promo";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,8 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/promo" element={<Promo />} />
+                <Route path="/promo/:code" element={<Promo />} />
 
                 {/* SEO landing pages */}
                 <Route path="/ai-pitch-deck-generator" element={<AIPitchDeckGenerator />} />

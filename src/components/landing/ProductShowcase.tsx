@@ -86,7 +86,7 @@ function ConsultantPreview() {
     <div ref={ref} className="bg-[hsl(222_47%_6%)] border border-[hsl(217_33%_15%)] rounded-[10px] overflow-hidden">
       <div className="p-5 space-y-4">
         <div>
-          <p className="text-[10px] font-medium text-electric uppercase tracking-wider mb-2">Investor Ready</p>
+          <p className="text-[10px] font-medium text-electric uppercase tracking-wider mb-2">Getting Sharp</p>
           <p className="text-[11px] text-foreground/70 leading-relaxed">
             Strong problem framing with real cost data. Add competitive positioning and growth metrics to close the gaps investors will surface.
           </p>
