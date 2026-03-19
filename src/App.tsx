@@ -23,6 +23,9 @@ import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import AIPitchDeckGenerator from "./pages/seo/AIPitchDeckGenerator";
+import InvestorMemoGenerator from "./pages/seo/InvestorMemoGenerator";
+import PitchEmailTemplate from "./pages/seo/PitchEmailTemplate";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +40,7 @@ const App = () => (
             <Routes>
               {/* Public data room - outside RootLayout for clean presentation */}
               <Route path="/room/:slug" element={<PublicDataRoom />} />
+
               <Route element={<RootLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -55,6 +59,12 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
+
+                {/* SEO landing pages */}
+                <Route path="/ai-pitch-deck-generator" element={<AIPitchDeckGenerator />} />
+                <Route path="/investor-memo-generator" element={<InvestorMemoGenerator />} />
+                <Route path="/pitch-email-template" element={<PitchEmailTemplate />} />
+
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
