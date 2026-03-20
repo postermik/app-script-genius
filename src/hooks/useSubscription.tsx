@@ -5,6 +5,7 @@ interface SubscriptionState {
   subscribed: boolean;
   productId: string | null;
   subscriptionEnd: string | null;
+  subscriptionStatus: string | null;
   loading: boolean;
 }
 
@@ -16,6 +17,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   subscribed: false,
   productId: null,
   subscriptionEnd: null,
+  subscriptionStatus: null,
   loading: true,
   checkSubscription: async () => {},
 });
@@ -72,6 +74,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     subscribed: false,
     productId: null,
     subscriptionEnd: null,
+    subscriptionStatus: null,
     loading: true,
   });
 
@@ -79,7 +82,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setState({ subscribed: false, productId: null, subscriptionEnd: null, loading: false });
+        setState({ subscribed: false, productId: null, subscriptionEnd: null, subscriptionStatus: null, loading: false });
         return;
       }
 
@@ -92,12 +95,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       if (profile?.forced_tier === "pro") {
         console.log("[Subscription] forced_tier=pro override active");
-        setState({ subscribed: true, productId: TIERS.pro.product_id, subscriptionEnd: null, loading: false });
+        setState({ subscribed: true, productId: TIERS.pro.product_id, subscriptionEnd: null, subscriptionStatus: "forced", loading: false });
         return;
       }
       if (profile?.forced_tier === "hobby") {
         console.log("[Subscription] forced_tier=hobby override active");
-        setState({ subscribed: true, productId: TIERS.hobby.product_id, subscriptionEnd: null, loading: false });
+        setState({ subscribed: true, productId: TIERS.hobby.product_id, subscriptionEnd: null, subscriptionStatus: "forced", loading: false });
         return;
       }
 
@@ -109,6 +112,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         subscribed: data.subscribed ?? false,
         productId: data.product_id ?? null,
         subscriptionEnd: data.subscription_end ?? null,
+        subscriptionStatus: data.status ?? null,
         loading: false,
       });
     } catch {
