@@ -8,7 +8,7 @@ import type { Session } from "@supabase/supabase-js";
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { subscribed, productId, subscriptionEnd, subscriptionStatus, loading: subLoading } = useSubscription();
+  const { subscribed, productId, subscriptionEnd, subscriptionStatus, cancelAtPeriodEnd, loading: subLoading } = useSubscription();
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [forcedTier, setForcedTier] = useState<string | null>(null);
@@ -27,9 +27,12 @@ export default function Settings() {
   const isHobby = subscribed && productId === TIERS.hobby.product_id;
   const isForced = forcedTier === "pro" || forcedTier === "hobby";
   const isTrialing = subscriptionStatus === "trialing";
+  const isCanceled = cancelAtPeriodEnd;
 
   const tierLabel = isForced
     ? `${forcedTier === "pro" ? "Pro" : "Hobby"} (Admin Override)`
+    : isCanceled
+    ? `${isPro ? "Pro" : "Hobby"} (Canceled)`
     : isTrialing
     ? `${isPro ? "Pro" : "Hobby"} Trial`
     : isPro ? "Pro" : isHobby ? "Hobby" : "Free";
@@ -39,14 +42,20 @@ export default function Settings() {
     ? Math.max(0, Math.ceil((new Date(subscriptionEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
 
+  const endDate = subscriptionEnd
+    ? new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
+
   const tierPrice = isForced ? null
+    : isCanceled
+    ? `Subscription canceled. Active until ${endDate || "end of billing period"}.`
     : isTrialing
     ? `Free trial. ${trialDaysRemaining !== null ? `${trialDaysRemaining} day${trialDaysRemaining !== 1 ? "s" : ""} remaining.` : ""} Then $${isPro ? TIERS.pro.monthlyPrice : TIERS.hobby.monthlyPrice}/mo`
     : isPro ? `$${TIERS.pro.monthlyPrice}/mo`
     : isHobby ? `$${TIERS.hobby.monthlyPrice}/mo`
     : null;
 
-  const renewalDate = !isForced && !isTrialing && subscriptionEnd
+  const renewalDate = !isForced && !isTrialing && !isCanceled && subscriptionEnd
     ? new Date(subscriptionEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : null;
 

@@ -6,6 +6,7 @@ interface SubscriptionState {
   productId: string | null;
   subscriptionEnd: string | null;
   subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
   loading: boolean;
 }
 
@@ -18,6 +19,7 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
   productId: null,
   subscriptionEnd: null,
   subscriptionStatus: null,
+  cancelAtPeriodEnd: false,
   loading: true,
   checkSubscription: async () => {},
 });
@@ -75,6 +77,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     productId: null,
     subscriptionEnd: null,
     subscriptionStatus: null,
+    cancelAtPeriodEnd: false,
     loading: true,
   });
 
@@ -82,7 +85,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setState({ subscribed: false, productId: null, subscriptionEnd: null, subscriptionStatus: null, loading: false });
+        setState({ subscribed: false, productId: null, subscriptionEnd: null, subscriptionStatus: null, cancelAtPeriodEnd: false, loading: false });
         return;
       }
 
@@ -95,12 +98,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       if (profile?.forced_tier === "pro") {
         console.log("[Subscription] forced_tier=pro override active");
-        setState({ subscribed: true, productId: TIERS.pro.product_id, subscriptionEnd: null, subscriptionStatus: "forced", loading: false });
+        setState({ subscribed: true, productId: TIERS.pro.product_id, subscriptionEnd: null, subscriptionStatus: "forced", cancelAtPeriodEnd: false, loading: false });
         return;
       }
       if (profile?.forced_tier === "hobby") {
         console.log("[Subscription] forced_tier=hobby override active");
-        setState({ subscribed: true, productId: TIERS.hobby.product_id, subscriptionEnd: null, subscriptionStatus: "forced", loading: false });
+        setState({ subscribed: true, productId: TIERS.hobby.product_id, subscriptionEnd: null, subscriptionStatus: "forced", cancelAtPeriodEnd: false, loading: false });
         return;
       }
 
@@ -113,6 +116,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         productId: data.product_id ?? null,
         subscriptionEnd: data.subscription_end ?? null,
         subscriptionStatus: data.status ?? null,
+        cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
         loading: false,
       });
     } catch {
