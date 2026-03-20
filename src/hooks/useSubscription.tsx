@@ -22,9 +22,9 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 
 export const TIERS = {
   hobby: {
-    price_id: "price_1T6JwBDqdQWdRyBVWrslYqfx",
-    annual_price_id: "price_1T7QQMDqdQWdRyBV8iodNkIj",
-    product_id: "prod_U4SrUy9qxNChoO",
+    price_id: "price_1TD4KbB7jRg3HnkHbls1bqEx",
+    annual_price_id: "price_1TD4KbB7jRg3HnkH47kxyPvK",
+    product_id: "prod_UBRDuVglIUqv6B",
     monthlyPrice: 20,
     annualMonthlyPrice: 16,
     annualYearlyPrice: 192,
@@ -39,9 +39,9 @@ export const TIERS = {
     ],
   },
   pro: {
-    price_id: "price_1T6JwNDqdQWdRyBVnIXQc9Jn",
-    annual_price_id: "price_1T7QQcDqdQWdRyBVZUkYKRSE",
-    product_id: "prod_U4SsYqz1XAGBR4",
+    price_id: "price_1TD4KnB7jRg3HnkHSWr0a1Ud",
+    annual_price_id: "price_1TD4L1B7jRg3HnkHSkBNPN0C",
+    product_id: "prod_UBRD9a4b4ETInc",
     monthlyPrice: 100,
     annualMonthlyPrice: 80,
     annualYearlyPrice: 960,
