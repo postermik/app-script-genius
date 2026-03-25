@@ -14,9 +14,13 @@ export default function Auth() {
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
   const otpInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const nextUrl = searchParams.get("next") || "/dashboard";
+  const baseNextUrl = searchParams.get("next") || "/dashboard";
+  // If user entered a promo code, redirect to promo page after auth
+  const nextUrl = promoCode.trim() ? `/promo/${promoCode.trim().toUpperCase()}` : baseNextUrl;
 
   useEffect(() => {
     console.log("[Auth] Mounting, checking session...");
@@ -192,6 +196,25 @@ export default function Auth() {
               className="w-full bg-card border border-border rounded-sm px-4 py-3 text-foreground text-sm focus:outline-none focus:border-electric/40 transition-colors"
             />
           </div>
+          {isSignUp && (
+            <div>
+              {!showPromo ? (
+                <button type="button" onClick={() => setShowPromo(true)}
+                  className="text-xs text-muted-foreground/50 hover:text-foreground/70 transition-colors">
+                  Have a promo code?
+                </button>
+              ) : (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Promo Code</label>
+                  <input
+                    type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. FOUNDER5"
+                    className="w-full bg-card border border-border rounded-sm px-4 py-3 text-foreground text-sm focus:outline-none focus:border-electric/40 transition-colors uppercase tracking-wider"
+                  />
+                </div>
+              )}
+            </div>
+          )}
           <button type="submit" disabled={loading}
             className="w-full py-3 bg-primary text-primary-foreground text-sm font-medium rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 glow-blue">
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
