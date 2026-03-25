@@ -208,7 +208,7 @@ export default function Auth() {
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Promo Code</label>
                   <input
                     type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. FOUNDER5"
+                    placeholder="Enter code"
                     className="w-full bg-card border border-border rounded-sm px-4 py-3 text-foreground text-sm focus:outline-none focus:border-electric/40 transition-colors uppercase tracking-wider"
                   />
                 </div>
