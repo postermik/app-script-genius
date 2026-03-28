@@ -198,29 +198,29 @@ function InvestorPreview() {
 /* ── Main Showcase ── */
 export function ProductShowcase() {
   return (
-    <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-24 overflow-hidden">
+    <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-14 sm:pb-20 overflow-hidden">
       <div className="max-w-[1000px] mx-auto">
         <div className="md:w-[52%] md:ml-[5%]">
           <AnimatedEntry>
-            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">From Notes to Materials</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/30 mb-4">From notes to materials</p>
             <GenerationPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Built-in Consultant</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/30 mb-4">Built-in consultant</p>
             <ConsultantPreview />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Every Format, Ready to Use</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/30 mb-4">Every format, ready to use</p>
             <FormatChartCard />
           </AnimatedEntry>
         </div>
         <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
           <AnimatedEntry>
-            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-foreground/50 mb-4">Find Your Investors</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/30 mb-4">Find your investors</p>
             <InvestorPreview />
           </AnimatedEntry>
         </div>

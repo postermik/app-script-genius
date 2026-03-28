@@ -51,7 +51,7 @@ export function LandingPage() {
             Turn rough notes into pitch decks, board updates, and strategy memos.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
-            className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2 glow-blue">
+            className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2">
             Start Free <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -121,22 +121,22 @@ export function LandingPage() {
       <ProductShowcase />
 
       {/* ── Credibility Bar ── */}
-      <section className="px-4 sm:px-6 py-10 sm:py-12 border-y border-border">
-        <div className="max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-10 sm:gap-y-4">
+      <section className="px-4 sm:px-6 py-8 sm:py-10 border-y border-border/50">
+        <div className="max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-10 sm:gap-y-3">
           {PROOF.map((p) => (
             <div key={p.text} className="flex items-center gap-2.5">
-              <p.icon className="h-4 w-4 text-electric shrink-0" />
-              <span className="font-medium text-foreground text-sm">{p.text}</span>
+              <p.icon className="h-3.5 w-3.5 text-foreground/40 shrink-0" />
+              <span className="text-foreground/70 text-sm">{p.text}</span>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Pricing ── */}
-      <section className="px-4 sm:px-6 py-16 sm:py-24">
+      <section className="px-4 sm:px-6 py-14 sm:py-20">
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-10">
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
+            <p className="text-[11px] font-medium text-foreground/30 uppercase tracking-wide mb-3">Pricing</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Start free. Scale when ready.</h2>
           </div>
           <div className="flex items-center justify-center gap-3 mb-12">
@@ -152,9 +152,9 @@ export function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-md md:max-w-none mx-auto w-full">
             {PLANS.map((plan) => (
               <div key={plan.name} className={`bg-card/50 border rounded-sm p-8 flex flex-col transition-all hover:-translate-y-0.5 ${
-                plan.highlighted ? "border-electric/30 glow-blue-subtle" : "border-border hover:border-muted-foreground/20"
+                plan.highlighted ? "border-electric/30" : "border-border hover:border-muted-foreground/20"
               }`}>
-                <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-foreground/40 mb-4">{plan.name}</p>
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {plan.tierId && <span className="text-sm text-foreground/60">/mo</span>}
@@ -172,7 +172,7 @@ export function LandingPage() {
                 </ul>
                 <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
                   className={`w-full py-3 text-sm font-medium rounded-sm transition-opacity ${
-                    plan.highlighted ? "bg-primary text-primary-foreground hover:opacity-90 glow-blue" : "border border-border text-foreground hover:border-muted-foreground/30"
+                    plan.highlighted ? "bg-primary text-primary-foreground hover:opacity-90" : "border border-border text-foreground hover:border-muted-foreground/30"
                   }`}>
                   {plan.cta}
                 </button>
@@ -183,14 +183,14 @@ export function LandingPage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="px-4 sm:px-6 py-16 sm:py-24">
+      <section className="px-4 sm:px-6 py-14 sm:py-20 border-t border-border/50">
         <div className="max-w-[700px] mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Frequently Asked Questions</p>
+          <div className="text-center mb-10">
+            <p className="text-[11px] font-medium text-foreground/30 uppercase tracking-wide">Frequently asked questions</p>
           </div>
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-1.5">
             {FAQ_ITEMS.map((item, i) => (
-              <AccordionItem key={i} value={`faq-${i}`} className="border border-border rounded-sm px-5 bg-card/30">
+              <AccordionItem key={i} value={`faq-${i}`} className="border border-border/60 rounded-sm px-5 bg-card/20">
                 <AccordionTrigger className="text-sm text-foreground/90 hover:no-underline py-4 text-left">
                   {item.q}
                 </AccordionTrigger>
@@ -200,8 +200,8 @@ export function LandingPage() {
               </AccordionItem>
             ))}
           </Accordion>
-          <div className="text-center mt-8">
-            <Link to="/faq" className="text-sm text-electric hover:text-electric/80 transition-colors inline-flex items-center gap-1.5">
+          <div className="text-center mt-6">
+            <Link to="/faq" className="text-sm text-foreground/50 hover:text-foreground/80 transition-colors inline-flex items-center gap-1.5">
               More questions <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
