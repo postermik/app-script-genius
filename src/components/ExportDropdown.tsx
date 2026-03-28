@@ -11,6 +11,7 @@ import { buildPlainText, copyAsHtml } from "@/lib/exportClipboard";
 interface Props {
   output: any;
   isPro: boolean;
+  subscribed: boolean;
   deliverable: Deliverable | null;
   excludedSlides: Set<number>;
   slideOrder: number[];
@@ -49,7 +50,7 @@ function getOptions(type: string) {
   }
 }
 
-export function ExportDropdown({ output, isPro, deliverable, excludedSlides, slideOrder, deckTheme }: Props) {
+export function ExportDropdown({ output, isPro, subscribed, deliverable, excludedSlides, slideOrder, deckTheme }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -71,17 +72,17 @@ export function ExportDropdown({ output, isPro, deliverable, excludedSlides, sli
     try {
       switch (action) {
         case "pptx":
-          if (!isPro) { toast.error("Export is available on Pro."); return; }
+          if (!subscribed) { toast.error("Upgrade to export files."); return; }
           await exportPptx({ output, isPro, excludedSlides, slideOrder, deckTheme });
           toast.success("Downloaded as PowerPoint.");
           break;
         case "pdf":
-          if (!isPro) { toast.error("Export is available on Pro."); return; }
+          if (!subscribed) { toast.error("Upgrade to export files."); return; }
           await exportPdf({ output, isPro, excludedSlides, slideOrder, deckTheme });
           toast.success("Downloaded as PDF.");
           break;
         case "docx":
-          if (!isPro) { toast.error("Export is available on Pro."); return; }
+          if (!subscribed) { toast.error("Upgrade to export files."); return; }
           await exportDocx({ title: output?.title || "Rhetoric Export", deliverable });
           toast.success("Downloaded as Word document.");
           break;
@@ -112,7 +113,7 @@ export function ExportDropdown({ output, isPro, deliverable, excludedSlides, sli
               <button key={opt.action} onClick={() => handleExport(opt.action)} className="w-full text-left text-xs px-3 py-2 hover:bg-accent transition-colors flex items-center gap-2 text-foreground">
                 <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                 {opt.label}
-                {(opt as any).pro && !isPro && <span className="ml-auto text-[10px] text-electric">Pro</span>}
+                {(opt as any).pro && !subscribed && <span className="ml-auto text-[10px] text-electric">Upgrade</span>}
               </button>
             );
           })}

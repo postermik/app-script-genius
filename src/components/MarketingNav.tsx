@@ -19,7 +19,7 @@ export function MarketingNav() {
   const [authReady, setAuthReady] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { subscribed, productId } = useSubscription();
-  const { output, reset, isPro, versions, currentVersion, saveVersion, loadVersion, currentProjectId } = useDecksmith();
+  const { output, reset, isPro, versions, currentVersion, saveVersion, loadVersion, currentProjectId, deckTheme } = useDecksmith();
 
   const isRaise = location.pathname.startsWith("/raise");
   const isProjectView = !!output && !isRaise;
@@ -150,7 +150,7 @@ export function MarketingNav() {
             <>
               {isProjectView && (
                 <>
-                  <ExportDropdown output={output} isPro={isPro} deliverable={deliverable} excludedSlides={new Set()} slideOrder={[]} deckTheme={{ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" }} />
+                  <ExportDropdown output={output} isPro={isPro} subscribed={subscribed} deliverable={deliverable} excludedSlides={new Set()} slideOrder={[]} deckTheme={deckTheme} />
                   <div className="hidden md:block w-px h-5 bg-border" />
                 </>
               )}

@@ -21,7 +21,6 @@ import { StrategicMemoView } from "@/components/outputs/StrategicMemoView";
 import { SlideShimmer, PitchShimmer, QAShimmer, EmailShimmer, MemoShimmer, CoreNarrativeShimmer, ScoreShimmer } from "@/components/outputs/OutputShimmer";
 import { sortBySpeed } from "@/lib/outputOrder";
 import { Layout, RefreshCw } from "lucide-react";
-import type { DeckTheme } from "@/components/SlidePreview";
 import type { OutputTabKey, OutputDeliverable, ElevatorPitchData, InvestorQAItem, PitchEmailVariant, InvestmentMemoData, BoardMemoData, KeyMetricsSummaryData, StrategicMemoData } from "@/types/rhetoric";
 import { getOutputIntent, getDeliverable, getScore, getAnalysis } from "@/types/rhetoric";
 import { findData } from "@/lib/findData";
@@ -282,6 +281,7 @@ export function OutputView() {
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
     completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText, appliedSuggestions,
+    deckTheme, setDeckTheme,
   } = useDecksmith();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -298,7 +298,6 @@ export function OutputView() {
   const [activeTab, setActiveTab] = useState<OutputTabKey>(defaultTab);
   const [excludedSlides, setExcludedSlides] = useState<Set<number>>(new Set());
   const [slideOrder, setSlideOrder] = useState<number[]>([]);
-  const [deckTheme, setDeckTheme] = useState<DeckTheme>({ scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [isRefiningPitch, setIsRefiningPitch] = useState(false);
   const [refiningQAIndex, setRefiningQAIndex] = useState<number | null>(null);

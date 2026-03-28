@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
 import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
+import type { DeckTheme } from "@/components/SlidePreview";
+
+const DEFAULT_DECK_THEME: DeckTheme = { scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" };
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
@@ -105,6 +108,8 @@ interface DecksmithContextType {
   coreNarrative: CoreNarrativeData | null;
   outputData: Record<string, any>;
   generateOutput: (outputType: OutputDeliverable) => Promise<void>;
+  deckTheme: DeckTheme;
+  setDeckTheme: (theme: DeckTheme) => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -143,6 +148,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+  const [deckTheme, setDeckTheme] = useState<DeckTheme>(DEFAULT_DECK_THEME);
   const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
@@ -288,6 +294,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return saveQueueRef.current;
+  }, [currentProjectId]);
+
+  // Deck theme setter that also persists to output_data
+  const setDeckThemeAndPersist = useCallback((theme: DeckTheme) => {
+    setDeckTheme(theme);
+    if (!currentProjectId) return;
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      try {
+        const { data: project } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+        const existing = (project?.output_data as any) || {};
+        await supabase.from("projects").update({
+          output_data: { ...existing, deck_theme: theme } as any,
+        }).eq("id", currentProjectId);
+        console.log("[Persistence] Deck theme saved");
+      } catch (e) {
+        console.warn("[Persistence] Failed to save deck theme:", e);
+      }
+    });
   }, [currentProjectId]);
 
   const startLoadingPhases = useCallback(() => {
@@ -1660,9 +1684,16 @@ Return JSON: { "deckFramework": [...] }`,
     const updatedCN = { sections: updatedSections };
     setCoreNarrative(updatedCN);
     if (currentProjectId) {
-      const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
-      const existing = (proj?.output_data as any) || {};
-      await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+      saveQueueRef.current = saveQueueRef.current.then(async () => {
+        try {
+          const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+          const existing = (proj?.output_data as any) || {};
+          await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+          console.log("[Persistence] Narrative section updated:", sectionHeading);
+        } catch (e) {
+          console.warn("[Persistence] Failed to save narrative section:", e);
+        }
+      });
     }
   }, [currentProjectId]);
 
@@ -1904,6 +1935,7 @@ No markdown fences. No commentary outside the JSON.`;
     setDismissedSuggestions(new Set());
     setCoreNarrative(null);
     setOutputData({});
+    setDeckTheme(DEFAULT_DECK_THEME);
     setScoringComplete(false);
   }, []);
 
@@ -1968,7 +2000,7 @@ No markdown fences. No commentary outside the JSON.`;
     }
 
     // Restore individual outputs (everything except meta keys)
-    const META_KEYS = new Set(["core_narrative", "intake_selections", "applied_suggestions", "dismissed_suggestions", "tab_order", "score", "mode", "title", "intent"]);
+    const META_KEYS = new Set(["core_narrative", "intake_selections", "applied_suggestions", "dismissed_suggestions", "tab_order", "score", "mode", "title", "intent", "deck_theme"]);
     const restoredOutputData: Record<string, any> = {};
     for (const key of Object.keys(persisted)) {
       if (!META_KEYS.has(key) && !key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted[key]) {
@@ -2005,6 +2037,9 @@ No markdown fences. No commentary outside the JSON.`;
     setAppliedSuggestions(new Set(applied.map(String)));
     const dismissed = persisted.dismissed_suggestions || [];
     setDismissedSuggestions(new Set(dismissed));
+
+    // Restore deck theme
+    setDeckTheme(persisted.deck_theme || DEFAULT_DECK_THEME);
 
     // Restore the main output object so ProductView renders OutputView
     const hasPersistedData = persisted.core_narrative || persisted.score || Object.keys(restoredOutputData).length > 0;
@@ -2110,6 +2145,7 @@ No markdown fences. No commentary outside the JSON.`;
         appliedSuggestions, markSuggestionApplied,
         applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
         dismissedSuggestions, dismissSuggestion, updateNarrativeSection,
+        deckTheme, setDeckTheme: setDeckThemeAndPersist,
       }}
     >
       {children}
