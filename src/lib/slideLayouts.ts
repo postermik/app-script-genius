@@ -1,148 +1,79 @@
 /**
- * slideLayouts.ts
- *
- * Shared layout definitions for slide rendering.
- * Consumed by exportPptx.ts (PPTX rendering) and future SlideCanvas.tsx (HTML preview).
- *
- * Every layout defines:
- *  - element positions and sizes (in inches for PPTX, convertible to CSS)
- *  - character limits per element
- *  - font sizes with auto-step-down rules
- *  - shape definitions (visual elements to render)
+ * slideLayouts.ts - 1:1 mapping from AI layoutRecommendation to renderer.
+ * No collapsing. Each recommendation gets its own visual.
  */
 
-// ── Slide dimensions (16:9 at 10in x 5.625in) ──
-export const SLIDE = {
-  W: 10,
-  H: 5.625,
-  MARGIN_L: 0.75,
-  MARGIN_R: 0.75,
-  MARGIN_T: 0.25,
-  MARGIN_B: 0.4,
-} as const;
+export const SLIDE = { W: 10, H: 5.625, MARGIN_L: 0.75, MARGIN_R: 0.75, MARGIN_T: 0.25, MARGIN_B: 0.4 } as const;
+export const CONTENT_W = SLIDE.W - SLIDE.MARGIN_L - SLIDE.MARGIN_R;
 
-export const CONTENT_W = SLIDE.W - SLIDE.MARGIN_L - SLIDE.MARGIN_R; // 8.5in
-
-// ── Font sizing with auto-step-down ──
-// Approximate chars-per-line at a given pt size on CONTENT_W (8.5in, Arial)
-const CHARS_PER_LINE: Record<number, number> = {
-  36: 35,
-  32: 40,
-  28: 44,
-  24: 53,
-  22: 58,
-  20: 63,
-  18: 67,
-  16: 75,
-  14: 82,
-  13: 88,
-  12: 95,
-  11: 105,
-};
+const CHARS_PER_LINE: Record<number, number> = { 28:44, 24:53, 22:58, 20:63, 18:67, 16:75, 14:82, 13:88, 12:95, 11:105 };
 
 export function estimateLines(text: string, fontSize: number, widthIn: number = CONTENT_W): number {
-  const cplFull = CHARS_PER_LINE[fontSize] || Math.round(widthIn / (fontSize * 0.012));
-  const cpl = Math.round(cplFull * (widthIn / CONTENT_W));
+  const cpl = Math.round((CHARS_PER_LINE[fontSize] || 60) * (widthIn / CONTENT_W));
   return Math.ceil(text.length / cpl);
 }
-
 export function estimateHeight(text: string, fontSize: number, widthIn: number = CONTENT_W): number {
-  const lineHeightIn = (fontSize / 72) * 1.35; // 1.35x line height
-  return estimateLines(text, fontSize, widthIn) * lineHeightIn;
+  return estimateLines(text, fontSize, widthIn) * ((fontSize / 72) * 1.35);
 }
 
-// ── Character limits ──
 export const CHAR_LIMITS = {
-  HEADLINE_IDEAL: 60,       // prompt target
-  HEADLINE_MAX: 100,        // hard truncate in export
-  SUBHEADLINE_IDEAL: 80,    // prompt target
-  SUBHEADLINE_MAX: 120,     // hard truncate
-  BULLET_IDEAL: 90,         // prompt target
-  BULLET_MAX: 130,          // hard truncate
-  CLOSING_MAX: 100,         // hard truncate
-  CATEGORY_MAX: 20,         // category labels are short
+  HEADLINE_MAX: 100, SUBHEADLINE_MAX: 120, BULLET_MAX: 130, CLOSING_MAX: 100, CATEGORY_MAX: 20,
 } as const;
 
-// ── Font size step-down for headlines ──
-export interface FontStep {
-  maxChars: number;
-  fontSize: number;
-}
-
-export const HEADLINE_STEPS: FontStep[] = [
-  { maxChars: 50, fontSize: 28 },
-  { maxChars: 70, fontSize: 24 },
-  { maxChars: 90, fontSize: 22 },
-  { maxChars: 120, fontSize: 20 },
+export const HEADLINE_STEPS = [
+  { maxChars: 40, fontSize: 24 },
+  { maxChars: 60, fontSize: 22 },
+  { maxChars: 80, fontSize: 20 },
+  { maxChars: 100, fontSize: 18 },
 ];
 
 export function getHeadlineFontSize(text: string): number {
-  for (const step of HEADLINE_STEPS) {
-    if (text.length <= step.maxChars) return step.fontSize;
-  }
-  return 18; // fallback for very long text
+  for (const s of HEADLINE_STEPS) { if (text.length <= s.maxChars) return s.fontSize; }
+  return 16;
 }
 
-// ── Text truncation ──
-export function truncate(text: string, maxChars: number): string {
-  if (!text || text.length <= maxChars) return text;
-  // Cut at last word boundary before limit
-  const truncated = text.substring(0, maxChars);
-  const lastSpace = truncated.lastIndexOf(" ");
-  return (lastSpace > maxChars * 0.7 ? truncated.substring(0, lastSpace) : truncated) + "...";
+export function truncate(text: string, max: number): string {
+  if (!text || text.length <= max) return text;
+  const t = text.substring(0, max);
+  const sp = t.lastIndexOf(" ");
+  return (sp > max * 0.7 ? t.substring(0, sp) : t) + "...";
 }
 
-// ── Layout type mapping ──
-// Maps AI-generated layoutRecommendation values to renderer keys
+// 1:1 mapping from AI recommendation to renderer key
 export type LayoutType =
-  | "bullets"
-  | "statement"
-  | "two-column"
-  | "matrix"
-  | "timeline"
-  | "cards";
+  | "bullets" | "statement" | "data-cards" | "concentric"
+  | "matrix" | "timeline" | "icon-columns" | "team" | "staircase";
 
 const LAYOUT_MAP: Record<string, LayoutType> = {
-  "3-column-with-icons": "cards",
-  "data-cards": "cards",
-  "split-layout": "two-column",
-  "concentric-circles": "cards",
-  "flywheel": "two-column",
-  "competitive-matrix": "matrix",
-  "timeline": "timeline",
   "full-bleed-statement": "statement",
-  "staircase-chart": "cards",
+  "data-cards": "data-cards",
+  "concentric-circles": "concentric",
+  "competitive-matrix": "matrix",
   "table": "matrix",
-  "team-grid": "cards",
+  "timeline": "timeline",
+  "3-column-with-icons": "icon-columns",
+  "team-grid": "team",
+  "staircase-chart": "staircase",
+  "split-layout": "bullets",
+  "flywheel": "icon-columns",
 };
 
 export function resolveLayout(recommendation?: string, selectedLayout?: string): LayoutType {
-  // User override takes priority
-  if (selectedLayout && isValidLayout(selectedLayout)) return selectedLayout as LayoutType;
-  // Map AI recommendation
+  if (selectedLayout && Object.values(LAYOUT_MAP).includes(selectedLayout as LayoutType)) return selectedLayout as LayoutType;
   if (recommendation && LAYOUT_MAP[recommendation]) return LAYOUT_MAP[recommendation];
-  // Default
   return "bullets";
 }
 
-function isValidLayout(layout: string): layout is LayoutType {
-  return ["bullets", "statement", "two-column", "matrix", "timeline", "cards"].includes(layout);
-}
-
-// ── Layout metadata for UI (used by future layout picker) ──
-export interface LayoutDefinition {
-  type: LayoutType;
-  label: string;
-  description: string;
-  maxBullets: number;
-  supportsDataPoints: boolean;
-}
+export interface LayoutDefinition { type: LayoutType; label: string; description: string; }
 
 export const LAYOUT_DEFINITIONS: LayoutDefinition[] = [
-  { type: "bullets", label: "Bullet Points", description: "Headline with supporting bullets", maxBullets: 5, supportsDataPoints: false },
-  { type: "statement", label: "Statement", description: "Full-bleed headline with no bullets", maxBullets: 0, supportsDataPoints: false },
-  { type: "two-column", label: "Two Column", description: "Content left, visual area right", maxBullets: 4, supportsDataPoints: false },
-  { type: "matrix", label: "Matrix", description: "2x2 comparison grid", maxBullets: 4, supportsDataPoints: false },
-  { type: "timeline", label: "Timeline", description: "Horizontal connected steps", maxBullets: 5, supportsDataPoints: false },
-  { type: "cards", label: "Cards", description: "Side-by-side info cards", maxBullets: 3, supportsDataPoints: true },
+  { type: "bullets", label: "Bullets", description: "Headline with supporting points" },
+  { type: "statement", label: "Statement", description: "Hero headline, no bullets" },
+  { type: "data-cards", label: "Data Cards", description: "Stat callouts with numbers" },
+  { type: "concentric", label: "Concentric", description: "Nested rings (TAM/SAM/SOM)" },
+  { type: "matrix", label: "Matrix", description: "2x2 comparison grid" },
+  { type: "timeline", label: "Timeline", description: "Connected steps" },
+  { type: "icon-columns", label: "Icon Columns", description: "Columns with icons" },
+  { type: "team", label: "Team", description: "Name and role cards" },
+  { type: "staircase", label: "Staircase", description: "Ascending growth steps" },
 ];
