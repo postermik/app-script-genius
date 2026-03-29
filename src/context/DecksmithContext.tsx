@@ -736,17 +736,19 @@ Return ONLY valid JSON, no markdown fences.`;
       strategic_memo: `${gapContext}${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
       slide_framework: `${gapContext}You are generating a SLIDE FRAMEWORK (pitch deck). Generate 10-12 slides.
 
-CRITICAL RULES FOR EVERY SLIDE:
-- headline: A COMPLETE ARGUMENT (8-15 words, max 20). NOT a topic label. BAD: "Market Opportunity". GOOD: "15,000 US pre-seed raises annually represent a $300M narrative infrastructure gap"
-- bodyContent: An array of 3-5 SPECIFIC, CONCRETE bullet points drawn from the founder's narrative. Each bullet must contain real data, real claims, or real arguments. NEVER output generic descriptions like "Key supporting data point" or "Strategic context and framing". Every bullet must be a real sentence with real information.
-- subheadline: One supporting context line drawn from the narrative (not a generic description)
-- closingStatement: One punchy line that reinforces the slide's takeaway
-- speakerNotes: 2-4 sentences of what the presenter should SAY (context, stories, objection-handling)
-- layoutRecommendation: Choose from "3-column-with-icons", "data-cards", "split-layout", "concentric-circles", "flywheel", "competitive-matrix", "timeline", "full-bleed-statement", "team-grid"
+CRITICAL FORMAT RULES FOR EVERY SLIDE:
+- headline: A sharp claim or argument, NOT a full sentence or topic label. MAX 60 CHARACTERS. Think billboard copy, not memo prose. BAD: "Founders lose months to broken narrative infrastructure when capital sits behind better storytelling" (too long). GOOD: "Capital sits behind better storytelling" (punchy, short). BAD: "Market Opportunity" (topic label). GOOD: "$2.8B market trapped in agency middlemen"
+- subheadline: One supporting context line. MAX 80 CHARACTERS. Adds specificity to the headline.
+- bodyContent: Array of 3-5 SPECIFIC, CONCRETE bullet points. Each bullet MAX 100 CHARACTERS. Must contain real data, real claims, or real arguments from the founder's narrative. NEVER output generic descriptions like "Key supporting data point" or "Strategic context and framing". Every bullet must be a real sentence with real information.
+- closingStatement: One punchy takeaway line. MAX 80 CHARACTERS.
+- speakerNotes: 2-4 sentences of what the presenter should SAY (context, stories, objection-handling). This is the only field with no character limit.
+- layoutRecommendation: Choose the BEST visual format for this slide's content from: "full-bleed-statement" (opening/closing/vision slides), "data-cards" (slides with key metrics), "split-layout" (text + visual concept), "3-column-with-icons" (parallel points), "competitive-matrix" (comparison), "timeline" (sequential steps), "concentric-circles" (market sizing), "flywheel" (cyclical process), "team-grid" (team slide). Do NOT default to the same layout for every slide. Vary layouts across the deck.
 - suggestion: Optional 1-2 sentence improvement for this slide (include on ~50% of slides)
-- metadata: { slideType, visualDirection, visualDominant, dataPoints }
+- metadata: { slideType, visualDirection, visualDominant, dataPoints } where dataPoints is an array of key numbers/stats from this slide (e.g. ["$2.8B", "15,000", "30 days"])
 
-VALIDATION: If any bodyContent item is a generic placeholder like "Key supporting context" or "Evidence that reinforces the narrative" instead of real content, the entire output is INVALID. Use the founder's actual data, claims, and arguments.
+CHARACTER LIMITS ARE HARD CONSTRAINTS. Content that exceeds limits will be truncated in the export. Write tighter, not longer.
+
+VALIDATION: If any bodyContent item is a generic placeholder instead of real content, the entire output is INVALID. Use the founder's actual data, claims, and arguments.
 
 Return JSON: { "deckFramework": [...] }`,
     };
