@@ -97,7 +97,6 @@ export function truncate(text: string, maxChars: number): string {
 export type LayoutType =
   | "bullets"
   | "statement"
-  | "data-callout"
   | "two-column"
   | "matrix"
   | "timeline"
@@ -105,14 +104,14 @@ export type LayoutType =
 
 const LAYOUT_MAP: Record<string, LayoutType> = {
   "3-column-with-icons": "cards",
-  "data-cards": "data-callout",
+  "data-cards": "cards",
   "split-layout": "two-column",
-  "concentric-circles": "data-callout",
+  "concentric-circles": "cards",
   "flywheel": "two-column",
   "competitive-matrix": "matrix",
   "timeline": "timeline",
   "full-bleed-statement": "statement",
-  "staircase-chart": "data-callout",
+  "staircase-chart": "cards",
   "table": "matrix",
   "team-grid": "cards",
 };
@@ -127,7 +126,7 @@ export function resolveLayout(recommendation?: string, selectedLayout?: string):
 }
 
 function isValidLayout(layout: string): layout is LayoutType {
-  return ["bullets", "statement", "data-callout", "two-column", "matrix", "timeline", "cards"].includes(layout);
+  return ["bullets", "statement", "two-column", "matrix", "timeline", "cards"].includes(layout);
 }
 
 // ── Layout metadata for UI (used by future layout picker) ──
@@ -142,7 +141,6 @@ export interface LayoutDefinition {
 export const LAYOUT_DEFINITIONS: LayoutDefinition[] = [
   { type: "bullets", label: "Bullet Points", description: "Headline with supporting bullets", maxBullets: 5, supportsDataPoints: false },
   { type: "statement", label: "Statement", description: "Full-bleed headline with no bullets", maxBullets: 0, supportsDataPoints: false },
-  { type: "data-callout", label: "Data Callout", description: "Big numbers with supporting context", maxBullets: 3, supportsDataPoints: true },
   { type: "two-column", label: "Two Column", description: "Content left, visual area right", maxBullets: 4, supportsDataPoints: false },
   { type: "matrix", label: "Matrix", description: "2x2 comparison grid", maxBullets: 4, supportsDataPoints: false },
   { type: "timeline", label: "Timeline", description: "Horizontal connected steps", maxBullets: 5, supportsDataPoints: false },

@@ -134,51 +134,6 @@ function renderStatement(ctx: RenderContext, f: ReturnType<typeof slideFields>) 
   }
 }
 
-// ── LAYOUT: Data Callout ──
-function renderDataCallout(ctx: RenderContext, f: ReturnType<typeof slideFields>) {
-  const { pptx, slide, colors, raw } = ctx;
-  const ML = SLIDE.MARGIN_L;
-  let y = 0.35;
-
-  if (f.categoryLabel) {
-    slide.addText(f.categoryLabel.toUpperCase(), { x: ML, y, w: CONTENT_W, h: 0.25, fontSize: 10, fontFace: "Arial", bold: true, color: colors.ACCENT, align: "left", valign: "top", charSpacing: 3 });
-    y += 0.3;
-  }
-
-  const hSize = getHeadlineFontSize(f.headline);
-  const hH = Math.max(estimateHeight(f.headline, hSize), 0.5);
-  slide.addText(f.headline, { x: ML, y, w: CONTENT_W, h: hH + 0.1, fontSize: hSize, fontFace: "Arial", bold: true, color: colors.PRIMARY, align: "left", valign: "top" });
-  y += hH + 0.25;
-
-  const dataPoints = extractDataPoints(raw);
-  const labels = f.bodyContent.slice(0, 3);
-  const cardCount = Math.max(dataPoints.length, Math.min(labels.length, 3));
-
-  if (cardCount > 0) {
-    const gap = 0.3;
-    const cardW = (CONTENT_W - gap * (cardCount - 1)) / cardCount;
-    const cardH = 1.6;
-
-    for (let i = 0; i < cardCount; i++) {
-      const cx = ML + i * (cardW + gap);
-      slide.addShape(pptx.ShapeType.rect, { x: cx, y, w: cardW, h: cardH, fill: { color: colors.ACCENT }, rectRadius: 0.06 });
-      if (dataPoints[i]) {
-        slide.addText(dataPoints[i], { x: cx + 0.2, y: y + 0.15, w: cardW - 0.4, h: 0.7, fontSize: 36, fontFace: "Arial", bold: true, color: onAccent(colors), align: "left", valign: "middle" });
-      }
-      if (labels[i]) {
-        slide.addText(truncate(labels[i], 80), { x: cx + 0.2, y: y + (dataPoints[i] ? 0.85 : 0.2), w: cardW - 0.4, h: 0.6, fontSize: 11, fontFace: "Arial", color: onAccent(colors), align: "left", valign: "top" });
-      }
-    }
-    y += cardH + 0.2;
-  }
-
-  const rest = f.bodyContent.slice(cardCount);
-  if (rest.length > 0) {
-    const rows = rest.map((line: string) => ({ text: line, options: { fontSize: 12, fontFace: "Arial", color: colors.FG, bullet: { code: "2022", color: colors.ACCENT }, lineSpacingMultiple: 1.3, paraSpaceAfter: 4 } }));
-    slide.addText(rows as any, { x: ML, y, w: CONTENT_W, h: SLIDE.H - y - SLIDE.MARGIN_B, valign: "top" });
-  }
-}
-
 // ── LAYOUT: Matrix (2x2 grid) ──
 function renderMatrix(ctx: RenderContext, f: ReturnType<typeof slideFields>) {
   const { pptx, slide, colors } = ctx;
@@ -281,7 +236,7 @@ function renderCards(ctx: RenderContext, f: ReturnType<typeof slideFields>) {
 
       let ty = y + 0.2;
       if (dp[i]) {
-        slide.addText(dp[i], { x: cx + 0.2, y: ty, w: cW - 0.4, h: 0.5, fontSize: 28, fontFace: "Arial", bold: true, color: onAccent(colors), align: "left", valign: "middle" });
+        slide.addText(dp[i], { x: cx + 0.2, y: ty, w: cW - 0.4, h: 0.5, fontSize: 36, fontFace: "Arial", bold: true, color: onAccent(colors), align: "left", valign: "middle" });
         ty += 0.55;
       }
       slide.addText(truncate(items[i], 100), { x: cx + 0.2, y: ty, w: cW - 0.4, h: cH - (ty - y) - 0.2, fontSize: 12, fontFace: "Arial", color: onAccent(colors), align: "left", valign: "top" });
@@ -325,10 +280,6 @@ function renderTwoColumn(ctx: RenderContext, f: ReturnType<typeof slideFields>) 
   const rTop = 0.6;
   const rH = SLIDE.H - rTop - SLIDE.MARGIN_B;
   slide.addShape(pptx.ShapeType.rect, { x: rightX, y: rTop, w: rightW, h: rH, fill: { color: colors.ACCENT }, rectRadius: 0.08 });
-  const vDir = typeof ctx.raw !== "string" ? (ctx.raw?.metadata?.visualDirection || "") : "";
-  if (vDir) {
-    slide.addText(vDir, { x: rightX + 0.3, y: rTop + rH / 2 - 0.3, w: rightW - 0.6, h: 0.6, fontSize: 12, fontFace: "Arial", italic: true, color: onAccent(colors), align: "center", valign: "middle" });
-  }
 
   if (f.closingStatement) {
     slide.addText(f.closingStatement, { x: ML, y: SLIDE.H - SLIDE.MARGIN_B - 0.4, w: leftW, h: 0.35, fontSize: 11, fontFace: "Arial", bold: true, color: colors.ACCENT, align: "left", valign: "bottom" });
@@ -337,7 +288,7 @@ function renderTwoColumn(ctx: RenderContext, f: ReturnType<typeof slideFields>) 
 
 // ── Dispatcher ──
 const RENDERERS: Record<LayoutType, (ctx: RenderContext, f: ReturnType<typeof slideFields>) => void> = {
-  "bullets": renderBullets, "statement": renderStatement, "data-callout": renderDataCallout,
+  "bullets": renderBullets, "statement": renderStatement, 
   "two-column": renderTwoColumn, "matrix": renderMatrix, "timeline": renderTimeline, "cards": renderCards,
 };
 

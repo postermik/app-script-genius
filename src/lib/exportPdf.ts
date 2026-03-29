@@ -159,7 +159,7 @@ export async function exportPdf({ output, isPro, excludedSlides, slideOrder, dec
         pdf.text(f.closingStatement, ML, H - 0.5);
       }
 
-    } else if (layout === "data-callout" || layout === "cards") {
+    } else if (layout === "cards") {
       // Data callout / cards: render colored card backgrounds
       const items = f.bodyContent.slice(0, 3);
       const dp = typeof raw !== "string" ? (raw?.metadata?.dataPoints || []) : [];
