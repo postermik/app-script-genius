@@ -15,7 +15,7 @@ function getThemeColors(theme: DeckTheme): ThemeColors {
   return { BG:"0b0f14", FG:"dce0e8", PRIMARY:"3b82f6", MUTED:"6b7280", MUTED_TEXT:"9ca3af", ACCENT:"3b82f6" };
 }
 
-function onAccent(c: ThemeColors) { return c.BG === "ffffff" ? "ffffff" : c.BG; }
+function onAccent(c: ThemeColors) { return "ffffff"; }
 
 function slideFields(raw: any) {
   const s = (v: any, max: number) => truncate(typeof v === "string" ? v : (v || ""), max);
@@ -72,7 +72,7 @@ function renderStatement(ctx: Ctx, f: Fields) {
   if (f.subheadline) slide.addText(f.subheadline, { x:ML, y:3.2, w:CONTENT_W*0.75, h:0.5, fontSize:14, fontFace:"Arial", color:c.MUTED_TEXT, align:"left", valign:"top" });
   if (f.closingStatement) {
     slide.addShape(pptx.ShapeType.rect, { x:0, y:SLIDE.H-0.8, w:SLIDE.W, h:0.8, fill:{color:c.ACCENT} });
-    slide.addText(f.closingStatement, { x:ML, y:SLIDE.H-0.75, w:CONTENT_W, h:0.6, fontSize:13, fontFace:"Arial", bold:true, color:onAccent(c), align:"left", valign:"middle" });
+    slide.addText(f.closingStatement, { x:ML, y:SLIDE.H-0.75, w:CONTENT_W, h:0.6, fontSize:13, fontFace:"Arial", bold:true, color:"ffffff", align:"left", valign:"middle" });
   }
 }
 
@@ -89,8 +89,8 @@ function renderDataCards(ctx: Ctx, f: Fields) {
       ctx.slide.addShape(ctx.pptx.ShapeType.rect, { x:cx, y, w:cW, h:cH, fill:{color:ctx.c.ACCENT}, rectRadius:0.06 });
       ctx.slide.addShape(ctx.pptx.ShapeType.rect, { x:cx, y, w:cW, h:0.04, fill:{color:ctx.c.PRIMARY} });
       let ty = y + 0.2;
-      if (dp[i]) { ctx.slide.addText(dp[i], { x:cx+0.15, y:ty, w:cW-0.3, h:0.5, fontSize:28, fontFace:"Arial", bold:true, color:onAccent(ctx.c), align:"left", valign:"middle" }); ty += 0.55; }
-      if (labels[i]) ctx.slide.addText(truncate(labels[i], 90), { x:cx+0.15, y:ty, w:cW-0.3, h:cH-(ty-y)-0.15, fontSize:11, fontFace:"Arial", color:onAccent(ctx.c), align:"left", valign:"top" });
+      if (dp[i]) { ctx.slide.addText(dp[i], { x:cx+0.15, y:ty, w:cW-0.3, h:0.5, fontSize:18, fontFace:"Arial", bold:true, color:"ffffff", align:"left", valign:"middle" }); ty += 0.55; }
+      if (labels[i]) ctx.slide.addText(truncate(labels[i], 90), { x:cx+0.15, y:ty, w:cW-0.3, h:cH-(ty-y)-0.15, fontSize:11, fontFace:"Arial", color:"ffffff", align:"left", valign:"top" });
     }
   }
 }
@@ -101,27 +101,48 @@ function renderConcentric(ctx: Ctx, f: Fields) {
   const { pptx, slide, c } = ctx;
   const items = f.bodyContent.slice(0, 3);
   const dp = f.dataPoints.slice(0, 3);
-  const centerX = ML + CONTENT_W / 2;
+  const centerX = ML + CONTENT_W * 0.4;
   const centerY = y + (SLIDE.H - y - SLIDE.MARGIN_B) / 2;
-  const radii = [1.4, 1.0, 0.6];
-  const alphas = ["20", "40", "80"]; // opacity via color mixing
+  const radii = [1.35, 0.95, 0.55];
+  const fills = [c.ACCENT, c.PRIMARY, c.ACCENT];
 
+  // Draw rings from largest to smallest
   for (let i = 0; i < Math.min(items.length, 3); i++) {
-    const r = radii[i] || 0.5;
-    // Draw circle
-    slide.addShape(pptx.ShapeType.ellipse, { x:centerX-r, y:centerY-r, w:r*2, h:r*2, fill:{color:c.PRIMARY}, line:{color:c.ACCENT, width:1.5} });
-    // Label inside
-    const label = dp[i] ? `${dp[i]}` : "";
-    const desc = truncate(items[i], 50);
-    if (label) slide.addText(label, { x:centerX-r+0.1, y:centerY - (i===0 ? r-0.15 : 0.22), w:(r*2)-0.2, h:0.35, fontSize:i===0?14:12, fontFace:"Arial", bold:true, color:onAccent(c), align:"center", valign:"middle" });
-    if (i === 0 && desc) slide.addText(desc, { x:centerX-r+0.15, y:centerY-r+0.45, w:(r*2)-0.3, h:0.3, fontSize:9, fontFace:"Arial", color:onAccent(c), align:"center", valign:"top" });
+    slide.addShape(pptx.ShapeType.ellipse, {
+      x: centerX - radii[i], y: centerY - radii[i],
+      w: radii[i] * 2, h: radii[i] * 2,
+      fill: { color: fills[i] },
+      line: { color: c.PRIMARY, width: 1.5 },
+    });
+  }
+  // Labels on each ring (positioned to not overlap)
+  const labelPositions = [
+    { x: centerX - 0.5, y: centerY - radii[0] + 0.12, w: 1, fs: 11 },
+    { x: centerX - 0.5, y: centerY - 0.15, w: 1, fs: 10 },
+    { x: centerX - 0.4, y: centerY + radii[2] - 0.35, w: 0.8, fs: 9 },
+  ];
+  for (let i = 0; i < Math.min(items.length, 3); i++) {
+    if (dp[i]) {
+      slide.addText(dp[i], {
+        x: labelPositions[i].x, y: labelPositions[i].y, w: labelPositions[i].w, h: 0.3,
+        fontSize: labelPositions[i].fs, fontFace: "Arial", bold: true, color: "ffffff",
+        align: "center", valign: "middle",
+      });
+    }
   }
   // Legend on the right
   const legendX = centerX + radii[0] + 0.3;
   for (let i = 0; i < Math.min(items.length, 3); i++) {
-    const ly = centerY - 0.8 + i * 0.6;
-    if (dp[i]) slide.addText(dp[i], { x:legendX, y:ly, w:2.5, h:0.25, fontSize:14, fontFace:"Arial", bold:true, color:c.PRIMARY, align:"left" });
-    slide.addText(truncate(items[i], 60), { x:legendX, y:ly+0.22, w:2.5, h:0.25, fontSize:9, fontFace:"Arial", color:c.FG, align:"left" });
+    const ly = centerY - 0.9 + i * 0.7;
+    const tierLabel = ["TAM", "SAM", "SOM"][i] || "";
+    slide.addText(tierLabel + (dp[i] ? ": " + dp[i] : ""), {
+      x: legendX, y: ly, w: 2.8, h: 0.28,
+      fontSize: 13, fontFace: "Arial", bold: true, color: c.PRIMARY, align: "left",
+    });
+    slide.addText(truncate(items[i], 55), {
+      x: legendX, y: ly + 0.28, w: 2.8, h: 0.3,
+      fontSize: 9, fontFace: "Arial", color: c.FG, align: "left",
+    });
   }
 }
 
@@ -137,7 +158,7 @@ function renderMatrix(ctx: Ctx, f: Fields) {
       const cx = ML + col*(cellW+gap); const cy = y + row*(cellH+gap);
       ctx.slide.addShape(ctx.pptx.ShapeType.rect, { x:cx, y:cy, w:cellW, h:cellH, fill:{color:ctx.c.ACCENT}, rectRadius:0.06 });
       ctx.slide.addShape(ctx.pptx.ShapeType.rect, { x:cx, y:cy, w:0.04, h:cellH, fill:{color:ctx.c.PRIMARY} });
-      ctx.slide.addText(truncate(items[i], 120), { x:cx+0.2, y:cy+0.15, w:cellW-0.4, h:cellH-0.3, fontSize:11, fontFace:"Arial", color:onAccent(ctx.c), align:"left", valign:"top" });
+      ctx.slide.addText(truncate(items[i], 120), { x:cx+0.2, y:cy+0.15, w:cellW-0.4, h:cellH-0.3, fontSize:11, fontFace:"Arial", color:"ffffff", align:"left", valign:"top" });
     }
   }
 }
@@ -153,7 +174,7 @@ function renderTimeline(ctx: Ctx, f: Fields) {
       const cx = ML + sp*i + sp/2;
       ctx.slide.addShape(ctx.pptx.ShapeType.ellipse, { x:cx-r, y, w:r*2, h:r*2, fill:{color:ctx.c.PRIMARY} });
       ctx.slide.addText(String(i+1), { x:cx-r, y, w:r*2, h:r*2, fontSize:11, fontFace:"Arial", bold:true, color:onAccent(ctx.c), align:"center", valign:"middle" });
-      ctx.slide.addText(truncate(items[i], 70), { x:cx-sp/2+0.08, y:y+r*2+0.12, w:sp-0.16, h:SLIDE.H-(y+r*2+0.12)-SLIDE.MARGIN_B, fontSize:10, fontFace:"Arial", color:ctx.c.FG, align:"center", valign:"top" });
+      ctx.slide.addText(truncate(items[i], 100), { x:cx-sp/2+0.08, y:y+r*2+0.12, w:sp-0.16, h:SLIDE.H-(y+r*2+0.12)-SLIDE.MARGIN_B, fontSize:10, fontFace:"Arial", color:ctx.c.FG, align:"center", valign:"top" });
     }
   }
 }
@@ -172,7 +193,7 @@ function renderIconColumns(ctx: Ctx, f: Fields) {
       // Icon circle
       const iconR = 0.25;
       slide.addShape(pptx.ShapeType.ellipse, { x:cx+colW/2-iconR, y, w:iconR*2, h:iconR*2, fill:{color:c.ACCENT} });
-      slide.addText(String(i+1), { x:cx+colW/2-iconR, y, w:iconR*2, h:iconR*2, fontSize:14, fontFace:"Arial", bold:true, color:onAccent(c), align:"center", valign:"middle" });
+      slide.addText(String(i+1), { x:cx+colW/2-iconR, y, w:iconR*2, h:iconR*2, fontSize:14, fontFace:"Arial", bold:true, color:"ffffff", align:"center", valign:"middle" });
       // Stat if exists
       let ty = y + iconR*2 + 0.15;
       if (dp[i]) {
@@ -204,8 +225,8 @@ function renderTeam(ctx: Ctx, f: Fields) {
       const colonIdx = text.indexOf(":");
       const title = colonIdx > 0 ? text.substring(0, colonIdx).trim() : "";
       const desc = colonIdx > 0 ? text.substring(colonIdx+1).trim() : text;
-      if (title) slide.addText(title, { x:cx+0.15, y:y+pr*2+0.35, w:cardW-0.3, h:0.3, fontSize:12, fontFace:"Arial", bold:true, color:onAccent(c), align:"center", valign:"top" });
-      slide.addText(truncate(desc, 100), { x:cx+0.15, y:y+pr*2+(title?0.7:0.4), w:cardW-0.3, h:cardH-pr*2-1, fontSize:10, fontFace:"Arial", color:onAccent(c), align:"center", valign:"top" });
+      if (title) slide.addText(title, { x:cx+0.15, y:y+pr*2+0.35, w:cardW-0.3, h:0.3, fontSize:12, fontFace:"Arial", bold:true, color:"ffffff", align:"center", valign:"top" });
+      slide.addText(truncate(desc, 100), { x:cx+0.15, y:y+pr*2+(title?0.7:0.4), w:cardW-0.3, h:cardH-pr*2-1, fontSize:10, fontFace:"Arial", color:"ffffff", align:"center", valign:"top" });
     }
   }
 }
@@ -215,22 +236,30 @@ function renderStaircase(ctx: Ctx, f: Fields) {
   let y = renderHeader(ctx, f);
   const { pptx, slide, c } = ctx;
   const items = f.bodyContent.slice(0, 4);
-  const dp = f.dataPoints;
+  const dp = f.dataPoints.slice(0, 4);
   if (items.length >= 2) {
     const n = items.length;
-    const totalW = CONTENT_W; const stepW = totalW / n;
-    const maxH = SLIDE.H - y - SLIDE.MARGIN_B - 0.1;
+    const gap = 0.15;
+    const stepW = (CONTENT_W - gap * (n - 1)) / n;
+    const maxH = SLIDE.H - y - SLIDE.MARGIN_B - 0.15;
     const baseY = y + maxH;
     for (let i = 0; i < n; i++) {
-      const stepH = maxH * ((i+1) / n) * 0.85;
-      const sx = ML + i * stepW;
+      const pct = 0.3 + 0.7 * ((i + 1) / n);
+      const stepH = maxH * pct;
+      const sx = ML + i * (stepW + gap);
       const sy = baseY - stepH;
-      // Step rectangle
-      slide.addShape(pptx.ShapeType.rect, { x:sx+0.05, y:sy, w:stepW-0.1, h:stepH, fill:{color: i === n-1 ? c.PRIMARY : c.ACCENT}, rectRadius:0.04 });
-      // Stat at top of step
-      if (dp[i]) slide.addText(dp[i], { x:sx+0.1, y:sy+0.1, w:stepW-0.2, h:0.3, fontSize:16, fontFace:"Arial", bold:true, color:onAccent(c), align:"center", valign:"middle" });
-      // Label
-      slide.addText(truncate(items[i], 60), { x:sx+0.1, y:sy+(dp[i]?0.4:0.15), w:stepW-0.2, h:0.6, fontSize:9, fontFace:"Arial", color:onAccent(c), align:"center", valign:"top" });
+      slide.addShape(pptx.ShapeType.rect, {
+        x: sx, y: sy, w: stepW, h: stepH,
+        fill: { color: i === n - 1 ? c.PRIMARY : c.ACCENT }, rectRadius: 0.04,
+      });
+      if (dp[i]) slide.addText(dp[i], {
+        x: sx + 0.08, y: sy + 0.08, w: stepW - 0.16, h: 0.35,
+        fontSize: 14, fontFace: "Arial", bold: true, color: "ffffff", align: "center", valign: "middle",
+      });
+      slide.addText(truncate(items[i], 50), {
+        x: sx + 0.08, y: sy + (dp[i] ? 0.45 : 0.12), w: stepW - 0.16, h: 0.7,
+        fontSize: 9, fontFace: "Arial", color: "ffffff", align: "center", valign: "top",
+      });
     }
   }
 }

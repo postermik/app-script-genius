@@ -18,7 +18,7 @@ function getColors(theme: DeckTheme) {
   return { bg:"#0b0f14", fg:"#dce0e8", primary:"#3b82f6", muted:"#9ca3af", accent:"#3b82f6" };
 }
 type C = ReturnType<typeof getColors>;
-function onA(c:C) { return c.bg==="#ffffff"?"#ffffff":c.bg; }
+function onA(c:C) { return "#ffffff"; }
 function hSz(t:string) { return t.length<=40?"1.1em":t.length<=60?"0.95em":t.length<=80?"0.85em":"0.75em"; }
 
 function Header({s,c}:{s:SlideCanvasData;c:C}) {
@@ -70,9 +70,8 @@ function Concentric({slide:s,colors:c}:{slide:SlideCanvasData;colors:C}) {
   return <div style={{display:"flex",height:"100%",padding:"6% 6%"}}>
     <div style={{flex:"0 0 35%"}}><Header s={s} c={c}/></div>
     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-      {[100,70,40].slice(0,items.length).map((pct,i)=><div key={i} style={{position:"absolute",width:`${pct}%`,aspectRatio:"1",borderRadius:"50%",border:`2px solid ${c.primary}`,backgroundColor:c.accent,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:i===0?"flex-start":"center",paddingTop:i===0?"8%":"0",opacity:0.7+i*0.15}}>
-        {dp[i] && <div style={{fontSize:i===0?"0.7em":"0.55em",fontWeight:700,color:onA(c)}}>{dp[i]}</div>}
-        <div style={{fontSize:"0.32em",color:onA(c),textAlign:"center",padding:"0 10%",opacity:0.85}}>{truncate(items[i],40)}</div>
+      {[100,70,40].slice(0,items.length).map((pct,i)=><div key={i} style={{position:"absolute",width:`${pct}%`,aspectRatio:"1",borderRadius:"50%",border:`2px solid ${c.primary}`,backgroundColor:i===1?c.primary:c.accent,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:i===0?"flex-start":"center",paddingTop:i===0?"6%":"0"}}>
+        {dp[i] && <div style={{fontSize:i===0?"0.6em":"0.48em",fontWeight:700,color:"#ffffff"}}>{dp[i]}</div>}
       </div>)}
     </div>
   </div>;
@@ -143,7 +142,7 @@ function Staircase({slide:s,colors:c}:{slide:SlideCanvasData;colors:C}) {
   return <div style={{display:"flex",flexDirection:"column",height:"100%",padding:"6% 8%"}}>
     <Header s={s} c={c}/>
     <div style={{flex:1,display:"flex",alignItems:"flex-end",gap:"1.5%",marginTop:"3%",paddingBottom:"2%"}}>
-      {items.map((t,i)=>{const pct=30+((i+1)/n)*55;
+      {items.map((t,i)=>{const pct=25+((i+1)/n)*65;
         return <div key={i} style={{flex:1,height:`${pct}%`,backgroundColor:i===n-1?c.primary:c.accent,borderRadius:4,padding:"2% 3%",display:"flex",flexDirection:"column",justifyContent:"flex-start"}}>
           {dp[i] && <div style={{fontSize:"0.6em",fontWeight:700,color:onA(c),marginTop:"4%"}}>{dp[i]}</div>}
           <div style={{fontSize:"0.35em",color:onA(c),marginTop:dp[i]?"3%":"6%",lineHeight:1.3}}>{truncate(t,60)}</div>

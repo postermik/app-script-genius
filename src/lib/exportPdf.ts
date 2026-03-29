@@ -14,7 +14,7 @@ function getColors(theme: DeckTheme): PC {
 }
 
 function pdfHSize(t:string):number{const s=getHeadlineFontSize(t);return s>=24?20:s>=22?18:s>=20?16:14;}
-function onA(c:PC):RGB{const br=(c.bg[0]*299+c.bg[1]*587+c.bg[2]*114)/1000;return br>128?[255,255,255]:c.bg;}
+function onA(c:PC):RGB{return [255,255,255];}
 
 function sf(raw:any){
   const headline=truncate(typeof raw==="string"?raw:(raw?.headline||""),CHAR_LIMITS.HEADLINE_MAX);
