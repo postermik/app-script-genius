@@ -68,7 +68,7 @@ export async function exportPdf({output,isPro,excludedSlides,slideOrder,deckThem
       if(n>0){const gap=0.3;const cW=(CW-gap*(n-1))/n;const cH=1.7;
         for(let i=0;i<n;i++){const cx=ML+i*(cW+gap);sc(c.accent,"fill");pdf.roundedRect(cx,y,cW,cH,0.06,0.06,"F");
           if(dp[i]){pdf.setFont("helvetica","bold");pdf.setFontSize(22);sc(onA(c));pdf.text(dp[i],cx+0.2,y+0.5);}
-          if(items[i]){pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(onA(c));pdf.text(pdf.splitTextToSize(truncate(items[i],80),cW-0.4),cx+0.2,y+(dp[i]?0.85:0.3));}
+          if(items[i]){pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(onA(c));pdf.text(pdf.splitTextToSize(items[i],cW-0.4),cx+0.2,y+(dp[i]?0.85:0.3));}
         }y+=cH+0.2;}
       const rest=f.bodyContent.slice(n);
       if(rest.length>0){pdf.setFont("helvetica","normal");pdf.setFontSize(10);for(const l of rest){if(y>H-0.8)break;sc(c.accent);pdf.text("\u2022",ML,y);sc(c.fg);pdf.text(pdf.splitTextToSize(l,CW-0.3),ML+0.25,y);y+=0.3;}}
@@ -80,33 +80,33 @@ export async function exportPdf({output,isPro,excludedSlides,slideOrder,deckThem
         if(dp[i]){pdf.setFont("helvetica","bold");pdf.setFontSize(i===0?12:10);sc(onA(c));pdf.text(dp[i],cx,cy-radii[i]+0.35,{align:"center"});}
         const ly=y+i*0.55; sc(c.primary);pdf.setFont("helvetica","bold");pdf.setFontSize(11);
         if(dp[i])pdf.text(dp[i],ML,ly+0.15);
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.fg);pdf.text(truncate(items[i],50),ML,ly+(dp[i]?0.35:0.15));
+        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.fg);pdf.text(items[i],ML,ly+(dp[i]?0.35:0.15));
       }
     } else if(layout==="matrix"){
       const items=f.bodyContent.slice(0,4);const cols=2;const rows=Math.ceil(items.length/cols);const gap=0.2;
       const cellW=(CW-gap)/cols;const cellH=(H-y-0.6)/rows-gap/2;
       for(let i=0;i<items.length;i++){const col=i%cols;const row=Math.floor(i/cols);const cx2=ML+col*(cellW+gap);const cy2=y+row*(cellH+gap);
         sc(c.accent,"fill");pdf.roundedRect(cx2,cy2,cellW,cellH,0.06,0.06,"F");sc(c.primary,"fill");pdf.rect(cx2,cy2,0.04,cellH,"F");
-        pdf.setFont("helvetica","normal");pdf.setFontSize(10);sc(onA(c));pdf.text(pdf.splitTextToSize(truncate(items[i],120),cellW-0.5),cx2+0.2,cy2+0.3);}
+        pdf.setFont("helvetica","normal");pdf.setFontSize(10);sc(onA(c));pdf.text(pdf.splitTextToSize(items[i],cellW-0.5),cx2+0.2,cy2+0.3);}
     } else if(layout==="timeline"){
       const items=f.bodyContent.slice(0,5);const n=items.length;const sp=CW/n;const r=0.13;
       sc(c.accent,"fill");pdf.rect(ML+sp/2,y+r-0.01,CW-sp,0.02,"F");
       for(let i=0;i<n;i++){const cx2=ML+sp*i+sp/2;sc(c.primary,"fill");pdf.circle(cx2,y+r,r,"F");
         pdf.setFont("helvetica","bold");pdf.setFontSize(9);sc(onA(c));pdf.text(String(i+1),cx2,y+r+0.04,{align:"center"});
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.fg);pdf.text(pdf.splitTextToSize(truncate(items[i],70),sp-0.3),cx2,y+r*2+0.2,{align:"center"});}
+        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.fg);pdf.text(pdf.splitTextToSize(items[i],sp-0.3),cx2,y+r*2+0.2,{align:"center"});}
     } else if(layout==="staircase"){
       const items=f.bodyContent.slice(0,4);const dp=f.dataPoints;const n=items.length;const stepW=CW/n;const maxH=H-y-0.6;const baseY=y+maxH;
       for(let i=0;i<n;i++){const stepH=maxH*((i+1)/n)*0.85;const sx=ML+i*stepW;const sy=baseY-stepH;
         sc(i===n-1?c.primary:c.accent,"fill");pdf.roundedRect(sx+0.05,sy,stepW-0.1,stepH,0.04,0.04,"F");
         if(dp[i]){pdf.setFont("helvetica","bold");pdf.setFontSize(13);sc(onA(c));pdf.text(dp[i],sx+stepW/2,sy+0.25,{align:"center"});}
-        pdf.setFont("helvetica","normal");pdf.setFontSize(8);sc(onA(c));pdf.text(pdf.splitTextToSize(truncate(items[i],50),stepW-0.3),sx+stepW/2,sy+(dp[i]?0.45:0.2),{align:"center"});}
+        pdf.setFont("helvetica","normal");pdf.setFontSize(8);sc(onA(c));pdf.text(pdf.splitTextToSize(items[i],stepW-0.3),sx+stepW/2,sy+(dp[i]?0.45:0.2),{align:"center"});}
     } else if(layout==="team"){
       const items=f.bodyContent.slice(0,3);const n=items.length;const gap=0.25;const cW2=(CW-gap*(n-1))/n;const cH2=H-y-0.6;
       for(let i=0;i<n;i++){const cx2=ML+i*(cW2+gap);sc(c.accent,"fill");pdf.roundedRect(cx2,y,cW2,cH2,0.06,0.06,"F");
         sc(c.primary,"fill");pdf.circle(cx2+cW2/2,y+0.4,0.18,"F");
         const t=items[i];const ci=t.indexOf(":");const title=ci>0?t.substring(0,ci):"";const desc=ci>0?t.substring(ci+1).trim():t;
         if(title){pdf.setFont("helvetica","bold");pdf.setFontSize(10);sc(onA(c));pdf.text(title,cx2+cW2/2,y+0.8,{align:"center"});}
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(onA(c));pdf.text(pdf.splitTextToSize(truncate(desc,90),cW2-0.4),cx2+cW2/2,y+(title?1.0:0.8),{align:"center"});}
+        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(onA(c));pdf.text(pdf.splitTextToSize(desc,cW2-0.4),cx2+cW2/2,y+(title?1.0:0.8),{align:"center"});}
     } else {
       // Default bullets
       if(f.subheadline){pdf.setFont("helvetica","normal");pdf.setFontSize(11);sc(c.muted);const sl=pdf.splitTextToSize(f.subheadline,CW);pdf.text(sl,ML,y);y+=sl.length*0.2+0.12;}
