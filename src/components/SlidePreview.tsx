@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2, Pencil, X, Check } from "lucide-react";
+import { GripVertical, RotateCcw, ChevronDown, Info, Lightbulb, Loader2, Pencil, X, Check, Eye, EyeOff } from "lucide-react";
+import { SlideCanvas, LayoutPicker } from "@/components/SlideCanvas";
+import { resolveLayout } from "@/lib/slideLayouts";
 
 export interface SlideData {
   headline: string;
@@ -12,6 +14,8 @@ export interface SlideData {
   suggestion?: string | null;
   bodyContent?: string[];
   subheadline?: string;
+  selectedLayout?: string;
+  dataPoints?: string[];
 }
 
 export interface DeckTheme {
@@ -162,6 +166,7 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
   const [themeExpanded, setThemeExpanded] = useState(false);
   const [editingSlide, setEditingSlide] = useState<number | null>(null);
   const [savedSlide, setSavedSlide] = useState<number | null>(null);
+  const [previewSlide, setPreviewSlide] = useState<number | null>(null);
 
   if (slides.length === 0) return null;
 
@@ -248,8 +253,8 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
           const bodyPoints = (slide.bodyContent && slide.bodyContent.length > 0) ? slide.bodyContent : getSlideBodyPoints(slide.headline, slide.content);
           const slideReason = getSlideReason(slide.headline, i, orderedSlides.length);
           return (
+            <div key={slide.originalIdx}>
             <div
-              key={slide.originalIdx}
               draggable
               onDragStart={() => handleDragStart(i)}
               onDragOver={e => handleDragOver(e, i)}
@@ -404,6 +409,28 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   </button>
                 )}
 
+                {/* Layout picker */}
+                {!isExcluded && onEditSlide && (
+                  <LayoutPicker
+                    current={resolveLayout(slide.layoutRecommendation, slide.selectedLayout)}
+                    onChange={(layout) => onEditSlide?.(slide.originalIdx, "selectedLayout", layout)}
+                  />
+                )}
+
+                {/* Preview toggle */}
+                {!isExcluded && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPreviewSlide(previewSlide === slide.originalIdx ? null : slide.originalIdx); }}
+                    className={`text-xs px-3 py-1.5 w-[76px] justify-center rounded-sm border font-medium flex items-center gap-1 transition-colors ${
+                      previewSlide === slide.originalIdx
+                        ? "border-electric text-electric bg-electric/10"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    {previewSlide === slide.originalIdx ? <><EyeOff className="h-3 w-3" /> Hide</> : <><Eye className="h-3 w-3" /> Preview</>}
+                  </button>
+                )}
+
                 {/* Refine dropdown */}
                 <div className="relative">
                   <button
@@ -447,6 +474,25 @@ export function SlidePreview({ slides, excludedSlides, onToggleSlide, slideOrder
                   </button>
                 )}
               </div>
+            </div>
+            {previewSlide === slide.originalIdx && !isExcluded && (
+              <div className="mt-2 border border-border rounded-sm overflow-hidden animate-fade-in">
+                <SlideCanvas
+                  slide={{
+                    headline: slide.headline,
+                    subheadline: slide.subheadline || getSlideSubheader(slide.headline, slide.content),
+                    bodyContent: (slide.bodyContent && slide.bodyContent.length > 0) ? slide.bodyContent : getSlideBodyPoints(slide.headline, slide.content),
+                    categoryLabel: slide.categoryLabel,
+                    closingStatement: slide.closingStatement,
+                    layoutRecommendation: slide.layoutRecommendation,
+                    selectedLayout: slide.selectedLayout,
+                    dataPoints: slide.dataPoints,
+                    visualDirection: slide.visualDirection,
+                  }}
+                  theme={theme}
+                />
+              </div>
+            )}
             </div>
           );
         })}

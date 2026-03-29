@@ -56,6 +56,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       suggestion: slide?.suggestion,
       bodyContent: filteredBodyContent,
       subheadline: isPlaceholderText(slide?.subheadline || "") ? "" : slide?.subheadline,
+      selectedLayout: slide?.selectedLayout,
+      dataPoints: slide?.metadata?.dataPoints || [],
     };
   });
 
