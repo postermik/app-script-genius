@@ -133,7 +133,7 @@ export function SlidePreview({
         {orderedSlides.map((slide, i) => {
           const isExcluded = excludedSlides.has(slide.originalIdx);
           const isEditing = editingSlide === slide.originalIdx;
-          const layout = resolveLayout(slide.layoutRecommendation, slide.selectedLayout, slide.categoryLabel, slide.dataPoints);
+          const layout = resolveLayout(slide.layoutRecommendation, slide.selectedLayout, slide.categoryLabel, slide.dataPoints, i, orderedSlides.length);
 
           return (
             <div key={slide.originalIdx}
@@ -247,14 +247,6 @@ export function SlidePreview({
                 <div className="mx-3 mb-3 mt-1 bg-electric/[0.06] border border-electric/20 rounded-sm p-2.5 flex items-start gap-2.5">
                   <Lightbulb className="w-3.5 h-3.5 text-electric mt-0.5 shrink-0" />
                   <p className="text-[12px] text-foreground/80 flex-1">{slide.suggestion}</p>
-                  <button
-                    onClick={() => {
-                      const updated = [...(slide.bodyContent || []), slide.suggestion || ""];
-                      onEditSlide?.(slide.originalIdx, "bodyContent", updated);
-                      setDismissedSuggestions(prev => [...prev, slide.originalIdx]);
-                    }}
-                    className="text-[10px] px-2.5 py-1 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all shrink-0"
-                  >Apply</button>
                   <button onClick={() => setDismissedSuggestions(prev => [...prev, slide.originalIdx])} className="text-[11px] text-muted-foreground hover:text-foreground px-1">✕</button>
                 </div>
               )}

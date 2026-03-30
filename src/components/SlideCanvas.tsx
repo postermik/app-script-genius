@@ -25,26 +25,29 @@ function gc(theme: DeckTheme) {
 }
 type C = ReturnType<typeof gc>;
 
-function hSz(t: string) { return t.length <= 40 ? "1.15em" : t.length <= 60 ? "1em" : t.length <= 80 ? "0.88em" : "0.78em"; }
+function hSz(t: string) { return t.length <= 40 ? "1.4em" : t.length <= 60 ? "1.2em" : t.length <= 80 ? "1.05em" : "0.9em"; }
 
 function Header({ s, c }: { s: SlideCanvasData; c: C }) {
   return <>
-    {s.categoryLabel && <div style={{ fontSize:"0.42em", fontWeight:700, color:c.cat, letterSpacing:"0.15em", textTransform:"uppercase" }}>{s.categoryLabel}</div>}
+    {s.categoryLabel && <div style={{ fontSize:"0.5em", fontWeight:700, color:c.cat, letterSpacing:"0.15em", textTransform:"uppercase" }}>{s.categoryLabel}</div>}
     <div style={{ fontSize:hSz(s.headline), fontWeight:700, color:c.head, lineHeight:1.25, marginTop:"1%" }}>{s.headline}</div>
   </>;
 }
 
-// ── BULLETS (default) ──
+// ── BULLETS (default, adapts spacing based on content) ──
 function Bullets({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  const bullets = s.bodyContent || [];
+  const isCompact = bullets.length > 4;
+  const isSpacious = bullets.length <= 2;
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
     <Header s={s} c={c} />
-    {s.subheadline && <div style={{ fontSize:"0.52em", color:c.sub, marginTop:"2%", lineHeight:1.4 }}>{s.subheadline}</div>}
-    {s.bodyContent && s.bodyContent.length > 0 && <div style={{ marginTop:"3%", flex:1 }}>
-      {s.bodyContent.slice(0, 6).map((t, i) => <div key={i} style={{ fontSize:"0.48em", color:c.body, lineHeight:1.7, display:"flex", gap:"0.5em" }}>
+    {s.subheadline && <div style={{ fontSize:"0.55em", color:c.sub, marginTop:"2%", lineHeight:1.4 }}>{s.subheadline}</div>}
+    {bullets.length > 0 && <div style={{ marginTop:"3%", flex:1, display:"flex", flexDirection:"column", justifyContent: isSpacious ? "center" : "flex-start", gap: isCompact ? "0.3em" : "0.5em" }}>
+      {bullets.slice(0, 6).map((t, i) => <div key={i} style={{ fontSize: isCompact ? "0.5em" : "0.55em", color:c.body, lineHeight: isCompact ? 1.5 : 1.7, display:"flex", gap:"0.5em" }}>
         <span style={{ color:c.primary }}>•</span><span>{t}</span>
       </div>)}
     </div>}
-    {s.closingStatement && <div style={{ fontSize:"0.46em", fontWeight:600, color:c.close, marginTop:"2%" }}>{s.closingStatement}</div>}
+    {s.closingStatement && <div style={{ fontSize:"0.5em", fontWeight:600, color:c.close, marginTop:"2%" }}>{s.closingStatement}</div>}
   </div>;
 }
 
@@ -117,8 +120,8 @@ function Concentric({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C
     </div>
     <div style={{ flex:"0 0 32%", display:"flex", flexDirection:"column", justifyContent:"center", gap:"8%", paddingLeft:"3%" }}>
       {items.map((t, i) => <div key={i}>
-        <div style={{ fontSize:"0.42em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{labels[i]}: {dp[i] || ""}</div>
-        <div style={{ fontSize:"0.38em", color:c.body, lineHeight:1.4 }}>{t}</div>
+        <div style={{ fontSize:"0.5em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{labels[i]}</div>
+        <div style={{ fontSize:"0.42em", color:c.body, lineHeight:1.4 }}>{t}</div>
       </div>)}
     </div>
   </div>;
@@ -269,25 +272,26 @@ function Staircase({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
     <Header s={s} c={c} />
     <div style={{ flex:1, marginTop:"1.5%" }}>
       <svg viewBox="0 0 800 340" width="100%" height="100%" fontFamily="Arial" preserveAspectRatio="xMidYMax meet">
+        <defs>{ms.map((m, i) => {
+          const h = (pcts[i] || 90) / 100 * 310; const y = 340 - h;
+          const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12);
+          return <clipPath key={`cp${i}`} id={`stair-clip-${i}`}><rect x={x} y={y} width={w} height={h} /></clipPath>;
+        })}</defs>
         {ms.map((m, i) => {
           const h = (pcts[i] || 90) / 100 * 310; const y = 340 - h;
           const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12);
           const isLast = i === n - 1;
           return <g key={i}>
             <rect x={x} y={y} width={w} height={h} rx="3" fill={isLast ? `${c.primary}12` : "none"} stroke={isLast ? c.primary : c.border} strokeWidth={isLast ? 1.5 : 1} />
-            {m.amount && <text x={x + w / 2} y={y + 22} textAnchor="middle" fill={isLast ? c.primary : c.head} fontSize="16" fontWeight="700">{m.amount}</text>}
-            {m.bullets.map((b, bi) => <g key={bi}>
-              <text x={x + 14} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.primary} fontSize="8">•</text>
-              <text x={x + 22} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.sub} fontSize="9">{b}</text>
-            </g>)}
+            <g clipPath={`url(#stair-clip-${i})`}>
+              {m.amount && <text x={x + w / 2} y={y + 22} textAnchor="middle" fill={isLast ? c.primary : c.head} fontSize="16" fontWeight="700">{m.amount}</text>}
+              {m.bullets.map((b, bi) => <g key={bi}>
+                <text x={x + 14} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.primary} fontSize="8">•</text>
+                <text x={x + 22} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.sub} fontSize="9">{b}</text>
+              </g>)}
+            </g>
           </g>;
         })}
-        {/* Growth arrow above bars */}
-        <polyline points={ms.map((_, i) => { const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12) + w / 2; const y = 340 - (pcts[i] || 90) / 100 * 310 - 10; return `${x},${y}`; }).join(" ")}
-          fill="none" stroke={c.primary} strokeWidth="2" strokeDasharray="5,4" />
-        {(() => { const w = (780 - 12 * (n - 1)) / n; const lx = 10 + (n - 1) * (w + 12) + w / 2 + 15; const ly = 340 - (pcts[n - 1] || 90) / 100 * 310 - 18;
-          return <polygon points={`${lx},${ly} ${lx - 10},${ly + 3} ${lx - 7},${ly - 7}`} fill={c.primary} />;
-        })()}
       </svg>
     </div>
   </div>;
@@ -301,7 +305,7 @@ const RS: Record<LayoutType, React.FC<{ slide: SlideCanvasData; colors: C }>> = 
 export function SlideCanvas({ slide, theme, className }: Props) {
   const c = gc(theme); const layout = resolveLayout(slide.layoutRecommendation, slide.selectedLayout, slide.categoryLabel, slide.dataPoints);
   const R = RS[layout] || Bullets;
-  return <div className={className} style={{ aspectRatio:"16/9", backgroundColor:c.bg, borderRadius:4, overflow:"hidden", fontSize:"clamp(8px,1.8vw,16px)", fontFamily:"Arial,sans-serif", position:"relative" }}><R slide={slide} colors={c} /></div>;
+  return <div className={className} style={{ aspectRatio:"16/9", backgroundColor:c.bg, borderRadius:4, overflow:"hidden", fontSize:"clamp(10px,2.2vw,20px)", fontFamily:"Arial,sans-serif", position:"relative" }}><R slide={slide} colors={c} /></div>;
 }
 
 // Layout picker
