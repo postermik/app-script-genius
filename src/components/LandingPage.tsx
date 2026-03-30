@@ -59,10 +59,10 @@ export function LandingPage() {
         <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <div className="bg-card border border-border/80 rounded-xl overflow-hidden" style={{ boxShadow: "0 4px 32px -8px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
-                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
-                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
               </div>
               <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Example Output</span>
               <div />
@@ -71,7 +71,7 @@ export function LandingPage() {
               {/* Elevator pitch */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-foreground/70">Elevator Pitch</span>
-                <span className="text-[10px] text-emerald font-semibold px-1.5 py-0.5 bg-emerald/10 border border-emerald/20 rounded-md">Ready to Send</span>
+                <span className="text-[10px] text-electric font-semibold px-1.5 py-0.5 bg-electric/10 border border-electric/20 rounded-md">Generated</span>
               </div>
               <p className="text-[13px] text-foreground/80 leading-relaxed mt-4">
                 Sales teams waste 15 hours a week on meeting coordination. Relay automates the entire scheduling workflow, from availability to follow-up, so reps spend time selling instead of scheduling. We're live with 40 teams, growing 34% quarter over quarter, with 128% net revenue retention.
@@ -89,27 +89,47 @@ export function LandingPage() {
               <div className="border-t border-border/60 mt-6 pt-5">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-foreground/70">Slide Framework</span>
-                  <span className="text-[10px] text-emerald font-semibold px-1.5 py-0.5 bg-emerald/10 border border-emerald/20 rounded-md">Ready</span>
+                  <span className="text-[10px] text-emerald font-semibold px-1.5 py-0.5 bg-emerald/10 border border-emerald/20 rounded-md">3 slides</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
-                  {[
-                    { label: "Cover Slide", title: "Relay Pre-Seed Pitch" },
-                    { label: "Key Metrics", title: "Traction & Unit Economics" },
-                    { label: "Landscape", title: "Competitive Position" },
-                  ].map((slide) => (
-                    <div key={slide.label} className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
-                      <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
-                        <div>
-                          <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">{slide.label}</p>
-                          <p className="text-[13px] font-semibold text-foreground mt-2">{slide.title}</p>
-                        </div>
-                        <div className="space-y-1 select-none opacity-20">
-                          <div className="h-1.5 bg-foreground/20 rounded-md w-[70%]" />
-                          <div className="h-1.5 bg-foreground/20 rounded-md w-[50%]" />
-                        </div>
+                  {/* Card 1: Statement style with accent bar */}
+                  <div className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
+                    <div className="h-1 bg-electric/40" />
+                    <div className="p-4 sm:p-4 flex flex-col justify-between h-full gap-3">
+                      <div>
+                        <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">Cover Slide</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-2">Relay Pre-Seed Pitch</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">Scheduling automation for revenue teams</p>
+                    </div>
+                  </div>
+                  {/* Card 2: Data card style with stats */}
+                  <div className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
+                    <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-3">
+                      <div>
+                        <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">Key Metrics</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-2">Traction & Unit Economics</p>
+                      </div>
+                      <div className="flex gap-4">
+                        <div><p className="text-[16px] font-bold text-electric">40</p><p className="text-[8px] text-muted-foreground">teams</p></div>
+                        <div><p className="text-[16px] font-bold text-foreground">34%</p><p className="text-[8px] text-muted-foreground">QoQ</p></div>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  {/* Card 3: Matrix style with positioning hint */}
+                  <div className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
+                    <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-3">
+                      <div>
+                        <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">Landscape</p>
+                        <p className="text-[13px] font-semibold text-foreground mt-2">Competitive Position</p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <span className="text-[9px] px-2 py-0.5 bg-electric/10 text-electric rounded-md">Calendly</span>
+                        <span className="text-[9px] px-2 py-0.5 bg-electric/10 text-electric rounded-md">Chili Piper</span>
+                        <span className="text-[9px] px-2 py-0.5 bg-primary/10 text-primary rounded-md font-semibold">Relay</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

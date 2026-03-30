@@ -100,9 +100,9 @@ function ConsultantPreview() {
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {cards.map((card, i) => {
-            const borderColor = card.state === "covered" ? "border-l-emerald" : card.state === "strengthen" ? "border-l-electric" : "border-l-amber-400";
-            const bgColor = card.state === "covered" ? "bg-emerald/[0.04]" : card.state === "strengthen" ? "bg-secondary" : "bg-amber-400/[0.05]";
-            const badgeColor = card.state === "covered" ? "bg-emerald/10 text-emerald" : card.state === "strengthen" ? "bg-secondary text-electric" : "bg-amber-400/10 text-amber-400";
+            const borderColor = card.state === "covered" ? "border-l-emerald" : card.state === "strengthen" ? "border-l-amber-500" : "border-l-red-400";
+            const bgColor = card.state === "covered" ? "bg-emerald/[0.04]" : card.state === "strengthen" ? "bg-amber-50" : "bg-red-50";
+            const badgeColor = card.state === "covered" ? "bg-emerald/10 text-emerald" : card.state === "strengthen" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-600";
             const badgeLabel = card.state === "covered" ? "Covered" : card.state === "strengthen" ? "Strengthen" : "Missing";
             return (
               <div key={card.label}
@@ -114,7 +114,7 @@ function ConsultantPreview() {
                   <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${badgeColor}`}>{badgeLabel}</span>
                 </div>
                 {card.hint && (
-                  <p className={`text-[9px] flex items-center gap-1 mt-1 ${card.state === "missing" ? "text-amber-400/70" : "text-electric/70"}`}>
+                  <p className={`text-[9px] flex items-center gap-1 mt-1 ${card.state === "missing" ? "text-red-500" : "text-amber-600"}`}>
                     {card.state === "missing" ? <AlertTriangle className="h-2.5 w-2.5 shrink-0" /> : <Sparkles className="h-2.5 w-2.5 shrink-0" />}
                     {card.hint}
                   </p>
