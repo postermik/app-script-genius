@@ -124,9 +124,6 @@ function Concentric({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C
   </div>;
 }
 
-// ── MATRIX (X/Y scatter) ──
-function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 6);
 // ── MATRIX (X/Y scatter, uses competitors field if available) ──
 function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
   const structuredComps = s.competitors;
