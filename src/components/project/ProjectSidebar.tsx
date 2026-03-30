@@ -127,7 +127,7 @@ export function ProjectSidebar({ activeTab, onTabChange, intent, isLoading }: Pr
 
   return (
     <aside
-      className="bg-[hsl(222_24%_4%)] border-r border-border overflow-y-auto flex flex-col"
+      className="bg-card border-r border-border overflow-y-auto flex flex-col"
       style={{ position: "fixed", top: 56, left: 0, bottom: 0, width: 200, zIndex: 40 }}
     >
       <div className="flex-1 px-2.5 pt-5">

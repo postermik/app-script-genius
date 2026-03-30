@@ -13,7 +13,7 @@ export function RaiseSidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-52 shrink-0 sticky top-[56px] self-start h-[calc(100vh-56px)] overflow-y-auto bg-[hsl(222_24%_4%)] border-r border-border z-10 flex flex-col">
+    <aside className="w-52 shrink-0 sticky top-[56px] self-start h-[calc(100vh-56px)] overflow-y-auto bg-card border-r border-border z-10 flex flex-col">
       <div className="flex-1 px-3 pt-6">
         <h3 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric mb-4 px-3">
           Raise
