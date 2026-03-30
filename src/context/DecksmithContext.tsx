@@ -748,6 +748,22 @@ Return ONLY valid JSON, no markdown fences.`;
         activeGaps.map((g, i) => (i + 1) + ". " + g).join("\n") + "\n\n"
       : "";
 
+    // ── STRATEGIC INSIGHTS: inject Phase 1 analysis into all outputs ──
+    const si = od?.slide_framework?.strategicInsights || (output as any)?.strategicInsights;
+    let strategicContext = "";
+    if (si && outputType !== "slide_framework") {
+      const parts: string[] = [];
+      if (si.businessType) parts.push(`Business type: ${si.businessType}`);
+      if (si.stage) parts.push(`Stage: ${si.stage}`);
+      if (si.keyInsight) parts.push(`Key insight: ${si.keyInsight}`);
+      if (si.audiencePriorities?.length) parts.push(`Audience priorities: ${si.audiencePriorities.join(", ")}`);
+      if (si.missingElements?.length) parts.push(`Missing elements to address: ${si.missingElements.join(", ")}`);
+      if (si.flywheelLogic) parts.push(`Growth flywheel: ${si.flywheelLogic}`);
+      if (parts.length > 0) {
+        strategicContext = "STRATEGIC CONTEXT (from narrative analysis):\n" + parts.join("\n") + "\nUse this context to make your output more specific and strategically aligned.\n\n";
+      }
+    }
+
     const outputPrompts: Record<string, string> = {
       elevator_pitch: `${gapContext}${noSlideWarning} You are generating an ELEVATOR PITCH. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
       pitch_email: `${gapContext}${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
@@ -778,7 +794,7 @@ Return JSON: { "deckFramework": [...] }`,
     const prompt = outputPrompts[outputType] || "";
     const noEmDash = "STYLE RULE: Never use em dashes anywhere in your output. Use commas, periods, colons, or semicolons instead.\n";
     const overridePrefix = outputType !== "slide_framework" ? `IMPORTANT: This request is for "${outputType}" ONLY. Do NOT generate slides or deckFramework.\n\n` : "";
-    const fullInput = `${overridePrefix}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    const fullInput = `${overridePrefix}${strategicContext}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens =
       outputType === "slide_framework" ? 7000 :
@@ -953,12 +969,13 @@ Return JSON: { "deckFramework": [...] }`,
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
       // Step 2: Fire outputs sequentially so stepper and tabs update one at a time
+      // slide_framework runs first because Phase 1 produces strategicInsights that improve all other outputs
       const ORDERED_OUTPUTS = [
+        "slide_framework",
         "elevator_pitch",
         "investor_qa",
         "pitch_email",
         "investment_memo",
-        "slide_framework",
         "board_memo",
         "key_metrics_summary",
         "strategic_memo",
