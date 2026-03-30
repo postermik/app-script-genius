@@ -71,6 +71,7 @@ export function SlidePreview({
   const [savedSlide, setSavedSlide] = useState<number | null>(null);
   const [brandUrl, setBrandUrl] = useState("");
   const [isExtractingColors, setIsExtractingColors] = useState(false);
+  const [extractMessage, setExtractMessage] = useState("");
 
   if (slides.length === 0) return null;
 
@@ -134,6 +135,7 @@ export function SlidePreview({
                 disabled={!brandUrl.trim() || isExtractingColors}
                 onClick={async () => {
                   setIsExtractingColors(true);
+                  setExtractMessage("");
                   try {
                     const { data: { session: s } } = await supabase.auth.getSession();
                     const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/decksmith-ai", {
@@ -143,15 +145,25 @@ export function SlidePreview({
                     });
                     if (resp.ok) {
                       const colors = await resp.json();
-                      onThemeChange({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
+                      if (colors.noSignal) {
+                        setExtractMessage("Couldn't detect brand colors. Use the pickers above.");
+                        setTimeout(() => setExtractMessage(""), 4000);
+                      } else if (colors.primary) {
+                        onThemeChange({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
+                        setExtractMessage("");
+                      }
+                    } else {
+                      setExtractMessage("Extraction failed. Try again.");
+                      setTimeout(() => setExtractMessage(""), 4000);
                     }
-                  } catch (e) { console.warn("Brand color extraction failed:", e); }
+                  } catch (e) { console.warn("Brand color extraction failed:", e); setExtractMessage("Extraction failed."); setTimeout(() => setExtractMessage(""), 4000); }
                   finally { setIsExtractingColors(false); }
                 }}
                 className="text-[10px] px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 font-medium disabled:opacity-40 transition-colors flex items-center gap-1">
                 {isExtractingColors ? <><Loader2 className="h-3 w-3 animate-spin" />...</> : "Extract"}
               </button>
             </div>
+            {extractMessage && <div className="text-[10px] text-muted-foreground mt-1.5 pl-1">{extractMessage}</div>}
           </div>
         )}
       </div>
