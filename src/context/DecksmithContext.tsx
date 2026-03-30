@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
 import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
-import type { DeckTheme } from "@/components/SlidePreview";
+import type { DeckTheme, BrandColors } from "@/components/SlidePreview";
 
 const DEFAULT_DECK_THEME: DeckTheme = { scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f", text: undefined };
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +111,8 @@ interface DecksmithContextType {
   generateOutput: (outputType: OutputDeliverable) => Promise<void>;
   deckTheme: DeckTheme;
   setDeckTheme: (theme: DeckTheme) => void;
+  brandColors: BrandColors | null;
+  setBrandColors: (colors: BrandColors | null) => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -150,6 +152,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
   const [deckTheme, setDeckTheme] = useState<DeckTheme>(DEFAULT_DECK_THEME);
+  const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
   const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
 
@@ -311,6 +314,24 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
         console.log("[Persistence] Deck theme saved");
       } catch (e) {
         console.warn("[Persistence] Failed to save deck theme:", e);
+      }
+    });
+  }, [currentProjectId]);
+
+  // Brand colors setter that also persists to output_data
+  const setBrandColorsAndPersist = useCallback((colors: BrandColors | null) => {
+    setBrandColors(colors);
+    if (!currentProjectId) return;
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      try {
+        const { data: project } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+        const existing = (project?.output_data as any) || {};
+        await supabase.from("projects").update({
+          output_data: { ...existing, brand_colors: colors } as any,
+        }).eq("id", currentProjectId);
+        console.log("[Persistence] Brand colors saved");
+      } catch (e) {
+        console.warn("[Persistence] Failed to save brand colors:", e);
       }
     });
   }, [currentProjectId]);
@@ -819,8 +840,23 @@ Return JSON: { "deckFramework": [...] }`,
         headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ mode: "brand_colors", url: detectedUrl }),
       }).then(r => r.ok ? r.json() : null).then(colors => {
-        if (colors?.primary) {
-          console.log("[BrandColors] Extracted:", colors);
+        if (colors?.dark && colors?.light) {
+          console.log("[BrandColors] Extracted dark+light variants:", colors);
+          setBrandColors(colors);
+          // Auto-apply dark variant
+          setDeckThemeAndPersist({ scheme: "custom", brandVariant: "dark", primary: colors.dark.primary, secondary: colors.dark.secondary, accent: colors.dark.accent, text: colors.dark.text });
+          // Persist brand colors to project
+          if (currentProjectId) {
+            saveQueueRef.current = saveQueueRef.current.then(async () => {
+              try {
+                const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+                const existing = (proj?.output_data as any) || {};
+                await supabase.from("projects").update({ output_data: { ...existing, brand_colors: colors } as any }).eq("id", currentProjectId);
+              } catch (e) { console.warn("[Persistence] Failed to save brand colors:", e); }
+            });
+          }
+        } else if (colors?.primary) {
+          console.log("[BrandColors] Extracted (legacy):", colors);
           setDeckThemeAndPersist({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
         }
       }).catch(e => console.warn("[BrandColors] Extraction failed:", e));
@@ -1996,6 +2032,7 @@ No markdown fences. No commentary outside the JSON.`;
     setCoreNarrative(null);
     setOutputData({});
     setDeckTheme(DEFAULT_DECK_THEME);
+    setBrandColors(null);
     setScoringComplete(false);
   }, []);
 
@@ -2060,7 +2097,7 @@ No markdown fences. No commentary outside the JSON.`;
     }
 
     // Restore individual outputs (everything except meta keys)
-    const META_KEYS = new Set(["core_narrative", "intake_selections", "applied_suggestions", "dismissed_suggestions", "tab_order", "score", "mode", "title", "intent", "deck_theme"]);
+    const META_KEYS = new Set(["core_narrative", "intake_selections", "applied_suggestions", "dismissed_suggestions", "tab_order", "score", "mode", "title", "intent", "deck_theme", "brand_colors"]);
     const restoredOutputData: Record<string, any> = {};
     for (const key of Object.keys(persisted)) {
       if (!META_KEYS.has(key) && !key.endsWith("_error") && !key.endsWith("_rawResponse") && persisted[key]) {
@@ -2100,6 +2137,8 @@ No markdown fences. No commentary outside the JSON.`;
 
     // Restore deck theme
     setDeckTheme(persisted.deck_theme || DEFAULT_DECK_THEME);
+    // Restore brand colors
+    setBrandColors(persisted.brand_colors || null);
 
     // Restore the main output object so ProductView renders OutputView
     const hasPersistedData = persisted.core_narrative || persisted.score || Object.keys(restoredOutputData).length > 0;
@@ -2206,6 +2245,7 @@ No markdown fences. No commentary outside the JSON.`;
         applyDeckSuggestion, applySlideSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
         dismissedSuggestions, dismissSuggestion, updateNarrativeSection,
         deckTheme, setDeckTheme: setDeckThemeAndPersist,
+        brandColors, setBrandColors: setBrandColorsAndPersist,
       }}
     >
       {children}

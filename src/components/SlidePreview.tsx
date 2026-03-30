@@ -25,12 +25,16 @@ export interface SlideData {
   axisLabels?: { x: string; y: string; };
 }
 
+export interface BrandColorVariant { primary: string; secondary: string; accent: string; text: string; }
+export interface BrandColors { dark: BrandColorVariant; light: BrandColorVariant; }
+
 export interface DeckTheme {
   scheme: "dark" | "light" | "custom";
   primary: string;
   secondary: string;
   accent: string;
   text?: string;
+  brandVariant?: "dark" | "light";
 }
 
 interface Props {
@@ -46,6 +50,8 @@ interface Props {
   onEditSlide?: (slideIndex: number, field: string, value: string | string[]) => void;
   onApplySuggestion?: (slideIndex: number, suggestion: string) => void;
   applyingSuggestionSlideIndex?: number | null;
+  brandColors?: BrandColors | null;
+  onBrandColorsExtracted?: (colors: BrandColors) => void;
 }
 
 const REFINE_OPTIONS = [
@@ -58,10 +64,21 @@ const REFINE_OPTIONS = [
   { value: "revert", label: "Revert to Original" },
 ];
 
+// Mini color swatch strip for brand variant preview
+function ColorChip({ colors }: { colors: BrandColorVariant }) {
+  return (
+    <span className="inline-flex gap-px ml-1.5">
+      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colors.secondary, border: "1px solid rgba(128,128,128,0.3)" }} />
+      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colors.primary }} />
+      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: colors.accent }} />
+    </span>
+  );
+}
+
 export function SlidePreview({
   slides, excludedSlides, onToggleSlide, slideOrder, onReorder,
   theme, onThemeChange, onRefineSlide, refiningSlideIndex, onEditSlide,
-  onApplySuggestion, applyingSuggestionSlideIndex
+  onApplySuggestion, applyingSuggestionSlideIndex, brandColors, onBrandColorsExtracted
 }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
@@ -90,7 +107,76 @@ export function SlidePreview({
   };
   const handleDragEnd = () => setDragIdx(null);
 
-  const themeLabel = theme.scheme.charAt(0).toUpperCase() + theme.scheme.slice(1);
+  // Determine which button is active
+  const isDarkActive = theme.scheme === "dark" || theme.brandVariant === "dark";
+  const isLightActive = theme.scheme === "light" || theme.brandVariant === "light";
+  const isCustomActive = theme.scheme === "custom" && !theme.brandVariant;
+
+  const handleDarkClick = () => {
+    if (brandColors) {
+      const v = brandColors.dark;
+      onThemeChange({ scheme: "custom", brandVariant: "dark", primary: v.primary, secondary: v.secondary, accent: v.accent, text: v.text });
+    } else {
+      onThemeChange({ ...theme, scheme: "dark", brandVariant: undefined });
+    }
+  };
+
+  const handleLightClick = () => {
+    if (brandColors) {
+      const v = brandColors.light;
+      onThemeChange({ scheme: "custom", brandVariant: "light", primary: v.primary, secondary: v.secondary, accent: v.accent, text: v.text });
+    } else {
+      onThemeChange({ ...theme, scheme: "light", brandVariant: undefined });
+    }
+  };
+
+  const handleCustomClick = () => {
+    onThemeChange({ ...theme, scheme: "custom", brandVariant: undefined });
+  };
+
+  const handleExtract = async () => {
+    setIsExtractingColors(true);
+    setExtractMessage("");
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/decksmith-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz", "Authorization": `Bearer ${s?.access_token || ""}` },
+        body: JSON.stringify({ mode: "brand_colors", url: brandUrl.trim() }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.noSignal) {
+          setExtractMessage("Couldn't detect brand colors. Use the pickers.");
+          setTimeout(() => setExtractMessage(""), 4000);
+        } else if (data.dark && data.light) {
+          // New format: dark + light variants
+          const bc: BrandColors = { dark: data.dark, light: data.light };
+          onBrandColorsExtracted?.(bc);
+          // Auto-apply dark variant
+          onThemeChange({ scheme: "custom", brandVariant: "dark", primary: data.dark.primary, secondary: data.dark.secondary, accent: data.dark.accent, text: data.dark.text });
+          setExtractMessage("");
+        } else if (data.primary) {
+          // Legacy format (single colors): treat as dark variant, derive light
+          onThemeChange({ scheme: "custom", primary: data.primary, secondary: data.secondary, accent: data.accent, text: data.text });
+          setExtractMessage("");
+        }
+      } else {
+        setExtractMessage("Extraction failed. Try again.");
+        setTimeout(() => setExtractMessage(""), 4000);
+      }
+    } catch (e) {
+      console.warn("Brand color extraction failed:", e);
+      setExtractMessage("Extraction failed.");
+      setTimeout(() => setExtractMessage(""), 4000);
+    } finally {
+      setIsExtractingColors(false);
+    }
+  };
+
+  const themeLabel = isDarkActive ? (brandColors ? "Brand Dark" : "Dark")
+    : isLightActive ? (brandColors ? "Brand Light" : "Light")
+    : "Custom";
 
   return (
     <div className="mb-10">
@@ -106,20 +192,27 @@ export function SlidePreview({
         </div>
         {themeExpanded && (
           <div className="px-4 py-3 border border-t-0 border-border rounded-b-sm card-gradient">
+            {/* Theme variant buttons */}
             <div className="flex flex-wrap items-center gap-3">
-              {(["dark", "light", "custom"] as const).map(s => (
-                <button key={s} onClick={() => onThemeChange({ ...theme, scheme: s })}
-                  className={`text-xs px-4 py-2 rounded-sm border transition-colors capitalize font-medium ${theme.scheme === s ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"}`}>
-                  {s}
-                </button>
-              ))}
-              {theme.scheme === "custom" && (
+              <button onClick={handleDarkClick}
+                className={`text-xs px-4 py-2 rounded-sm border transition-colors font-medium flex items-center ${isDarkActive ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"}`}>
+                Dark{brandColors && <ColorChip colors={brandColors.dark} />}
+              </button>
+              <button onClick={handleLightClick}
+                className={`text-xs px-4 py-2 rounded-sm border transition-colors font-medium flex items-center ${isLightActive ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"}`}>
+                Light{brandColors && <ColorChip colors={brandColors.light} />}
+              </button>
+              <button onClick={handleCustomClick}
+                className={`text-xs px-4 py-2 rounded-sm border transition-colors font-medium ${isCustomActive ? "border-electric/40 text-foreground bg-electric/10" : "border-border text-secondary-foreground hover:text-foreground"}`}>
+                Custom
+              </button>
+              {isCustomActive && (
                 <div className="flex items-center gap-3 ml-2">
                   {[["Primary", "primary"], ["Background", "secondary"], ["Accent", "accent"], ["Text", "text"]].map(([label, key]) => (
                     <label key={key} className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">{label}</span>
                       <input type="color" value={(theme as any)[key] || (key === "text" ? "#e2e8f0" : "#3b82f6")}
-                        onChange={e => onThemeChange({ ...theme, [key]: e.target.value })}
+                        onChange={e => onThemeChange({ ...theme, [key]: e.target.value, brandVariant: undefined })}
                         className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
                     </label>
                   ))}
@@ -130,35 +223,9 @@ export function SlidePreview({
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
               <span className="text-[10px] text-muted-foreground whitespace-nowrap">Brand URL</span>
               <input value={brandUrl} onChange={e => setBrandUrl(e.target.value)} placeholder="yourcompany.com"
+                onKeyDown={e => { if (e.key === "Enter" && brandUrl.trim() && !isExtractingColors) handleExtract(); }}
                 className="flex-1 text-xs bg-transparent border border-border/50 rounded-sm px-2 py-1.5 text-foreground placeholder:text-muted-foreground/50 focus:border-electric/50 outline-none" />
-              <button
-                disabled={!brandUrl.trim() || isExtractingColors}
-                onClick={async () => {
-                  setIsExtractingColors(true);
-                  setExtractMessage("");
-                  try {
-                    const { data: { session: s } } = await supabase.auth.getSession();
-                    const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/decksmith-ai", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz", "Authorization": `Bearer ${s?.access_token || ""}` },
-                      body: JSON.stringify({ mode: "brand_colors", url: brandUrl.trim() }),
-                    });
-                    if (resp.ok) {
-                      const colors = await resp.json();
-                      if (colors.noSignal) {
-                        setExtractMessage("Couldn't detect brand colors. Use the pickers above.");
-                        setTimeout(() => setExtractMessage(""), 4000);
-                      } else if (colors.primary) {
-                        onThemeChange({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
-                        setExtractMessage("");
-                      }
-                    } else {
-                      setExtractMessage("Extraction failed. Try again.");
-                      setTimeout(() => setExtractMessage(""), 4000);
-                    }
-                  } catch (e) { console.warn("Brand color extraction failed:", e); setExtractMessage("Extraction failed."); setTimeout(() => setExtractMessage(""), 4000); }
-                  finally { setIsExtractingColors(false); }
-                }}
+              <button disabled={!brandUrl.trim() || isExtractingColors} onClick={handleExtract}
                 className="text-[10px] px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 font-medium disabled:opacity-40 transition-colors flex items-center gap-1">
                 {isExtractingColors ? <><Loader2 className="h-3 w-3 animate-spin" />...</> : "Extract"}
               </button>
@@ -253,19 +320,11 @@ export function SlidePreview({
               <div className={isExcluded ? "opacity-40 pointer-events-none" : ""}>
                 <SlideCanvas
                   slide={{
-                    headline: slide.headline,
-                    subheadline: slide.subheadline,
-                    bodyContent: slide.bodyContent,
-                    categoryLabel: slide.categoryLabel,
-                    closingStatement: slide.closingStatement,
-                    layoutRecommendation: slide.layoutRecommendation,
-                    selectedLayout: slide.selectedLayout,
-                    dataPoints: slide.dataPoints,
-                    tiers: slide.tiers,
-                    flywheelSteps: slide.flywheelSteps,
-                    milestones: slide.milestones,
-                    competitors: slide.competitors,
-                    cards: slide.cards,
+                    headline: slide.headline, subheadline: slide.subheadline, bodyContent: slide.bodyContent,
+                    categoryLabel: slide.categoryLabel, closingStatement: slide.closingStatement,
+                    layoutRecommendation: slide.layoutRecommendation, selectedLayout: slide.selectedLayout,
+                    dataPoints: slide.dataPoints, tiers: slide.tiers, flywheelSteps: slide.flywheelSteps,
+                    milestones: slide.milestones, competitors: slide.competitors, cards: slide.cards,
                     axisLabels: slide.axisLabels,
                   }}
                   theme={theme}
@@ -296,18 +355,14 @@ export function SlidePreview({
                   <p className="text-[12px] text-foreground/80 flex-1">{slide.suggestion}</p>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {onApplySuggestion && (
-                      <button
-                        onClick={() => onApplySuggestion(slide.originalIdx, slide.suggestion!)}
+                      <button onClick={() => onApplySuggestion(slide.originalIdx, slide.suggestion!)}
                         disabled={isApplyingSuggestion}
-                        className="text-[10px] px-2.5 py-1 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1"
-                      >
+                        className="text-[10px] px-2.5 py-1 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1">
                         {isApplyingSuggestion ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying...</> : "Apply"}
                       </button>
                     )}
-                    <button
-                      onClick={() => setDismissedSuggestions(prev => [...prev, slide.originalIdx])}
-                      className="text-[11px] text-muted-foreground hover:text-foreground px-1"
-                    >
+                    <button onClick={() => setDismissedSuggestions(prev => [...prev, slide.originalIdx])}
+                      className="text-[11px] text-muted-foreground hover:text-foreground px-1">
                       ✕
                     </button>
                   </div>

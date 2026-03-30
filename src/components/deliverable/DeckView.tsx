@@ -21,7 +21,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const [fadingOut, setFadingOut] = useState<number[]>([]);
   const [refiningSlideIndex, setRefiningSlideIndex] = useState<number | null>(null);
   const [applyingSuggestionSlideIndex, setApplyingSuggestionSlideIndex] = useState<number | null>(null);
-  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection, appliedSuggestions, applySlideSuggestion } = useDecksmith();
+  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection, appliedSuggestions, applySlideSuggestion, brandColors, setBrandColors } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -166,6 +166,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
         onEditSlide={handleEditSlide}
         onApplySuggestion={handleApplySlideSuggestion}
         applyingSuggestionSlideIndex={applyingSuggestionSlideIndex}
+        brandColors={brandColors}
+        onBrandColorsExtracted={setBrandColors}
       />
     </div>
   );
