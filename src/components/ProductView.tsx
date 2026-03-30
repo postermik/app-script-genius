@@ -96,12 +96,23 @@ export function ProductView() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col items-center px-6 pt-20">
         <div className="max-w-[720px] w-full animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-12">What are you building?</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-3">What are you building?</h1>
+          <p className="text-sm text-muted-foreground text-center mb-10">Paste your pitch, describe your startup, or upload a deck to evaluate.</p>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
               rows={8} disabled={isFreeAndLocked || isGenerating}
               className="w-full bg-card border border-border rounded-lg px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
+            {!rawInput.trim() && !isGenerating && !showIntake && (
+              <div className="flex flex-wrap gap-2 -mt-2">
+                {["Raising a pre-seed", "Seed round pitch", "Board update", "Strategy memo", "Evaluate my deck"].map(chip => (
+                  <button key={chip} onClick={() => setRawInput(chip === "Evaluate my deck" ? "" : `I'm working on a ${chip.toLowerCase()}. `)}
+                    className="text-xs px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-muted transition-colors font-medium">
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
             {showIntake && !isGenerating && (
               <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => setShowIntake(false)} />
             )}
