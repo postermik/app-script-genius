@@ -4,7 +4,7 @@ import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurp
 import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
 import type { DeckTheme, BrandColors } from "@/components/SlidePreview";
 
-const DEFAULT_DECK_THEME: DeckTheme = { scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f", text: undefined };
+const DEFAULT_DECK_THEME: DeckTheme = { scheme: "light", primary: "#3b82f6", secondary: "#ffffff", accent: "#1e3a5f", text: undefined };
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
