@@ -65,14 +65,15 @@ export function ConstellationBackground() {
         n.vy *= 0.999;
       }
 
+      // Warm tan connections
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[i].x - nodes[j].x;
           const dy = nodes[i].y - nodes[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < connectionDist) {
-            const alpha = (1 - dist / connectionDist) * 0.12;
-            ctx.strokeStyle = `rgba(96, 140, 210, ${alpha})`;
+            const alpha = (1 - dist / connectionDist) * 0.08;
+            ctx.strokeStyle = `rgba(160, 148, 130, ${alpha})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -82,15 +83,16 @@ export function ConstellationBackground() {
         }
       }
 
+      // Warm tan nodes
       for (const n of nodes) {
         const dx = n.x - mouse.x;
         const dy = n.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const glow = dist < mouseDist ? (1 - dist / mouseDist) * 0.4 : 0;
         const radius = 1.5 + glow * 2;
-        const alpha = 0.25 + glow * 0.5;
+        const alpha = 0.15 + glow * 0.4;
 
-        ctx.fillStyle = `rgba(120, 160, 220, ${alpha})`;
+        ctx.fillStyle = `rgba(140, 130, 115, ${alpha})`;
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
         ctx.fill();
