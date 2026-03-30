@@ -135,10 +135,10 @@ function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
   // Use structured cards field if available, else fall back to dataPoints/bodyContent
   const structuredCards = s.cards;
   if (structuredCards && structuredCards.length > 0) {
-    return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
+    return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%", justifyContent:"flex-start" }}>
       <Header s={s} c={c} />
-      <div style={{ display:"flex", gap:"2.5%", marginTop:"3%", flex:"1 1 0", alignItems:"stretch" }}>
-        {structuredCards.map((card, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderTop:`3px solid ${c.primary}`, borderRadius:4, padding:"3% 4%", display:"flex", flexDirection:"column", justifyContent:"flex-start" }}>
+      <div style={{ display:"flex", gap:"2.5%", marginTop:"4%" }}>
+        {structuredCards.map((card, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderTop:`3px solid ${c.primary}`, borderRadius:4, padding:"3% 4%" }}>
           <div style={{ fontSize:"0.48em", fontWeight:700, color:c.primary, marginBottom:"4%", borderBottom:`1px solid ${c.border}`, paddingBottom:"3%" }}>{card.category}</div>
           {card.stats.map((stat, j) => <div key={j} style={{ marginBottom:"6%" }}>
             <div style={{ fontSize:"0.42em", color:c.sub }}>{stat.label}</div>

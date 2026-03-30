@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Check, Zap, BarChart3, Users, Sparkles, ShieldCheck } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
-import { ConstellationBackground } from "@/components/ConstellationBackground";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { TIERS, FREE_PLAN } from "@/hooks/useSubscription";
@@ -41,7 +40,6 @@ export function LandingPage() {
     <>
       {/* ── Hero ── */}
       <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-10 overflow-hidden">
-        <ConstellationBackground />
         {/* Subtle warm radial background */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 30%, hsl(36 30% 92%) 0%, transparent 70%)" }} />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
