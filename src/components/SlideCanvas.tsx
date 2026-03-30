@@ -82,8 +82,8 @@ function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
         {structuredCards.map((card, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderTop:`3px solid ${c.primary}`, borderRadius:4, padding:"3% 4%", display:"flex", flexDirection:"column" }}>
           <div style={{ fontSize:"0.48em", fontWeight:700, color:c.primary, marginBottom:"4%", borderBottom:`1px solid ${c.border}`, paddingBottom:"3%" }}>{card.category}</div>
           {card.stats.map((stat, j) => <div key={j} style={{ marginBottom:"3%" }}>
-            <div style={{ fontSize:"0.35em", color:c.sub }}>{stat.label}</div>
-            <div style={{ fontSize:"0.6em", fontWeight:700, color:c.head }}>{stat.value}</div>
+            <div style={{ fontSize:"0.4em", color:c.sub }}>{stat.label}</div>
+            <div style={{ fontSize:"0.65em", fontWeight:700, color:c.head }}>{stat.value}</div>
           </div>)}
         </div>)}
       </div>
@@ -103,32 +103,34 @@ function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
   </div>;
 }
 
-// ── CONCENTRIC (bottom-aligned circles, uses tiers field if available) ──
+// ── CONCENTRIC (header on top, circles + legend below) ──
 function Concentric({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
   const tiers = s.tiers || [];
   const items = tiers.length > 0 ? tiers.map(t => t.description) : (s.bodyContent || []).slice(0, 3);
   const dp = tiers.length > 0 ? tiers.map(t => t.amount) : (s.dataPoints || []);
   const labels = tiers.length > 0 ? tiers.map(t => t.label) : ["TAM","SAM","SOM"];
-  return <div style={{ display:"flex", height:"100%", padding:"4% 4%" }}>
-    <div style={{ flex:"0 0 22%", paddingTop:"1%" }}><Header s={s} c={c} /></div>
-    <div style={{ flex:"0 0 42%", display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
-      <svg viewBox="0 0 360 380" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
-        <ellipse cx="180" cy="195" rx="175" ry="175" fill={`${c.primary}0a`} stroke={`${c.primary}33`} strokeWidth="1.5" />
-        <ellipse cx="180" cy="255" rx="120" ry="120" fill={`${c.primary}15`} stroke={`${c.primary}55`} strokeWidth="1.5" />
-        <ellipse cx="180" cy="315" rx="62" ry="62" fill={`${c.primary}22`} stroke={`${c.primary}77`} strokeWidth="1.5" />
-        <text x="180" y="72" textAnchor="middle" fill={c.head} fontSize="20" fontWeight="700" fontFamily="Arial">{dp[0] || ""}</text>
-        <text x="180" y="90" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[0]}</text>
-        <text x="180" y="189" textAnchor="middle" fill={c.head} fontSize="17" fontWeight="700" fontFamily="Arial">{dp[1] || ""}</text>
-        <text x="180" y="206" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[1]}</text>
-        <text x="180" y="310" textAnchor="middle" fill={c.head} fontSize="14" fontWeight="700" fontFamily="Arial">{dp[2] || ""}</text>
-        <text x="180" y="326" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[2]}</text>
-      </svg>
-    </div>
-    <div style={{ flex:"0 0 32%", display:"flex", flexDirection:"column", justifyContent:"center", gap:"8%", paddingLeft:"3%" }}>
-      {items.map((t, i) => <div key={i}>
-        <div style={{ fontSize:"0.5em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{labels[i]}</div>
-        <div style={{ fontSize:"0.42em", color:c.body, lineHeight:1.4 }}>{t}</div>
-      </div>)}
+  return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"4% 5%" }}>
+    <Header s={s} c={c} />
+    <div style={{ display:"flex", flex:1, marginTop:"2%" }}>
+      <div style={{ flex:"0 0 55%", display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+        <svg viewBox="0 0 360 340" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
+          <ellipse cx="180" cy="175" rx="165" ry="165" fill={`${c.primary}0a`} stroke={`${c.primary}33`} strokeWidth="1.5" />
+          <ellipse cx="180" cy="225" rx="112" ry="112" fill={`${c.primary}15`} stroke={`${c.primary}55`} strokeWidth="1.5" />
+          <ellipse cx="180" cy="278" rx="58" ry="58" fill={`${c.primary}22`} stroke={`${c.primary}77`} strokeWidth="1.5" />
+          <text x="180" y="55" textAnchor="middle" fill={c.head} fontSize="20" fontWeight="700" fontFamily="Arial">{dp[0] || ""}</text>
+          <text x="180" y="73" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[0]}</text>
+          <text x="180" y="168" textAnchor="middle" fill={c.head} fontSize="17" fontWeight="700" fontFamily="Arial">{dp[1] || ""}</text>
+          <text x="180" y="185" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[1]}</text>
+          <text x="180" y="275" textAnchor="middle" fill={c.head} fontSize="14" fontWeight="700" fontFamily="Arial">{dp[2] || ""}</text>
+          <text x="180" y="291" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[2]}</text>
+        </svg>
+      </div>
+      <div style={{ flex:"0 0 40%", display:"flex", flexDirection:"column", justifyContent:"center", gap:"8%", paddingLeft:"3%" }}>
+        {items.map((t, i) => <div key={i}>
+          <div style={{ fontSize:"0.5em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{labels[i]}</div>
+          <div style={{ fontSize:"0.42em", color:c.body, lineHeight:1.4 }}>{t}</div>
+        </div>)}
+      </div>
     </div>
   </div>;
 }
@@ -287,13 +289,15 @@ function Staircase({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
           const h = (pcts[i] || 90) / 100 * 310; const y = 340 - h;
           const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12);
           const isLast = i === n - 1;
+          const maxChars = Math.floor((w - 30) / 5);
+          const maxBullets = Math.min(m.bullets.length, Math.floor((h - (m.amount ? 50 : 25)) / 14));
           return <g key={i}>
             <rect x={x} y={y} width={w} height={h} rx="3" fill={isLast ? `${c.primary}12` : "none"} stroke={isLast ? c.primary : c.border} strokeWidth={isLast ? 1.5 : 1} />
             <g clipPath={`url(#stair-clip-${i})`}>
               {m.amount && <text x={x + w / 2} y={y + 22} textAnchor="middle" fill={isLast ? c.primary : c.head} fontSize="16" fontWeight="700">{m.amount}</text>}
-              {m.bullets.map((b, bi) => <g key={bi}>
-                <text x={x + 14} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.primary} fontSize="8">•</text>
-                <text x={x + 22} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.sub} fontSize="9">{b}</text>
+              {m.bullets.slice(0, maxBullets).map((b, bi) => <g key={bi}>
+                <text x={x + 10} y={y + (m.amount ? 40 : 18) + bi * 14} fill={c.primary} fontSize="7">•</text>
+                <text x={x + 18} y={y + (m.amount ? 40 : 18) + bi * 14} fill={c.sub} fontSize="8">{b.length > maxChars ? b.substring(0, maxChars) + "..." : b}</text>
               </g>)}
             </g>
           </g>;
