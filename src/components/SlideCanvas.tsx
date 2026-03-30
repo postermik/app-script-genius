@@ -57,6 +57,65 @@ function Bullets({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C })
   </div>;
 }
 
+// ── BULLETS-TWO-COLUMN ──
+function BulletsTwoColumn({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  const bullets = s.bodyContent || [];
+  const mid = Math.ceil(bullets.length / 2);
+  const left = bullets.slice(0, mid);
+  const right = bullets.slice(mid);
+  return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
+    <Header s={s} c={c} />
+    {s.subheadline && <div style={{ fontSize:"0.55em", color:c.sub, marginTop:"2%", lineHeight:1.4 }}>{s.subheadline}</div>}
+    {bullets.length > 0 && <div style={{ marginTop:"3%", flex:1, display:"flex", gap:"5%" }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:"0.45em" }}>
+        {left.map((t, i) => <div key={i} style={{ fontSize:"0.5em", color:c.body, lineHeight:1.6, display:"flex", gap:"0.5em" }}>
+          <span style={{ color:c.primary }}>•</span><span>{t}</span>
+        </div>)}
+      </div>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:"0.45em" }}>
+        {right.map((t, i) => <div key={i} style={{ fontSize:"0.5em", color:c.body, lineHeight:1.6, display:"flex", gap:"0.5em" }}>
+          <span style={{ color:c.primary }}>•</span><span>{t}</span>
+        </div>)}
+      </div>
+    </div>}
+    {s.closingStatement && <div style={{ fontSize:"0.5em", fontWeight:600, color:c.close, marginTop:"2%" }}>{s.closingStatement}</div>}
+  </div>;
+}
+
+// ── BULLETS-ACCENT (left accent bar, editorial feel) ──
+function BulletsAccent({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  const bullets = s.bodyContent || [];
+  const isCompact = bullets.length > 4;
+  return <div style={{ display:"flex", height:"100%" }}>
+    <div style={{ width:"0.6%", background:c.primary, flexShrink:0 }} />
+    <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"5% 7% 5% 5%" }}>
+      <Header s={s} c={c} />
+      {s.subheadline && <div style={{ fontSize:"0.55em", color:c.sub, marginTop:"2%", lineHeight:1.4 }}>{s.subheadline}</div>}
+      {bullets.length > 0 && <div style={{ marginTop:"3%", flex:1, display:"flex", flexDirection:"column", gap: isCompact ? "0.3em" : "0.5em", borderLeft:`2px solid ${c.accent}`, paddingLeft:"4%" }}>
+        {bullets.slice(0, 6).map((t, i) => <div key={i} style={{ fontSize: isCompact ? "0.5em" : "0.55em", color:c.body, lineHeight: isCompact ? 1.5 : 1.7 }}>{t}</div>)}
+      </div>}
+      {s.closingStatement && <div style={{ fontSize:"0.5em", fontWeight:600, color:c.close, marginTop:"2%", borderTop:`1px solid ${c.border}`, paddingTop:"2%" }}>{s.closingStatement}</div>}
+    </div>
+  </div>;
+}
+
+// ── BULLETS-NUMBERED (numbered items with prominent indices) ──
+function BulletsNumbered({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  const bullets = s.bodyContent || [];
+  const isCompact = bullets.length > 4;
+  return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
+    <Header s={s} c={c} />
+    {s.subheadline && <div style={{ fontSize:"0.55em", color:c.sub, marginTop:"2%", lineHeight:1.4 }}>{s.subheadline}</div>}
+    {bullets.length > 0 && <div style={{ marginTop:"3%", flex:1, display:"flex", flexDirection:"column", gap: isCompact ? "0.35em" : "0.55em" }}>
+      {bullets.slice(0, 6).map((t, i) => <div key={i} style={{ display:"flex", gap:"0.6em", alignItems:"baseline" }}>
+        <span style={{ fontSize: isCompact ? "0.6em" : "0.7em", fontWeight:700, color:c.primary, minWidth:"1.3em", textAlign:"right", lineHeight:1 }}>{String(i + 1).padStart(2, "0")}</span>
+        <span style={{ fontSize: isCompact ? "0.5em" : "0.55em", color:c.body, lineHeight: isCompact ? 1.5 : 1.7 }}>{t}</span>
+      </div>)}
+    </div>}
+    {s.closingStatement && <div style={{ fontSize:"0.5em", fontWeight:600, color:c.close, marginTop:"2%" }}>{s.closingStatement}</div>}
+  </div>;
+}
+
 // ── STATEMENT ──
 function Statement({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
   return <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
@@ -308,7 +367,8 @@ function Staircase({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
 }
 
 const RS: Record<LayoutType, React.FC<{ slide: SlideCanvasData; colors: C }>> = {
-  "bullets": Bullets, "statement": Statement, "data-cards": DataCards, "concentric": Concentric,
+  "bullets": Bullets, "bullets-two-column": BulletsTwoColumn, "bullets-accent": BulletsAccent, "bullets-numbered": BulletsNumbered,
+  "statement": Statement, "data-cards": DataCards, "concentric": Concentric,
   "matrix": Matrix, "flywheel": Flywheel, "icon-columns": IconColumns, "team": Team, "staircase": Staircase,
 };
 
@@ -318,16 +378,21 @@ export function SlideCanvas({ slide, theme, className }: Props) {
   return <div className={className} style={{ aspectRatio:"16/9", backgroundColor:c.bg, borderRadius:4, overflow:"hidden", fontSize:"clamp(10px,2.2vw,20px)", fontFamily:"Arial,sans-serif", position:"relative" }}><R slide={slide} colors={c} /></div>;
 }
 
-// Layout picker
+// Layout picker (shows only top-level types, hides sub-variants)
 interface LP { current: LayoutType; onChange: (l: LayoutType) => void; }
 export function LayoutPicker({ current, onChange }: LP) {
   const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
-  const label = LAYOUT_DEFINITIONS.find(d => d.type === current)?.label || "Layout";
+  const topLevel = LAYOUT_DEFINITIONS.filter(d => !d.parent);
+  // Show the parent label if current is a sub-variant
+  const currentDef = LAYOUT_DEFINITIONS.find(d => d.type === current);
+  const displayLabel = currentDef?.parent
+    ? `${LAYOUT_DEFINITIONS.find(d => d.type === currentDef.parent)?.label || "Layout"} / ${currentDef.label}`
+    : currentDef?.label || "Layout";
   return <div className="relative" ref={ref}>
-    <button onClick={e => { e.stopPropagation(); setOpen(!open) }} className="text-[10px] px-2 py-0.5 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 font-medium flex items-center gap-1 transition-colors">{label} <span className="text-[8px]">▼</span></button>
+    <button onClick={e => { e.stopPropagation(); setOpen(!open) }} className="text-[10px] px-2 py-0.5 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 font-medium flex items-center gap-1 transition-colors">{displayLabel} <span className="text-[8px]">▼</span></button>
     {open && <div className="absolute left-0 top-full mt-1 w-44 bg-card border border-border rounded-sm shadow-lg z-30 animate-fade-in py-1">
-      {LAYOUT_DEFINITIONS.map(d => <button key={d.type} onClick={e => { e.stopPropagation(); onChange(d.type); setOpen(false) }} className={`w-full text-left text-xs px-3 py-1.5 hover:bg-accent transition-colors ${current === d.type ? "text-electric font-medium" : "text-foreground"}`}>{d.label}</button>)}
+      {topLevel.map(d => <button key={d.type} onClick={e => { e.stopPropagation(); onChange(d.type); setOpen(false) }} className={`w-full text-left text-xs px-3 py-1.5 hover:bg-accent transition-colors ${current === d.type || currentDef?.parent === d.type ? "text-electric font-medium" : "text-foreground"}`}>{d.label}</button>)}
     </div>}
   </div>;
 }
