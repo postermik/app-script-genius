@@ -108,34 +108,41 @@ function statement(ctx:Ctx,f:F){
 // ── DATA-CARDS (reads structured cards field) ──
 function dataCards(ctx:Ctx,f:F){
   let y=header(ctx,f);
+  if(f.subheadline){const h=Math.max(estimateHeight(f.subheadline,12),0.25);ctx.slide.addText(f.subheadline,{x:ML,y,w:CONTENT_W,h:h+0.05,fontSize:12,fontFace:"Arial",color:ctx.c.SUB,align:"left",valign:"top"});y+=h+0.08;}
+  const closeReserve = f.closingStatement ? 0.35 : 0;
+  const availH = SLIDE.H - y - SLIDE.MARGIN_B - closeReserve;
   const structuredCards = f.cards;
   if(structuredCards && structuredCards.length > 0){
-    const n=structuredCards.length;const gap=0.2;const cW=(CONTENT_W-gap*(n-1))/n;
+    const n=structuredCards.length;const gap=0.2;const cW=(CONTENT_W-gap*(n-1))/n;const cH=availH;
     for(let i=0;i<n;i++){const cx=ML+i*(cW+gap);const card=structuredCards[i];
-      ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:2.2,fill:{type:"none"},line:{color:ctx.c.BORDER,width:1},rectRadius:0.04});
+      ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:cH,fill:{type:"none"},line:{color:ctx.c.BORDER,width:1},rectRadius:0.04});
       ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:0.04,fill:{color:ctx.c.PRIMARY}});
       let ty=y+0.15;
       ctx.slide.addText(card.category,{x:cx+0.1,y:ty,w:cW-0.2,h:0.25,fontSize:10,fontFace:"Arial",bold:true,color:ctx.c.PRIMARY,align:"left"});
       ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx+0.1,y:ty+0.28,w:cW-0.2,h:0.01,fill:{color:ctx.c.BORDER}});
       ty+=0.38;
+      // Space stats evenly within available card area
+      const statsAreaH = cH - 0.55; // card height minus header area
+      const statSpacing = Math.min(0.55, statsAreaH / Math.max(card.stats.length, 1));
       for(const stat of card.stats){
         ctx.slide.addText(stat.label,{x:cx+0.1,y:ty,w:cW-0.2,h:0.18,fontSize:9,fontFace:"Arial",color:ctx.c.SUB,align:"left",valign:"top"});
         ctx.slide.addText(stat.value,{x:cx+0.1,y:ty+0.16,w:cW-0.2,h:0.3,fontSize:16,fontFace:"Arial",bold:true,color:ctx.c.HEAD,align:"left",valign:"top"});
-        ty+=0.5;
+        ty+=statSpacing;
       }
     }
-    return;
+  } else {
+    // Fallback to old format
+    const dp=f.dataPoints;const items=f.bodyContent.slice(0,3);const n=Math.max(dp.length,Math.min(items.length,3));
+    if(n>0){const gap=0.2;const cW=(CONTENT_W-gap*(n-1))/n;const cH=availH;
+      for(let i=0;i<n;i++){const cx=ML+i*(cW+gap);
+        ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:cH,fill:{type:"none"},line:{color:ctx.c.BORDER,width:1},rectRadius:0.04});
+        ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:0.04,fill:{color:ctx.c.PRIMARY}});
+        let ty=y+0.15;
+        if(dp[i]){ctx.slide.addText(dp[i],{x:cx+0.1,y:ty,w:cW-0.2,h:0.35,fontSize:18,fontFace:"Arial",bold:true,color:ctx.c.HEAD,align:"left",valign:"middle"});ty+=0.4;}
+        if(items[i])ctx.slide.addText(items[i],{x:cx+0.1,y:ty,w:cW-0.2,h:cH-(ty-y)-0.1,fontSize:10,fontFace:"Arial",color:ctx.c.BODY,align:"left",valign:"top"});
+      }}
   }
-  // Fallback to old format
-  const dp=f.dataPoints;const items=f.bodyContent.slice(0,3);const n=Math.max(dp.length,Math.min(items.length,3));
-  if(n>0){const gap=0.2;const cW=(CONTENT_W-gap*(n-1))/n;
-    for(let i=0;i<n;i++){const cx=ML+i*(cW+gap);
-      ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:2.2,fill:{type:"none"},line:{color:ctx.c.BORDER,width:1},rectRadius:0.04});
-      ctx.slide.addShape(ctx.pptx.ShapeType.rect,{x:cx,y,w:cW,h:0.04,fill:{color:ctx.c.PRIMARY}});
-      let ty=y+0.15;
-      if(dp[i]){ctx.slide.addText(dp[i],{x:cx+0.1,y:ty,w:cW-0.2,h:0.35,fontSize:18,fontFace:"Arial",bold:true,color:ctx.c.HEAD,align:"left",valign:"middle"});ty+=0.4;}
-      if(items[i])ctx.slide.addText(items[i],{x:cx+0.1,y:ty,w:cW-0.2,h:1.5,fontSize:10,fontFace:"Arial",color:ctx.c.BODY,align:"left",valign:"top"});
-    }}
+  if(f.closingStatement)ctx.slide.addText(f.closingStatement,{x:ML,y:SLIDE.H-SLIDE.MARGIN_B-0.28,w:CONTENT_W,h:0.25,fontSize:11,fontFace:"Arial",bold:true,color:ctx.c.CLOSE,align:"left",valign:"bottom"});
 }
 
 // ── CONCENTRIC (reads structured tiers field) ──
@@ -213,7 +220,7 @@ function flywheel(ctx:Ctx,f:F){
       slide.addText(String(i+1),{x:nx-0.16,y:ny-0.16,w:0.32,h:0.32,fontSize:12,fontFace:"Arial",bold:true,color:"ffffff",align:"center",valign:"middle"});
       const tx=cxF+(r+0.7)*Math.cos(a);const ty=cyF+(r+0.5)*Math.sin(a);
       const ci2=items[i].indexOf(":");const title=ci2>0?items[i].substring(0,ci2).trim():items[i].substring(0,25);
-      slide.addText(title,{x:tx-0.8,y:ty-0.15,w:1.6,h:0.2,fontSize:10,fontFace:"Arial",bold:true,color:c.HEAD,align:"center",valign:"middle"});
+      slide.addText(title,{x:tx-1.1,y:ty-0.15,w:2.2,h:0.25,fontSize:10,fontFace:"Arial",bold:true,color:c.HEAD,align:"center",valign:"middle"});
     }
     return;
   }
@@ -231,8 +238,8 @@ function flywheel(ctx:Ctx,f:F){
     slide.addText(String(i+1),{x:nx-0.16,y:ny-0.16,w:0.32,h:0.32,fontSize:12,fontFace:"Arial",bold:true,color:"ffffff",align:"center",valign:"middle"});
     // Label outside
     const tx=cxF+(r+0.7)*Math.cos(a);const ty=cyF+(r+0.5)*Math.sin(a);
-    slide.addText(steps[i].label,{x:tx-0.8,y:ty-0.15,w:1.6,h:0.2,fontSize:10,fontFace:"Arial",bold:true,color:c.HEAD,align:"center",valign:"middle"});
-    if(steps[i].description)slide.addText(steps[i].description,{x:tx-0.8,y:ty+0.05,w:1.6,h:0.2,fontSize:8,fontFace:"Arial",color:c.SUB,align:"center"});
+    slide.addText(steps[i].label,{x:tx-1.1,y:ty-0.15,w:2.2,h:0.25,fontSize:10,fontFace:"Arial",bold:true,color:c.HEAD,align:"center",valign:"middle"});
+    if(steps[i].description)slide.addText(steps[i].description,{x:tx-1.1,y:ty+0.1,w:2.2,h:0.3,fontSize:8,fontFace:"Arial",color:c.SUB,align:"center",valign:"top"});
   }
 }
 

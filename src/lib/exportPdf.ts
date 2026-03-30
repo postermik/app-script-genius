@@ -63,21 +63,19 @@ export async function exportPdf({output,isPro,excludedSlides,slideOrder,deckThem
     if(layout==="data-cards" && f.cards && f.cards.length > 0){
       // Render structured data cards as formatted stat blocks
       const n=f.cards.length;const colW=CW/n-0.15;
+      const availH=H-y-0.5-(f.closingStatement?0.35:0);
       for(let i=0;i<n;i++){
         const cx=ML+i*(colW+0.2);const card=f.cards[i];
-        // Card outline
-        pdf.setDrawColor(c.border[0],c.border[1],c.border[2]);pdf.setLineWidth(0.01);pdf.rect(cx,y,colW,2.2);
-        // Top accent bar
+        pdf.setDrawColor(c.border[0],c.border[1],c.border[2]);pdf.setLineWidth(0.01);pdf.rect(cx,y,colW,availH);
         sc(c.primary,"fill");pdf.rect(cx,y,colW,0.04,"F");
-        // Category label
         pdf.setFont("helvetica","bold");pdf.setFontSize(9);sc(c.primary);pdf.text(card.category,cx+0.1,y+0.22);
         drawLine(cx+0.1,y+0.3,cx+colW-0.1,y+0.3,c.border);
-        // Stats
         let sy=y+0.45;
+        const statSpacing=Math.min(0.55,(availH-0.55)/Math.max(card.stats.length,1));
         for(const stat of card.stats){
           pdf.setFont("helvetica","normal");pdf.setFontSize(8);sc(c.sub);pdf.text(stat.label,cx+0.1,sy);
           pdf.setFont("helvetica","bold");pdf.setFontSize(14);sc(c.head);pdf.text(stat.value,cx+0.1,sy+0.2);
-          sy+=0.45;
+          sy+=statSpacing;
         }
       }
     } else if(layout==="concentric" && f.tiers && f.tiers.length > 0){
@@ -109,10 +107,10 @@ export async function exportPdf({output,isPro,excludedSlides,slideOrder,deckThem
         pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.sub);
         const desc=pdf.splitTextToSize(step.description,CW-0.5);pdf.text(desc,ML+0.35,y+0.22);
         if(step.leadsTo && i<(f.flywheelSteps?.length||0)-1){
-          pdf.setFontSize(8);sc(c.cat);pdf.text(`\u2192 ${step.leadsTo}`,ML+0.35,y+0.22+desc.length*0.12+0.05);
+          pdf.setFontSize(8);sc(c.cat);pdf.text(`-> ${step.leadsTo}`,ML+0.35,y+0.22+desc.length*0.14+0.05);
           y+=0.15;
         }
-        y+=0.3+desc.length*0.12;
+        y+=0.32+desc.length*0.14;
       });
     } else if(layout==="staircase" && f.milestones && f.milestones.length > 0){
       // Render milestones as formatted blocks
