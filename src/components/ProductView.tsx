@@ -103,11 +103,10 @@ export function ProductView() {
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
               rows={8} disabled={isFreeAndLocked || isGenerating}
               className="w-full bg-card border border-border rounded-lg px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
-            {!rawInput.trim() && !isGenerating && !showIntake && (
+            {!isGenerating && !showIntake && !isFreeAndLocked && (
               <div className="flex flex-wrap gap-2 -mt-2">
                 {[
-                  { label: "Pre-seed raise", template: "We're [COMPANY NAME] ([WEBSITE]). We're building [ONE SENTENCE DESCRIPTION]. We're raising $[AMOUNT] to [KEY MILESTONE]. Our team has [RELEVANT BACKGROUND]." },
-                  { label: "Seed round", template: "We're [COMPANY NAME] ([WEBSITE]), a [CATEGORY] platform that [VALUE PROP]. We have [TRACTION METRICS: users, revenue, growth rate]. We're raising $[AMOUNT] at $[VALUATION] to [USE OF FUNDS]." },
+                  { label: "Fundraise", template: "We're [COMPANY NAME] ([WEBSITE]). We're building [ONE SENTENCE DESCRIPTION]. We're raising $[AMOUNT] at [STAGE: pre-seed/seed/series A] to [KEY MILESTONE]. We have [TRACTION: users, revenue, growth]. Our team has [RELEVANT BACKGROUND]." },
                   { label: "Board update", template: "[COMPANY NAME] Q[X] [YEAR] Board Update\n\nKey metrics: Revenue $[X], Growth [X]%, Burn $[X]/mo, Runway [X] months\nHighlights: [2-3 wins this quarter]\nChallenges: [1-2 risks or misses]\nAsks: [What you need from the board]" },
                   { label: "Strategy memo", template: "[COMPANY NAME] Strategic Memo: [TOPIC]\n\nContext: [What changed that requires a strategic decision]\nOptions: [2-3 paths we could take]\nRecommendation: [Which path and why]\nSuccess metrics: [How we'll know it's working]" },
                   { label: "Evaluate my deck", template: "" },
