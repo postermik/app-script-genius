@@ -201,10 +201,10 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
   // Use structured competitors if available
   const comps = structuredComps || (() => {
     const items = (s.bodyContent || []).slice(0, 6);
-    const defaultPositions = [{ x: 0.18, y: 0.15 }, { x: 0.68, y: 0.65 }, { x: 0.42, y: 0.55 }, { x: 0.28, y: 0.72 }, { x: 0.55, y: 0.4 }];
+    const defaultPositions = [{ x: 0.18, y: 0.85 }, { x: 0.68, y: 0.35 }, { x: 0.42, y: 0.45 }, { x: 0.28, y: 0.28 }, { x: 0.55, y: 0.6 }];
     return items.map((t, i) => {
       const ci2 = t.indexOf(":"); const isLast = i === items.length - 1;
-      return { name: ci2 > 0 ? t.substring(0, ci2).trim() : t.substring(0, 25), description: ci2 > 0 ? t.substring(ci2 + 1).trim() : "", x: isLast ? 0.8 : (defaultPositions[i]?.x || 0.5), y: isLast ? 0.1 : (defaultPositions[i]?.y || 0.5) };
+      return { name: ci2 > 0 ? t.substring(0, ci2).trim() : t.substring(0, 25), description: ci2 > 0 ? t.substring(ci2 + 1).trim() : "", x: isLast ? 0.8 : (defaultPositions[i]?.x || 0.5), y: isLast ? 0.9 : (defaultPositions[i]?.y || 0.5) };
     });
   })();
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
@@ -218,7 +218,7 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
         <line x1="80" y1="170" x2="780" y2="170" stroke={c.accent} strokeWidth="0.5" strokeDasharray="4" />
         <line x1="430" y1="20" x2="430" y2="320" stroke={c.accent} strokeWidth="0.5" strokeDasharray="4" />
         {comps.slice(0, -1).map((comp, i) => {
-          const px = 80 + comp.x * 700; const py = 20 + comp.y * 300;
+          const px = 80 + comp.x * 700; const py = 320 - comp.y * 300;
           return <g key={i}>
             <circle cx={px} cy={py} r="7" fill={c.sub} opacity="0.5" />
             <text x={px + 14} y={py - 3} fill={c.body} fontSize="10" fontWeight="600">{comp.name}</text>
@@ -227,7 +227,7 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
         })}
         {comps.length > 0 && (() => {
           const last = comps[comps.length - 1];
-          const px = 80 + last.x * 700; const py = 20 + last.y * 300;
+          const px = 80 + last.x * 700; const py = 320 - last.y * 300;
           return <g>
             <circle cx={px} cy={py} r="11" fill={c.primary} opacity="0.9" />
             <circle cx={px} cy={py} r="17" fill="none" stroke={c.primary} strokeWidth="1.5" opacity="0.4" />
