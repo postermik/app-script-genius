@@ -16,7 +16,7 @@ export function RootLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <MarketingNav />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pt-14">
         <Outlet />
       </main>
       {showFooter && <Footer />}

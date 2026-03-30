@@ -174,7 +174,7 @@ export function LandingPage() {
             <span className={`text-sm ${!annual ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
             <button onClick={() => setAnnual(!annual)}
               className={`relative w-11 h-6 rounded-full border transition-colors ${annual ? "bg-primary/20 border-primary/30" : "bg-card border-border"}`}>
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full transition-transform ${annual ? "left-[22px] bg-primary" : "left-0.5 bg-foreground"}`} />
+              <span className={`absolute top-[1px] w-5 h-5 rounded-full transition-transform ${annual ? "left-[22px] bg-primary" : "left-0.5 bg-foreground"}`} />
             </button>
             <span className={`text-sm ${annual ? "text-foreground" : "text-muted-foreground"}`}>
               Annual <span className="text-xs text-primary ml-1">Save 20%</span>
