@@ -2,6 +2,7 @@ import { useState } from "react";
 import { GripVertical, RotateCcw, ChevronDown, Lightbulb, Loader2, Pencil, X, Check } from "lucide-react";
 import { SlideCanvas, LayoutPicker } from "@/components/SlideCanvas";
 import { resolveLayout } from "@/lib/slideLayouts";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface SlideData {
   headline: string;
@@ -131,9 +132,10 @@ export function SlidePreview({
                 onClick={async () => {
                   setIsExtractingColors(true);
                   try {
+                    const { data: { session: s } } = await supabase.auth.getSession();
                     const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/brand-colors", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz" },
+                      headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz", "Authorization": `Bearer ${s?.access_token || ""}` },
                       body: JSON.stringify({ url: brandUrl.trim() }),
                     });
                     if (resp.ok) {

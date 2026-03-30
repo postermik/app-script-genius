@@ -815,7 +815,7 @@ Return JSON: { "deckFramework": [...] }`,
       console.log("[BrandColors] Detected URL in input:", detectedUrl);
       fetch(`${SUPABASE_URL}/functions/v1/brand-colors`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ url: detectedUrl }),
       }).then(r => r.ok ? r.json() : null).then(colors => {
         if (colors?.primary) {
