@@ -5,6 +5,12 @@ import type { DeckTheme } from "@/components/SlidePreview";
 export interface SlideCanvasData {
   headline: string; subheadline?: string; bodyContent?: string[]; categoryLabel?: string;
   closingStatement?: string; layoutRecommendation?: string; selectedLayout?: string; dataPoints?: string[];
+  tiers?: { label: string; amount: string; description: string; }[];
+  flywheelSteps?: { label: string; description: string; leadsTo: string; }[];
+  milestones?: { amount: string; bullets: string[]; }[];
+  competitors?: { name: string; description: string; x: number; y: number; }[];
+  cards?: { category: string; stats: { label: string; value: string; }[]; }[];
+  axisLabels?: { x: string; y: string; };
 }
 interface Props { slide: SlideCanvasData; theme: DeckTheme; className?: string; }
 
@@ -58,6 +64,23 @@ function Statement({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
 
 // ── DATA-CARDS ──
 function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  // Use structured cards field if available, else fall back to dataPoints/bodyContent
+  const structuredCards = s.cards;
+  if (structuredCards && structuredCards.length > 0) {
+    return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
+      <Header s={s} c={c} />
+      <div style={{ display:"flex", gap:"2.5%", marginTop:"3%", flex:1 }}>
+        {structuredCards.map((card, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderTop:`3px solid ${c.primary}`, borderRadius:4, padding:"3% 4%", display:"flex", flexDirection:"column" }}>
+          <div style={{ fontSize:"0.48em", fontWeight:700, color:c.primary, marginBottom:"4%", borderBottom:`1px solid ${c.border}`, paddingBottom:"3%" }}>{card.category}</div>
+          {card.stats.map((stat, j) => <div key={j} style={{ marginBottom:"3%" }}>
+            <div style={{ fontSize:"0.35em", color:c.sub }}>{stat.label}</div>
+            <div style={{ fontSize:"0.6em", fontWeight:700, color:c.head }}>{stat.value}</div>
+          </div>)}
+        </div>)}
+      </div>
+    </div>;
+  }
+  // Fallback to old format
   const dp = s.dataPoints || []; const items = (s.bodyContent || []).slice(0, 3);
   const n = Math.max(dp.length, Math.min(items.length, 3));
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
@@ -71,32 +94,30 @@ function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
   </div>;
 }
 
-// ── CONCENTRIC (simplified: circles left, bullets right) ──
+// ── CONCENTRIC (bottom-aligned circles, uses tiers field if available) ──
 function Concentric({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 3); const dp = s.dataPoints || [];
+  const tiers = s.tiers || [];
+  const items = tiers.length > 0 ? tiers.map(t => t.description) : (s.bodyContent || []).slice(0, 3);
+  const dp = tiers.length > 0 ? tiers.map(t => t.amount) : (s.dataPoints || []);
+  const labels = tiers.length > 0 ? tiers.map(t => t.label) : ["TAM","SAM","SOM"];
   return <div style={{ display:"flex", height:"100%", padding:"4% 4%" }}>
     <div style={{ flex:"0 0 22%", paddingTop:"1%" }}><Header s={s} c={c} /></div>
     <div style={{ flex:"0 0 42%", display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
       <svg viewBox="0 0 360 380" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
-        {/* Bottom-aligned: all circles share bottom at y=380 */}
         <ellipse cx="180" cy="195" rx="175" ry="175" fill={`${c.primary}0a`} stroke={`${c.primary}33`} strokeWidth="1.5" />
         <ellipse cx="180" cy="255" rx="120" ry="120" fill={`${c.primary}15`} stroke={`${c.primary}55`} strokeWidth="1.5" />
         <ellipse cx="180" cy="315" rx="62" ry="62" fill={`${c.primary}22`} stroke={`${c.primary}77`} strokeWidth="1.5" />
-        {/* Labels centered between ring tops */}
-        {/* TAM: between outer top (20) and middle top (135) = 77 */}
         <text x="180" y="72" textAnchor="middle" fill={c.head} fontSize="20" fontWeight="700" fontFamily="Arial">{dp[0] || ""}</text>
-        <text x="180" y="90" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">TAM</text>
-        {/* SAM: between middle top (135) and inner top (253) = 194 */}
+        <text x="180" y="90" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[0]}</text>
         <text x="180" y="189" textAnchor="middle" fill={c.head} fontSize="17" fontWeight="700" fontFamily="Arial">{dp[1] || ""}</text>
-        <text x="180" y="206" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">SAM</text>
-        {/* SOM: center of inner (253 to 377) = 315 */}
+        <text x="180" y="206" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[1]}</text>
         <text x="180" y="310" textAnchor="middle" fill={c.head} fontSize="14" fontWeight="700" fontFamily="Arial">{dp[2] || ""}</text>
-        <text x="180" y="326" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">SOM</text>
+        <text x="180" y="326" textAnchor="middle" fill={c.cat} fontSize="10" fontFamily="Arial">{labels[2]}</text>
       </svg>
     </div>
     <div style={{ flex:"0 0 32%", display:"flex", flexDirection:"column", justifyContent:"center", gap:"8%", paddingLeft:"3%" }}>
       {items.map((t, i) => <div key={i}>
-        <div style={{ fontSize:"0.42em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{["TAM","SAM","SOM"][i]}: {dp[i] || ""}</div>
+        <div style={{ fontSize:"0.42em", fontWeight:700, color:c.cat, marginBottom:"2%" }}>{labels[i]}: {dp[i] || ""}</div>
         <div style={{ fontSize:"0.38em", color:c.body, lineHeight:1.4 }}>{t}</div>
       </div>)}
     </div>
@@ -106,37 +127,45 @@ function Concentric({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C
 // ── MATRIX (X/Y scatter) ──
 function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
   const items = (s.bodyContent || []).slice(0, 6);
-  const positions = [{ x: 18, y: 15 }, { x: 68, y: 65 }, { x: 42, y: 55 }, { x: 28, y: 72 }, { x: 55, y: 40 }];
+// ── MATRIX (X/Y scatter, uses competitors field if available) ──
+function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
+  const structuredComps = s.competitors;
+  const axes = s.axisLabels || { x: "Speed + Affordability", y: "Narrative Quality" };
+  // Use structured competitors if available
+  const comps = structuredComps || (() => {
+    const items = (s.bodyContent || []).slice(0, 6);
+    const defaultPositions = [{ x: 0.18, y: 0.15 }, { x: 0.68, y: 0.65 }, { x: 0.42, y: 0.55 }, { x: 0.28, y: 0.72 }, { x: 0.55, y: 0.4 }];
+    return items.map((t, i) => {
+      const ci2 = t.indexOf(":"); const isLast = i === items.length - 1;
+      return { name: ci2 > 0 ? t.substring(0, ci2).trim() : t.substring(0, 25), description: ci2 > 0 ? t.substring(ci2 + 1).trim() : "", x: isLast ? 0.8 : (defaultPositions[i]?.x || 0.5), y: isLast ? 0.1 : (defaultPositions[i]?.y || 0.5) };
+    });
+  })();
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
     <Header s={s} c={c} />
     <div style={{ flex:1, marginTop:"2.5%" }}>
       <svg viewBox="0 0 800 340" width="100%" height="100%" fontFamily="Arial">
         <line x1="80" y1="20" x2="80" y2="320" stroke={c.border} strokeWidth="1" />
-        <text x="35" y="170" textAnchor="middle" fill={c.sub} fontSize="11" transform="rotate(-90,35,170)">Narrative Quality</text>
+        <text x="35" y="170" textAnchor="middle" fill={c.sub} fontSize="11" transform="rotate(-90,35,170)">{axes.y}</text>
         <line x1="80" y1="320" x2="780" y2="320" stroke={c.border} strokeWidth="1" />
-        <text x="430" y="338" textAnchor="middle" fill={c.sub} fontSize="11">Speed + Affordability</text>
+        <text x="430" y="338" textAnchor="middle" fill={c.sub} fontSize="11">{axes.x}</text>
         <line x1="80" y1="170" x2="780" y2="170" stroke={c.accent} strokeWidth="0.5" strokeDasharray="4" />
         <line x1="430" y1="20" x2="430" y2="320" stroke={c.accent} strokeWidth="0.5" strokeDasharray="4" />
-        {items.slice(0, -1).map((t, i) => {
-          const pos = positions[i] || { x: 50, y: 50 };
-          const px = 80 + pos.x / 100 * 700; const py = 20 + pos.y / 100 * 300;
-          const ci2 = t.indexOf(":"); const name = ci2 > 0 ? t.substring(0, ci2).trim() : t.substring(0, 25);
-          const desc = ci2 > 0 ? t.substring(ci2 + 1).trim() : "";
+        {comps.slice(0, -1).map((comp, i) => {
+          const px = 80 + comp.x * 700; const py = 20 + comp.y * 300;
           return <g key={i}>
             <circle cx={px} cy={py} r="7" fill={c.sub} opacity="0.5" />
-            <text x={px + 14} y={py - 3} fill={c.body} fontSize="10" fontWeight="600">{name}</text>
-            {desc && <text x={px + 14} y={py + 10} fill={c.sub} fontSize="8">{desc.substring(0, 45)}</text>}
+            <text x={px + 14} y={py - 3} fill={c.body} fontSize="10" fontWeight="600">{comp.name}</text>
+            {comp.description && <text x={px + 14} y={py + 10} fill={c.sub} fontSize="8">{comp.description.substring(0, 45)}</text>}
           </g>;
         })}
-        {items.length > 0 && (() => {
-          const last = items[items.length - 1]; const ci3 = last.indexOf(":");
-          const name2 = ci3 > 0 ? last.substring(0, ci3).trim() : last.substring(0, 25);
-          const desc2 = ci3 > 0 ? last.substring(ci3 + 1).trim() : "";
+        {comps.length > 0 && (() => {
+          const last = comps[comps.length - 1];
+          const px = 80 + last.x * 700; const py = 20 + last.y * 300;
           return <g>
-            <circle cx="660" cy="55" r="11" fill={c.primary} opacity="0.9" />
-            <circle cx="660" cy="55" r="17" fill="none" stroke={c.primary} strokeWidth="1.5" opacity="0.4" />
-            <text x="660" y="35" textAnchor="middle" fill={c.head} fontSize="12" fontWeight="700">{name2}</text>
-            {desc2 && <text x="682" y="58" fill={c.cat} fontSize="9">{desc2.substring(0, 40)}</text>}
+            <circle cx={px} cy={py} r="11" fill={c.primary} opacity="0.9" />
+            <circle cx={px} cy={py} r="17" fill="none" stroke={c.primary} strokeWidth="1.5" opacity="0.4" />
+            <text x={px} y={py - 18} textAnchor="middle" fill={c.head} fontSize="12" fontWeight="700">{last.name}</text>
+            {last.description && <text x={px + 18} y={py + 4} fill={c.cat} fontSize="9">{last.description.substring(0, 40)}</text>}
           </g>;
         })()}
       </svg>
@@ -144,9 +173,13 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
   </div>;
 }
 
-// ── FLYWHEEL ──
+// ── FLYWHEEL (uses flywheelSteps field if available) ──
 function Flywheel({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 6); const n = items.length;
+  // Use structured flywheelSteps if available, else parse bodyContent
+  const steps = s.flywheelSteps || (s.bodyContent || []).slice(0, 6).map(t => {
+    const ci2 = t.indexOf(":"); return { label: ci2 > 0 ? t.substring(0, ci2).trim() : t.substring(0, 30), description: ci2 > 0 ? t.substring(ci2 + 1).trim() : "", leadsTo: "" };
+  });
+  const n = steps.length;
   if (n < 3) return <Bullets slide={s} colors={c} />;
   const fcx = 410, fcy = 148, fr = 90;
   const angles = n === 3 ? [-90, 30, 150] : n === 4 ? [-90, 0, 90, 180] : n === 5 ? [-90, -18, 54, 126, 198] : [-90, -30, 30, 90, 150, 210];
@@ -166,18 +199,16 @@ function Flywheel({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }
           </g>;
         })}
         {nodes.map((nd, i) => {
-          const item = items[i]; const ci2 = item.indexOf(":");
-          const title = ci2 > 0 ? item.substring(0, ci2).trim() : item.substring(0, 30);
-          const desc = ci2 > 0 ? item.substring(ci2 + 1).trim() : "";
+          const step = steps[i];
           const tx = fcx + (fr + 70) * Math.cos(nd.a * Math.PI / 180);
           const ty = fcy + (fr + 50) * Math.sin(nd.a * Math.PI / 180);
-          const isTop = nd.a === -90; const isBottom = nd.a === 90 || nd.a === 180;
+          const isTop = nd.a === -90;
           const anchor = nd.a > -45 && nd.a < 45 ? "start" : nd.a > 135 || nd.a < -135 ? "end" : "middle";
           return <g key={`n${i}`}>
             <circle cx={nd.x} cy={nd.y} r={14} fill={c.primary} />
             <text x={nd.x} y={nd.y + 4} textAnchor="middle" fill="#fff" fontSize="11" fontWeight="700">{i + 1}</text>
-            <text x={tx} y={isTop ? ty - 6 : ty} textAnchor={anchor} fill={c.head} fontSize="11" fontWeight="600">{title}</text>
-            {desc && <text x={tx} y={isTop ? ty + 7 : ty + 13} textAnchor={anchor} fill={c.sub} fontSize="9">{desc.substring(0, 45)}</text>}
+            <text x={tx} y={isTop ? ty - 6 : ty} textAnchor={anchor} fill={c.head} fontSize="11" fontWeight="600">{step.label}</text>
+            {step.description && <text x={tx} y={isTop ? ty + 7 : ty + 13} textAnchor={anchor} fill={c.sub} fontSize="9">{step.description.substring(0, 45)}</text>}
           </g>;
         })}
       </svg>
@@ -228,32 +259,36 @@ function Team({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
   </div>;
 }
 
-// ── STAIRCASE ──
+// ── STAIRCASE (uses milestones field if available) ──
 function Staircase({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 4); const dp = s.dataPoints || []; const n = items.length;
+  // Use structured milestones if available
+  const ms = s.milestones || (s.bodyContent || []).slice(0, 4).map((t, i) => ({
+    amount: (s.dataPoints || [])[i] || "",
+    bullets: t.split(/[,;]/).map(b => b.trim()).filter(Boolean).slice(0, 3),
+  }));
+  const n = ms.length;
   const pcts = [30, 50, 70, 90];
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"4.5% 6%" }}>
     <Header s={s} c={c} />
     <div style={{ flex:1, marginTop:"1.5%" }}>
       <svg viewBox="0 0 800 340" width="100%" height="100%" fontFamily="Arial" preserveAspectRatio="xMidYMax meet">
-        {items.map((t, i) => {
-          const h = pcts[i] / 100 * 310; const y = 340 - h;
+        {ms.map((m, i) => {
+          const h = (pcts[i] || 90) / 100 * 310; const y = 340 - h;
           const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12);
           const isLast = i === n - 1;
-          const bullets = t.split(/[,;]/).map(b => b.trim()).filter(Boolean).slice(0, 3);
           return <g key={i}>
             <rect x={x} y={y} width={w} height={h} rx="3" fill={isLast ? `${c.primary}12` : "none"} stroke={isLast ? c.primary : c.border} strokeWidth={isLast ? 1.5 : 1} />
-            {dp[i] && <text x={x + w / 2} y={y + 22} textAnchor="middle" fill={isLast ? c.primary : c.head} fontSize="16" fontWeight="700">{dp[i]}</text>}
-            {bullets.map((b, bi) => <g key={bi}>
-              <text x={x + 14} y={y + (dp[i] ? 42 : 22) + bi * 15} fill={c.primary} fontSize="8">•</text>
-              <text x={x + 22} y={y + (dp[i] ? 42 : 22) + bi * 15} fill={c.sub} fontSize="9">{b}</text>
+            {m.amount && <text x={x + w / 2} y={y + 22} textAnchor="middle" fill={isLast ? c.primary : c.head} fontSize="16" fontWeight="700">{m.amount}</text>}
+            {m.bullets.map((b, bi) => <g key={bi}>
+              <text x={x + 14} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.primary} fontSize="8">•</text>
+              <text x={x + 22} y={y + (m.amount ? 42 : 22) + bi * 15} fill={c.sub} fontSize="9">{b}</text>
             </g>)}
           </g>;
         })}
         {/* Growth arrow above bars */}
-        <polyline points={items.map((_, i) => { const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12) + w / 2; const y = 340 - pcts[i] / 100 * 310 - 10; return `${x},${y}`; }).join(" ")}
+        <polyline points={ms.map((_, i) => { const w = (780 - 12 * (n - 1)) / n; const x = 10 + i * (w + 12) + w / 2; const y = 340 - (pcts[i] || 90) / 100 * 310 - 10; return `${x},${y}`; }).join(" ")}
           fill="none" stroke={c.primary} strokeWidth="2" strokeDasharray="5,4" />
-        {(() => { const w = (780 - 12 * (n - 1)) / n; const lx = 10 + (n - 1) * (w + 12) + w / 2 + 15; const ly = 340 - pcts[n - 1] / 100 * 310 - 18;
+        {(() => { const w = (780 - 12 * (n - 1)) / n; const lx = 10 + (n - 1) * (w + 12) + w / 2 + 15; const ly = 340 - (pcts[n - 1] || 90) / 100 * 310 - 18;
           return <polygon points={`${lx},${ly} ${lx - 10},${ly + 3} ${lx - 7},${ly - 7}`} fill={c.primary} />;
         })()}
       </svg>

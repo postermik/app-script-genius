@@ -16,6 +16,12 @@ export interface SlideData {
   subheadline?: string;
   selectedLayout?: string;
   dataPoints?: string[];
+  tiers?: { label: string; amount: string; description: string; }[];
+  flywheelSteps?: { label: string; description: string; leadsTo: string; }[];
+  milestones?: { amount: string; bullets: string[]; }[];
+  competitors?: { name: string; description: string; x: number; y: number; }[];
+  cards?: { category: string; stats: { label: string; value: string; }[]; }[];
+  axisLabels?: { x: string; y: string; };
 }
 
 export interface DeckTheme {
@@ -208,6 +214,12 @@ export function SlidePreview({
                     layoutRecommendation: slide.layoutRecommendation,
                     selectedLayout: slide.selectedLayout,
                     dataPoints: slide.dataPoints,
+                    tiers: slide.tiers,
+                    flywheelSteps: slide.flywheelSteps,
+                    milestones: slide.milestones,
+                    competitors: slide.competitors,
+                    cards: slide.cards,
+                    axisLabels: slide.axisLabels,
                   }}
                   theme={theme}
                 />

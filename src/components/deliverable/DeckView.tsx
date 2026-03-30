@@ -58,6 +58,12 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       subheadline: isPlaceholderText(slide?.subheadline || "") ? "" : slide?.subheadline,
       selectedLayout: slide?.selectedLayout,
       dataPoints: slide?.metadata?.dataPoints || [],
+      tiers: slide?.tiers,
+      flywheelSteps: slide?.flywheelSteps,
+      milestones: slide?.milestones,
+      competitors: slide?.competitors,
+      cards: slide?.cards,
+      axisLabels: slide?.axisLabels,
     };
   });
 

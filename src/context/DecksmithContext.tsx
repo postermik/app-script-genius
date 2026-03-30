@@ -929,12 +929,14 @@ Return JSON: { "deckFramework": [...] }`,
           // Merge into main output for backward compatibility
           if (outputType === "slide_framework") {
             const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
+            const strategicInsights = result.strategicInsights;
             if (deckFramework?.length) {
               setOutput(prev => {
                 if (!prev) return prev;
                 const updated = { ...prev } as any;
                 if (!updated.deliverable) updated.deliverable = { type: "deck" };
                 updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
+                if (strategicInsights) updated.strategicInsights = strategicInsights;
                 return updated;
               });
             }
@@ -1018,12 +1020,14 @@ Return JSON: { "deckFramework": [...] }`,
       // Merge slides into output
       if (outputType === "slide_framework") {
         const deckFramework = result.deckFramework || result.deliverable?.deckFramework;
+        const strategicInsights = result.strategicInsights;
         if (deckFramework?.length) {
           setOutput(prev => {
             if (!prev) return prev;
             const updated = { ...prev } as any;
             if (!updated.deliverable) updated.deliverable = { type: "deck" };
             updated.deliverable = { ...updated.deliverable, type: "deck", deckFramework };
+            if (strategicInsights) updated.strategicInsights = strategicInsights;
             return updated;
           });
           toast.success("Slide framework generated!");
