@@ -133,10 +133,10 @@ export function SlidePreview({
                   setIsExtractingColors(true);
                   try {
                     const { data: { session: s } } = await supabase.auth.getSession();
-                    const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/brand-colors", {
+                    const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/decksmith-ai", {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz", "Authorization": `Bearer ${s?.access_token || ""}` },
-                      body: JSON.stringify({ url: brandUrl.trim() }),
+                      body: JSON.stringify({ mode: "brand_colors", url: brandUrl.trim() }),
                     });
                     if (resp.ok) {
                       const colors = await resp.json();
