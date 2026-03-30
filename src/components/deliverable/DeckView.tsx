@@ -20,7 +20,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [fadingOut, setFadingOut] = useState<number[]>([]);
   const [refiningSlideIndex, setRefiningSlideIndex] = useState<number | null>(null);
-  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection, appliedSuggestions } = useDecksmith();
+  const [applyingSuggestionSlideIndex, setApplyingSuggestionSlideIndex] = useState<number | null>(null);
+  const { applyDeckSuggestion, dismissedSuggestions, dismissSuggestion, refineSection, appliedSuggestions, applySlideSuggestion } = useDecksmith();
 
   if (framework.length === 0) return null;
 
@@ -87,9 +88,6 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
     try {
       await applyDeckSuggestion(suggestion, index);
       setFadingOut(prev => [...prev, index]);
-      setTimeout(() => {
-        // Already persisted via context dismissSuggestion
-      }, 400);
     } catch {
       // applyDeckSuggestion already shows toast
     } finally {
@@ -105,6 +103,17 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
       // refineSection already shows toast
     } finally {
       setRefiningSlideIndex(null);
+    }
+  };
+
+  const handleApplySlideSuggestion = async (slideIndex: number, suggestion: string) => {
+    setApplyingSuggestionSlideIndex(slideIndex);
+    try {
+      await applySlideSuggestion(slideIndex, suggestion);
+    } catch {
+      // applySlideSuggestion already shows toast
+    } finally {
+      setApplyingSuggestionSlideIndex(null);
     }
   };
 
@@ -129,7 +138,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
                     disabled={applyingIndex === i}
                     className="text-xs px-3 py-1.5 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {applyingIndex === i ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying…</> : "Apply"}
+                    {applyingIndex === i ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying...</> : "Apply"}
                   </button>
                   <button
                     onClick={() => dismissSuggestion(i)}
@@ -155,6 +164,8 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
         onRefineSlide={handleRefineSlide}
         refiningSlideIndex={refiningSlideIndex}
         onEditSlide={handleEditSlide}
+        onApplySuggestion={handleApplySlideSuggestion}
+        applyingSuggestionSlideIndex={applyingSuggestionSlideIndex}
       />
     </div>
   );

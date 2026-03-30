@@ -44,6 +44,8 @@ interface Props {
   onRefineSlide?: (slideIndex: number, tone: string) => void;
   refiningSlideIndex?: number | null;
   onEditSlide?: (slideIndex: number, field: string, value: string | string[]) => void;
+  onApplySuggestion?: (slideIndex: number, suggestion: string) => void;
+  applyingSuggestionSlideIndex?: number | null;
 }
 
 const REFINE_OPTIONS = [
@@ -58,7 +60,8 @@ const REFINE_OPTIONS = [
 
 export function SlidePreview({
   slides, excludedSlides, onToggleSlide, slideOrder, onReorder,
-  theme, onThemeChange, onRefineSlide, refiningSlideIndex, onEditSlide
+  theme, onThemeChange, onRefineSlide, refiningSlideIndex, onEditSlide,
+  onApplySuggestion, applyingSuggestionSlideIndex
 }: Props) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [refineOpen, setRefineOpen] = useState<number | null>(null);
@@ -96,7 +99,7 @@ export function SlidePreview({
           onClick={() => setThemeExpanded(!themeExpanded)}>
           <div className="flex items-center gap-2">
             <h4 className="text-xs font-semibold tracking-[0.12em] uppercase text-electric">Deck Theme</h4>
-            <span className="text-xs text-secondary-foreground">· {themeLabel}</span>
+            <span className="text-xs text-secondary-foreground">&middot; {themeLabel}</span>
           </div>
           <button className="text-muted-foreground hover:text-foreground transition-colors p-1"><Pencil className="h-3.5 w-3.5" /></button>
         </div>
@@ -165,6 +168,7 @@ export function SlidePreview({
           const isExcluded = excludedSlides.has(slide.originalIdx);
           const isEditing = editingSlide === slide.originalIdx;
           const layout = resolveLayout(slide.layoutRecommendation, slide.selectedLayout, slide.categoryLabel, slide.dataPoints, i, orderedSlides.length);
+          const isApplyingSuggestion = applyingSuggestionSlideIndex === slide.originalIdx;
 
           return (
             <div key={slide.originalIdx}
@@ -273,12 +277,28 @@ export function SlidePreview({
                 </div>
               )}
 
-              {/* Suggestion */}
+              {/* Suggestion with Apply button */}
               {slide.suggestion && !dismissedSuggestions.includes(slide.originalIdx) && !isExcluded && (
                 <div className="mx-3 mb-3 mt-1 bg-electric/[0.06] border border-electric/20 rounded-sm p-2.5 flex items-start gap-2.5">
                   <Lightbulb className="w-3.5 h-3.5 text-electric mt-0.5 shrink-0" />
                   <p className="text-[12px] text-foreground/80 flex-1">{slide.suggestion}</p>
-                  <button onClick={() => setDismissedSuggestions(prev => [...prev, slide.originalIdx])} className="text-[11px] text-muted-foreground hover:text-foreground px-1">✕</button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {onApplySuggestion && (
+                      <button
+                        onClick={() => onApplySuggestion(slide.originalIdx, slide.suggestion!)}
+                        disabled={isApplyingSuggestion}
+                        className="text-[10px] px-2.5 py-1 rounded-sm font-medium bg-electric text-primary-foreground hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {isApplyingSuggestion ? <><Loader2 className="w-3 h-3 animate-spin" /> Applying...</> : "Apply"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setDismissedSuggestions(prev => [...prev, slide.originalIdx])}
+                      className="text-[11px] text-muted-foreground hover:text-foreground px-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -94,6 +94,7 @@ interface DecksmithContextType {
   appliedSuggestions: Set<string>;
   markSuggestionApplied: (key: string) => void;
   applyDeckSuggestion: (suggestion: string, suggestionIndex: number) => Promise<void>;
+  applySlideSuggestion: (slideIndex: number, suggestion: string) => Promise<void>;
   rescoreNarrative: () => Promise<void>;
   computeNarrativeStrength: () => NarrativeStrength;
   aiAssistOpportunity: (opportunityId: string, context: string) => Promise<string>;
@@ -1071,6 +1072,80 @@ Return JSON: { "deckFramework": [...] }`,
     await generateOutput("slide_framework");
   }, [generateOutput]);
 
+  // ── Shared helper: call refine_slide edge function for a single slide ──
+  const fetchRefineSlide = useCallback(async (
+    slideIndex: number,
+    directive: string,
+    options?: { generateNew?: boolean }
+  ): Promise<any> => {
+    const cn = coreNarrativeRef.current;
+    const narrativeCtx = cn?.sections?.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n") || rawInput;
+    const fw = outputDataRef.current?.slide_framework?.deckFramework
+      || (output as any)?.deliverable?.deckFramework || [];
+    const currentSlide = options?.generateNew ? null : fw[slideIndex] || null;
+
+    const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+      body: {
+        mode: "refine_slide",
+        slideData: currentSlide ? JSON.stringify(currentSlide) : null,
+        directive,
+        narrativeContext: narrativeCtx,
+        slideIndex: options?.generateNew ? fw.length : slideIndex,
+        totalSlides: fw.length,
+      },
+    });
+    if (error) throw error;
+
+    let refinedSlide = data.slide;
+    // Fallback: if the edge function returned raw content instead of parsed slide
+    if (!refinedSlide && data.content) {
+      let content = data.content;
+      if (typeof content === "string") {
+        content = content.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+        refinedSlide = JSON.parse(content);
+      } else {
+        refinedSlide = content;
+      }
+    }
+    if (typeof refinedSlide === "string") {
+      refinedSlide = JSON.parse(refinedSlide.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim());
+    }
+    if (!refinedSlide || typeof refinedSlide !== "object") {
+      throw new Error("Invalid slide response from AI");
+    }
+
+    return sanitizeEmDash(refinedSlide);
+  }, [output, rawInput]);
+
+  // ── Shared helper: update slide framework in state + persist to Supabase ──
+  const updateSlideFramework = useCallback((updatedFw: any[]) => {
+    setOutput(prev => {
+      if (!prev) return prev;
+      const updated = JSON.parse(JSON.stringify(prev));
+      if (!updated.deliverable) updated.deliverable = { type: "deck" };
+      updated.deliverable.deckFramework = updatedFw;
+      return updated;
+    });
+    setOutputData((prev: any) => ({
+      ...prev,
+      slide_framework: { ...prev?.slide_framework, deckFramework: updatedFw },
+    }));
+    if (currentProjectId) {
+      saveQueueRef.current = saveQueueRef.current.then(async () => {
+        try {
+          const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+          const existing = (proj?.output_data as any) || {};
+          await supabase.from("projects").update({
+            output_data: { ...existing, slide_framework: { ...existing.slide_framework, deckFramework: updatedFw } } as any,
+          }).eq("id", currentProjectId);
+          console.log("[Persistence] Slide framework updated");
+        } catch (e) {
+          console.warn("[Persistence] Failed to save slide framework:", e);
+        }
+      });
+    }
+  }, [currentProjectId]);
+
 
 
   const evaluateDeck = useCallback(async (extractedText: string) => {
@@ -1120,29 +1195,38 @@ Return JSON: { "deckFramework": [...] }`,
     if (!output) return;
     setRefiningSection(sectionKey);
     try {
-      // Determine the current content to refine based on the path
-      let currentContent: string | undefined;
       const cn = coreNarrativeRef.current;
 
+      // ── SLIDE REFINE: use structured refine_slide mode ──
+      if (path.startsWith("deckFramework.")) {
+        const slideIndex = parseInt(path.split(".")[1], 10);
+        const refinedSlide = await fetchRefineSlide(slideIndex, tone);
+        const fw = outputDataRef.current?.slide_framework?.deckFramework
+          || (output as any).deliverable?.deckFramework || [];
+        const updatedFw = [...fw];
+        updatedFw[slideIndex] = { ...updatedFw[slideIndex], ...refinedSlide };
+        updateSlideFramework(updatedFw);
+
+        // Log to refinement history
+        if (currentProjectId && session) {
+          const historyEntry = { section: sectionKey, tone, timestamp: new Date().toISOString(), before: JSON.stringify(fw[slideIndex]), after: JSON.stringify(refinedSlide) };
+          supabase.from("projects").update({
+            refinement_history: [...(projects.find(p => p.id === currentProjectId)?.refinement_history || []), historyEntry] as any,
+          }).eq("id", currentProjectId).then();
+        }
+        return; // Done, skip the text-based refine path below
+      }
+
+      // ── TEXT REFINE: core narrative sections and fallback paths ──
+      let currentContent: string | undefined;
+
       if (path === "narrativeStructure" && cn?.sections?.length) {
-        // Score tab "Apply to Core Narrative": refine the full core narrative with the howToFix directive
         currentContent = cn.sections.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n");
       } else if (path.startsWith("coreNarrative.sections.") && cn?.sections?.length) {
-        // Core Narrative Refine button: refine a specific section
         const parts = path.split(".");
         const sectionIndex = parseInt(parts[2], 10);
         currentContent = cn.sections[sectionIndex]?.content;
-      } else if (path.startsWith("deckFramework.")) {
-        // Slide Refine button: refine a specific slide
-        const slideIndex = parseInt(path.split(".")[1], 10);
-        const fw = outputDataRef.current?.slide_framework?.deckFramework
-          || (output as any).deliverable?.deckFramework || [];
-        const slide = fw[slideIndex];
-        if (slide) {
-          currentContent = JSON.stringify(slide);
-        }
       } else {
-        // Fallback for backward compat (old projects with supporting data)
         const sourceObj = (output as any).supporting || (output as any).data || {};
         currentContent = getNestedValue(sourceObj, path);
       }
@@ -1154,10 +1238,7 @@ Return JSON: { "deckFramework": [...] }`,
       if (error) throw error;
       const refined = data.content;
 
-      // Write the refined content back to the right place
       if (path === "narrativeStructure" && cn?.sections?.length) {
-        // Score tab Apply: the refined text is a full rewrite of the core narrative
-        // Parse it back into sections and update coreNarrative
         const newSections = cn.sections.map((s: any) => {
           const regex = new RegExp(`${s.heading}:\\s*([\\s\\S]*?)(?=\\n[A-Z][a-z]+:|$)`);
           const match = refined.match(regex);
@@ -1165,7 +1246,6 @@ Return JSON: { "deckFramework": [...] }`,
         });
         const updatedCN = { sections: newSections };
         setCoreNarrative(updatedCN);
-        // Persist to Supabase
         if (currentProjectId) {
           supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
             const existing = (proj?.output_data as any) || {};
@@ -1173,7 +1253,6 @@ Return JSON: { "deckFramework": [...] }`,
           });
         }
       } else if (path.startsWith("coreNarrative.sections.") && cn?.sections?.length) {
-        // Core Narrative Refine: update the specific section
         const parts = path.split(".");
         const sectionIndex = parseInt(parts[2], 10);
         const updatedSections = [...cn.sections];
@@ -1186,47 +1265,7 @@ Return JSON: { "deckFramework": [...] }`,
             supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
           });
         }
-      } else if (path.startsWith("deckFramework.")) {
-        // Slide Refine: parse the refined slide and update the framework
-        const slideIndex = parseInt(path.split(".")[1], 10);
-        let refinedSlide = refined;
-        if (typeof refinedSlide === "string") {
-          try {
-            const cleaned = refinedSlide.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-            refinedSlide = JSON.parse(cleaned);
-          } catch {
-            // If it's not JSON, it's plain text refine of the slide content - skip update
-          }
-        }
-        if (refinedSlide && typeof refinedSlide === "object") {
-          const fw = outputDataRef.current?.slide_framework?.deckFramework
-            || (output as any).deliverable?.deckFramework || [];
-          const updatedFw = [...fw];
-          updatedFw[slideIndex] = { ...updatedFw[slideIndex], ...refinedSlide };
-          // Update output deliverable
-          setOutput((prev) => {
-            if (!prev) return prev;
-            const updated = JSON.parse(JSON.stringify(prev));
-            if (updated.deliverable) updated.deliverable.deckFramework = updatedFw;
-            return updated;
-          });
-          // Update outputData
-          setOutputData((prev: any) => ({
-            ...prev,
-            slide_framework: { ...prev?.slide_framework, deckFramework: updatedFw },
-          }));
-          // Persist
-          if (currentProjectId) {
-            supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
-              const existing = (proj?.output_data as any) || {};
-              supabase.from("projects").update({
-                output_data: { ...existing, slide_framework: { ...existing.slide_framework, deckFramework: updatedFw } } as any,
-              }).eq("id", currentProjectId);
-            });
-          }
-        }
       } else {
-        // Fallback: update output.supporting or output.data (old projects)
         setOutput((prev) => {
           if (!prev) return prev;
           const updated = JSON.parse(JSON.stringify(prev));
@@ -1254,42 +1293,45 @@ Return JSON: { "deckFramework": [...] }`,
     } finally {
       setRefiningSection(null);
     }
-  }, [output, rawInput, saveProject, currentProjectId, session, projects]);
+  }, [output, rawInput, saveProject, currentProjectId, session, projects, fetchRefineSlide, updateSlideFramework]);
 
   const applyDeckSuggestion = useCallback(async (suggestion: string, suggestionIndex: number) => {
     if (!output) return;
     setRefiningSection(`suggestion-${suggestionIndex}`);
     try {
-      const deliverable = (output as any).deliverable;
-      const deckFramework = deliverable?.deckFramework || (output as any).data?.deckFramework || [];
-      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: { mode: "refine", input: rawInput, section: "deckFramework", path: "deckFramework", tone: suggestion, currentContent: JSON.stringify(deckFramework), model: "claude-sonnet-4-20250514" },
-      });
-      if (error) throw error;
-      let refined = data.content;
-      if (typeof refined === "string") {
-        const cleaned = refined.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
-        try { refined = JSON.parse(cleaned); } catch {}
+      const fw = outputDataRef.current?.slide_framework?.deckFramework
+        || (output as any).deliverable?.deckFramework || [];
+      
+      // Detect which slide the suggestion targets
+      const slides = fw.map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }));
+      const targetIdx = detectRelevantSlideForBatch(suggestion, slides);
+      
+      if (targetIdx !== null) {
+        // Refine the targeted slide with the suggestion
+        const refinedSlide = await fetchRefineSlide(targetIdx, `Apply this deck improvement: ${suggestion}`);
+        const updatedFw = [...fw];
+        updatedFw[targetIdx] = { ...updatedFw[targetIdx], ...refinedSlide };
+        updateSlideFramework(updatedFw);
+      } else {
+        // No matching slide found, generate a new one
+        const refinedSlide = await fetchRefineSlide(fw.length, `Create a new slide for this deck: ${suggestion}`, { generateNew: true });
+        const updatedFw = [...fw, refinedSlide];
+        updateSlideFramework(updatedFw);
       }
+
+      setAppliedSuggestions(prev => new Set(prev).add(`deck-${suggestionIndex}`));
+      setDismissedSuggestions(prev => new Set(prev).add(suggestionIndex));
+      // Persist suggestion state to output object
       setOutput((prev) => {
         if (!prev) return prev;
-        const updated = JSON.parse(JSON.stringify(prev));
-        if (Array.isArray(refined)) {
-          if (updated.deliverable) updated.deliverable.deckFramework = refined;
-          if (updated.data?.deckFramework) updated.data.deckFramework = refined;
-        } else if (refined && typeof refined === "object" && refined.headline) {
-          const fw = updated.deliverable?.deckFramework || updated.data?.deckFramework || [];
-          fw.push(refined);
-          if (updated.deliverable) updated.deliverable.deckFramework = fw;
-          if (updated.data?.deckFramework) updated.data.deckFramework = fw;
-        }
+        const updated = { ...prev } as any;
         if (!updated._appliedSuggestions) updated._appliedSuggestions = [];
         updated._appliedSuggestions.push(`deck-${suggestionIndex}`);
+        if (!updated._dismissedSuggestions) updated._dismissedSuggestions = [];
+        updated._dismissedSuggestions.push(suggestionIndex);
         saveProject(updated as NarrativeOutputData);
         return updated;
       });
-      setAppliedSuggestions(prev => new Set(prev).add(`deck-${suggestionIndex}`));
-      setDismissedSuggestions(prev => new Set(prev).add(suggestionIndex));
       toast.success("Suggestion applied to deck.");
     } catch (e: any) {
       console.error("Apply deck suggestion error:", e);
@@ -1297,7 +1339,28 @@ Return JSON: { "deckFramework": [...] }`,
     } finally {
       setRefiningSection(null);
     }
-  }, [output, rawInput, saveProject]);
+  }, [output, fetchRefineSlide, updateSlideFramework, saveProject]);
+
+  // Apply a per-slide inline suggestion
+  const applySlideSuggestion = useCallback(async (slideIndex: number, suggestion: string) => {
+    if (!output) return;
+    setRefiningSection(`apply-slide-${slideIndex}`);
+    try {
+      const refinedSlide = await fetchRefineSlide(slideIndex, `Apply this suggestion to the slide: ${suggestion}`);
+      const fw = outputDataRef.current?.slide_framework?.deckFramework
+        || (output as any).deliverable?.deckFramework || [];
+      const updatedFw = [...fw];
+      // Merge refined content and clear the suggestion (it's been applied)
+      updatedFw[slideIndex] = { ...updatedFw[slideIndex], ...refinedSlide, suggestion: null };
+      updateSlideFramework(updatedFw);
+      toast.success("Suggestion applied to slide.");
+    } catch (e: any) {
+      console.error("Apply slide suggestion error:", e);
+      toast.error("Failed to apply suggestion. Please try again.");
+    } finally {
+      setRefiningSection(null);
+    }
+  }, [output, fetchRefineSlide, updateSlideFramework]);
 
   // Standalone markSuggestionApplied (needed by batchApplyGaps and individual apply)
   const markSuggestionApplied = useCallback((key: string) => {
@@ -1357,8 +1420,6 @@ Return JSON: { "deckFramework": [...] }`,
 
       if (affectedSlideIndices.size > 0 && fw.length > 0) {
         const slideRefinePromises = [...affectedSlideIndices].map(async (slideIdx) => {
-          const slide = fw[slideIdx];
-          if (!slide) return null;
           const relevantFixes = gapsToApply
             .filter(g => detectRelevantSlideForBatch(g.gapText, slidesList) === slideIdx)
             .map(g => g.howToFix);
@@ -1366,14 +1427,7 @@ Return JSON: { "deckFramework": [...] }`,
             ? `Apply these improvements to this slide:\n${relevantFixes.map((f, i) => `${i + 1}. ${f}`).join("\n")}`
             : relevantFixes[0] || "Refine this slide";
           try {
-            const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-              body: { mode: "refine", input: rawInput, section: `slide-${slideIdx}`, path: `deckFramework.${slideIdx}`, tone: directive, currentContent: JSON.stringify(slide), max_tokens: 2000, model: "claude-sonnet-4-20250514" },
-            });
-            if (error) return null;
-            let refinedSlide = data.content;
-            if (typeof refinedSlide === "string") {
-              try { refinedSlide = JSON.parse(refinedSlide.replace(/^```json\s*/, "").replace(/```\s*$/, "").trim()); } catch { return null; }
-            }
+            const refinedSlide = await fetchRefineSlide(slideIdx, directive);
             return { slideIdx, refinedSlide };
           } catch { return null; }
         });
@@ -1385,24 +1439,7 @@ Return JSON: { "deckFramework": [...] }`,
             updatedFw[r.slideIdx] = { ...updatedFw[r.slideIdx], ...r.refinedSlide };
           }
         }
-        setOutput((prev) => {
-          if (!prev) return prev;
-          const updated = JSON.parse(JSON.stringify(prev));
-          if (updated.deliverable) updated.deliverable.deckFramework = updatedFw;
-          return updated;
-        });
-        setOutputData((prev: any) => ({
-          ...prev,
-          slide_framework: { ...prev?.slide_framework, deckFramework: updatedFw },
-        }));
-        if (currentProjectId) {
-          supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
-            const existing = (proj?.output_data as any) || {};
-            supabase.from("projects").update({
-              output_data: { ...existing, slide_framework: { ...existing.slide_framework, deckFramework: updatedFw } } as any,
-            }).eq("id", currentProjectId);
-          });
-        }
+        updateSlideFramework(updatedFw);
       }
 
       // Mark all as applied
@@ -1415,7 +1452,7 @@ Return JSON: { "deckFramework": [...] }`,
     } finally {
       setRefiningSection(null);
     }
-  }, [output, rawInput, currentProjectId, markSuggestionApplied]);
+  }, [output, rawInput, currentProjectId, markSuggestionApplied, fetchRefineSlide, updateSlideFramework]);
 
   // ── Deterministic Narrative Strength scoring ──
   const computeNarrativeStrength = useCallback((): NarrativeStrength => {
@@ -2166,7 +2203,7 @@ No markdown fences. No commentary outside the JSON.`;
         generateOutput,
         completedOutputs, generationOutputs, coreNarrative, outputData,
         appliedSuggestions, markSuggestionApplied,
-        applyDeckSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
+        applyDeckSuggestion, applySlideSuggestion, rescoreNarrative, computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary,
         dismissedSuggestions, dismissSuggestion, updateNarrativeSection,
         deckTheme, setDeckTheme: setDeckThemeAndPersist,
       }}
