@@ -40,6 +40,8 @@ export function LandingPage() {
     <>
       {/* ── Hero ── */}
       <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-10 overflow-hidden">
+        {/* Subtle warm radial background */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 30%, hsl(36 30% 92%) 0%, transparent 70%)" }} />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
             Craft your narrative.
@@ -55,12 +57,12 @@ export function LandingPage() {
 
         {/* Hero product preview */}
         <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+          <div className="bg-card border border-border/80 rounded-xl overflow-hidden" style={{ boxShadow: "0 4px 32px -8px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-border" />
-                <div className="w-2 h-2 rounded-full bg-border" />
-                <div className="w-2 h-2 rounded-full bg-border" />
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/20" />
               </div>
               <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Example Output</span>
               <div />
@@ -68,14 +70,14 @@ export function LandingPage() {
             <div className="p-4 sm:p-8">
               {/* Elevator pitch */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Elevator Pitch</span>
-                <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-md">Ready to Send</span>
+                <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-foreground/70">Elevator Pitch</span>
+                <span className="text-[10px] text-emerald font-semibold px-1.5 py-0.5 bg-emerald/10 border border-emerald/20 rounded-md">Ready to Send</span>
               </div>
               <p className="text-[13px] text-foreground/80 leading-relaxed mt-4">
                 Sales teams waste 15 hours a week on meeting coordination. Relay automates the entire scheduling workflow, from availability to follow-up, so reps spend time selling instead of scheduling. We're live with 40 teams, growing 34% quarter over quarter, with 128% net revenue retention.
               </p>
-              <div className="mt-4 bg-secondary border border-border rounded-lg p-3 flex items-start gap-3">
-                <div className="text-electric mt-0.5 shrink-0">
+              <div className="mt-4 bg-amber-50 border border-amber-200/60 rounded-lg p-3 flex items-start gap-3">
+                <div className="text-amber-600 mt-0.5 shrink-0">
                   <Sparkles className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex-1">
@@ -84,10 +86,10 @@ export function LandingPage() {
               </div>
 
               {/* Slide framework */}
-              <div className="border-t border-border mt-6 pt-5">
+              <div className="border-t border-border/60 mt-6 pt-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-electric">Slide Framework</span>
-                  <span className="text-[10px] text-emerald font-medium px-1.5 py-0.5 border border-emerald/30 rounded-md">Ready</span>
+                  <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-foreground/70">Slide Framework</span>
+                  <span className="text-[10px] text-emerald font-semibold px-1.5 py-0.5 bg-emerald/10 border border-emerald/20 rounded-md">Ready</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-[18px]">
                   {[
@@ -95,7 +97,7 @@ export function LandingPage() {
                     { label: "Key Metrics", title: "Traction & Unit Economics" },
                     { label: "Landscape", title: "Competitive Position" },
                   ].map((slide) => (
-                    <div key={slide.label} className="bg-secondary border border-border rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
+                    <div key={slide.label} className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
                       <div className="p-4 sm:p-5 flex flex-col justify-between h-full gap-4">
                         <div>
                           <p className="text-[8px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">{slide.label}</p>
