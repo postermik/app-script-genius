@@ -19,7 +19,13 @@ function gc(theme: DeckTheme) {
   if (theme.scheme === "custom") {
     const s = theme.secondary || "#0b0f14"; const [r,g,b] = [s.slice(1,3),s.slice(3,5),s.slice(5,7)].map(h => parseInt(h,16));
     const il = (r*299+g*587+b*114)/1000 > 128;
-    return { bg:s, fg:il?"#334155":"#cbd5e1", primary:theme.primary||"#3b82f6", cat:theme.primary||"#60a5fa", head:il?"#1e293b":"#e2e8f0", body:il?"#475569":"#cbd5e1", sub:il?"#64748b":"#94a3b8", close:theme.primary||"#60a5fa", accent:theme.accent||"#1e3a5f", border:il?"#e2e8f0":"#1e3a5f" };
+    const txt = theme.text;
+    return {
+      bg:s, fg: txt || (il?"#334155":"#cbd5e1"), primary:theme.primary||"#3b82f6", cat:theme.primary||"#60a5fa",
+      head: txt || (il?"#1e293b":"#e2e8f0"), body: txt ? txt+"cc" : (il?"#475569":"#cbd5e1"),
+      sub: txt ? txt+"99" : (il?"#64748b":"#94a3b8"), close:theme.primary||"#60a5fa",
+      accent:theme.accent||"#1e3a5f", border:il?"#e2e8f0":"#1e3a5f"
+    };
   }
   return { bg:"#0b0f14", fg:"#cbd5e1", primary:"#3b82f6", cat:"#60a5fa", head:"#e2e8f0", body:"#cbd5e1", sub:"#94a3b8", close:"#60a5fa", accent:"#1e3a5f", border:"#1e3a5f" };
 }

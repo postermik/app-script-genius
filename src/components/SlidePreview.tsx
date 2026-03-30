@@ -29,6 +29,7 @@ export interface DeckTheme {
   primary: string;
   secondary: string;
   accent: string;
+  text?: string;
 }
 
 interface Props {
@@ -64,6 +65,8 @@ export function SlidePreview({
   const [themeExpanded, setThemeExpanded] = useState(false);
   const [editingSlide, setEditingSlide] = useState<number | null>(null);
   const [savedSlide, setSavedSlide] = useState<number | null>(null);
+  const [brandUrl, setBrandUrl] = useState("");
+  const [isExtractingColors, setIsExtractingColors] = useState(false);
 
   if (slides.length === 0) return null;
 
@@ -107,16 +110,42 @@ export function SlidePreview({
               ))}
               {theme.scheme === "custom" && (
                 <div className="flex items-center gap-3 ml-2">
-                  {[["Primary", "primary"], ["Background", "secondary"], ["Accent", "accent"]].map(([label, key]) => (
+                  {[["Primary", "primary"], ["Background", "secondary"], ["Accent", "accent"], ["Text", "text"]].map(([label, key]) => (
                     <label key={key} className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">{label}</span>
-                      <input type="color" value={(theme as any)[key] || "#3b82f6"}
+                      <input type="color" value={(theme as any)[key] || (key === "text" ? "#e2e8f0" : "#3b82f6")}
                         onChange={e => onThemeChange({ ...theme, [key]: e.target.value })}
                         className="w-7 h-7 rounded-sm border border-border cursor-pointer bg-transparent" />
                     </label>
                   ))}
                 </div>
               )}
+            </div>
+            {/* Brand URL extraction */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">Brand URL</span>
+              <input value={brandUrl} onChange={e => setBrandUrl(e.target.value)} placeholder="yourcompany.com"
+                className="flex-1 text-xs bg-transparent border border-border/50 rounded-sm px-2 py-1.5 text-foreground placeholder:text-muted-foreground/50 focus:border-electric/50 outline-none" />
+              <button
+                disabled={!brandUrl.trim() || isExtractingColors}
+                onClick={async () => {
+                  setIsExtractingColors(true);
+                  try {
+                    const resp = await fetch("https://jilopuugwyrqogoxlxjo.supabase.co/functions/v1/brand-colors", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "apikey": "sb_publishable_IdoGcGM61fuk6JhT88wOeg_JlwFjtxz" },
+                      body: JSON.stringify({ url: brandUrl.trim() }),
+                    });
+                    if (resp.ok) {
+                      const colors = await resp.json();
+                      onThemeChange({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
+                    }
+                  } catch (e) { console.warn("Brand color extraction failed:", e); }
+                  finally { setIsExtractingColors(false); }
+                }}
+                className="text-[10px] px-3 py-1.5 rounded-sm border border-electric/30 text-electric hover:bg-electric/10 font-medium disabled:opacity-40 transition-colors flex items-center gap-1">
+                {isExtractingColors ? <><Loader2 className="h-3 w-3 animate-spin" />...</> : "Extract"}
+              </button>
             </div>
           </div>
         )}

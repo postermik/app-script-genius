@@ -4,7 +4,7 @@ import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurp
 import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
 import type { DeckTheme } from "@/components/SlidePreview";
 
-const DEFAULT_DECK_THEME: DeckTheme = { scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f" };
+const DEFAULT_DECK_THEME: DeckTheme = { scheme: "dark", primary: "#3b82f6", secondary: "#0b0f14", accent: "#1e3a5f", text: undefined };
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, TIERS } from "@/hooks/useSubscription";
 import type { Session } from "@supabase/supabase-js";
@@ -807,6 +807,23 @@ Return JSON: { "deckFramework": [...] }`,
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+
+    // Auto-detect URL in input and extract brand colors in parallel
+    const urlMatch = rawInput.match(/https?:\/\/[^\s,)]+|(?:www\.)[^\s,)]+|[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}(?:\/[^\s,)]*)?/);
+    if (urlMatch) {
+      const detectedUrl = urlMatch[0].startsWith("http") ? urlMatch[0] : "https://" + urlMatch[0];
+      console.log("[BrandColors] Detected URL in input:", detectedUrl);
+      fetch(`${SUPABASE_URL}/functions/v1/brand-colors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        body: JSON.stringify({ url: detectedUrl }),
+      }).then(r => r.ok ? r.json() : null).then(colors => {
+        if (colors?.primary) {
+          console.log("[BrandColors] Extracted:", colors);
+          setDeckThemeAndPersist({ scheme: "custom", primary: colors.primary, secondary: colors.secondary, accent: colors.accent, text: colors.text });
+        }
+      }).catch(e => console.warn("[BrandColors] Extraction failed:", e));
+    }
 
     const currentIntake = intakeSelectionsRef.current || intakeSelections;
     const purpose = currentIntake?.purpose || "fundraising";
