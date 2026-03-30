@@ -101,7 +101,7 @@ export function ProductView() {
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
               rows={8} disabled={isFreeAndLocked || isGenerating}
-              className="w-full bg-card border border-border rounded-sm px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
+              className="w-full bg-card border border-border rounded-lg px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {showIntake && !isGenerating && (
               <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => setShowIntake(false)} />
             )}
@@ -109,13 +109,13 @@ export function ProductView() {
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <button onClick={handleShowIntake} disabled={!rawInput.trim()}
-                    className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
+                    className="flex-1 py-3.5 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center justify-center gap-2 glow-blue">
                     Generate
                   </button>
                   <input ref={fileInputRef} type="file" accept=".pdf,.pptx,.docx" className="hidden"
                     onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFileUpload(file); e.target.value = ""; }} />
                   <button onClick={() => fileInputRef.current?.click()} disabled={!!uploadingFile}
-                    className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-sm hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
+                    className="py-3.5 px-4 border border-border bg-card text-secondary-foreground font-medium text-sm rounded-lg hover:text-foreground hover:border-muted-foreground/30 transition-all disabled:opacity-50 flex items-center gap-2">
                     {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     {uploadingFile ? "Extracting..." : "Upload"}
                   </button>
@@ -123,12 +123,12 @@ export function ProductView() {
               </div>
             )}
             {isFreeAndLocked && (
-              <div className="border border-electric/20 rounded-sm p-6 card-gradient text-center">
+              <div className="border border-electric/20 rounded-lg p-6 card-gradient text-center">
                 <Lock className="h-5 w-5 text-electric mx-auto mb-3" />
                 <p className="text-sm font-medium text-foreground mb-2">You've used your free project.</p>
                 <p className="text-sm text-muted-foreground mb-4">Upgrade to create unlimited projects, export materials, and edit inline.</p>
                 <button onClick={() => setUpgradeOpen(true)}
-                  className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-sm hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
+                  className="bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity glow-blue">Upgrade Now</button>
               </div>
             )}
             {isGenerating && <GenerationStepper />}
@@ -138,7 +138,7 @@ export function ProductView() {
           <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
             {projects.length === 0 ? (
-              <div className="card-gradient border border-border rounded-sm p-10 flex flex-col items-center text-center">
+              <div className="card-gradient border border-border rounded-lg p-10 flex flex-col items-center text-center">
                 <FileText className="h-10 w-10 text-muted-foreground/30 mb-4" />
                 <p className="text-sm text-muted-foreground">No projects yet.</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">Paste your narrative above to get started.</p>
@@ -169,6 +169,15 @@ const MODE_LABELS: Record<string, string> = {
   fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy",
 };
 
+const MODE_ACCENTS: Record<string, string> = {
+  fundraising: "bg-electric/80",
+  board_update: "bg-amber-500",
+  board_meeting: "bg-amber-500",
+  strategy: "bg-indigo",
+  product_vision: "bg-emerald",
+  investor_update: "bg-electric/80",
+};
+
 function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
   const [copied, setCopied] = useState(false);
   const copyPrompt = (e: React.MouseEvent) => {
@@ -178,9 +187,16 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
     toast.success("Prompt copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const accentColor = MODE_ACCENTS[project.mode] || "bg-electric/80";
+  const preview = (project.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 90).trim();
+
   return (
-    <div className="card-gradient border border-border rounded-sm p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all">
-      <div className="flex items-start justify-between mb-1.5">
+    <div onClick={onOpen} className="bg-card border border-border rounded-lg p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden relative">
+      {/* Mode accent bar */}
+      <div className={`absolute top-0 left-0 right-0 h-1 ${accentColor} rounded-t-lg`} />
+
+      <div className="flex items-start justify-between mb-1.5 mt-1">
         <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1 min-w-0">
           {project.title}
           {project.detected_intent === "evaluate" && (
@@ -196,13 +212,20 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
           </button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
+
+      <p className="text-xs text-muted-foreground mb-3">
         {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
       </p>
+
+      {/* Preview snippet */}
+      {preview && (
+        <p className="text-[11px] text-muted-foreground/70 line-clamp-2 leading-relaxed mb-3">{preview}...</p>
+      )}
+
       <div className="mt-auto">
-        <button onClick={onOpen} className="flex items-center text-xs text-muted-foreground hover:text-electric transition-colors cursor-pointer">
+        <span className="flex items-center text-xs text-electric hover:text-foreground transition-colors">
           Open <ArrowRight className="h-3 w-3 ml-1" />
-        </button>
+        </span>
       </div>
     </div>
   );

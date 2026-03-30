@@ -163,7 +163,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
     <div className="space-y-5">
 
       {/* CONSULTANT HEADER */}
-      <div className="card-gradient rounded-sm border border-border p-5">
+      <div className="card-gradient rounded-lg border border-border p-5">
         <div className="flex items-center justify-between mb-2">
           <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
           {summary && (
@@ -199,22 +199,22 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
             <div className="grid grid-cols-2 gap-2">
               {cards.filter(c => c.category !== "Materials").map((card) => {
                 const isActive = activeCard === card.category;
-                const borderColor = card.allDone ? "border-l-emerald" : card.isMissing ? "border-l-amber-400" : "border-l-electric";
+                const borderColor = card.allDone ? "border-l-emerald" : card.isMissing ? "border-l-red-400" : "border-l-amber-500";
                 return (
                   <div key={card.category}
                     onClick={() => { if (!isActive) { setActiveCard(card.category); setEditingSection(null); } }}
-                    className={`rounded-sm border p-4 cursor-pointer transition-all duration-200 ${
+                    className={`rounded-lg border p-4 cursor-pointer transition-all duration-200 ${
                       isActive
-                        ? card.allDone ? "border-emerald/40 bg-emerald/[0.03]" : card.isMissing ? "border-amber-400/40 bg-amber-400/[0.03]" : "border-electric/50 bg-electric/[0.04]"
-                        : `border-l-[3px] ${borderColor} border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card/30 hover:bg-muted/10`
+                        ? card.allDone ? "border-emerald/40 bg-emerald/[0.03]" : card.isMissing ? "border-red-300 bg-red-50/50" : "border-amber-300 bg-amber-50/50"
+                        : `border-l-[3px] ${borderColor} border-t border-r border-b border-t-border/60 border-r-border/60 border-b-border/60 bg-card hover:bg-secondary/50`
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[13px] font-semibold text-foreground">{card.category}</span>
                       <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
                         card.allDone ? "bg-emerald/10 text-emerald" :
-                        card.isMissing ? "bg-amber-400/10 text-amber-400" :
-                        "bg-electric/10 text-electric"
+                        card.isMissing ? "bg-red-100 text-red-600" :
+                        "bg-amber-100 text-amber-700"
                       }`}>
                         {card.allDone ? "Covered" : card.isMissing ? "Missing" : "Strengthen"}
                       </span>
@@ -223,7 +223,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                       <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{card.preview}</p>
                     )}
                     {card.primaryOp && !isActive && (
-                      <p className={`text-[11px] mt-2 flex items-center gap-1.5 opacity-80 ${card.isMissing ? "text-amber-400" : "text-electric"}`}>
+                      <p className={`text-[11px] mt-2 flex items-center gap-1.5 opacity-80 ${card.isMissing ? "text-red-500" : "text-amber-600"}`}>
                         {card.isMissing ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <Sparkles className="h-3 w-3 shrink-0" />}
                         {card.primaryOp.description}
                       </p>
@@ -240,10 +240,10 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                 if (!card) return null;
                 const op = card.primaryOp;
                 const isEditing = editingSection === card.sectionHeading;
-                const borderColor = card.allDone ? "border-emerald/20" : "border-electric/30";
+                const borderColor = card.allDone ? "border-emerald/20" : card.isMissing ? "border-red-200" : "border-amber-200";
 
                 return (
-                  <div className={`rounded-sm border ${borderColor} bg-[hsl(222_24%_7%)] p-5 space-y-4`}>
+                  <div className={`rounded-lg border ${borderColor} bg-card p-5 space-y-4`}>
                     {/* Header with close X */}
                     <div className="flex items-center justify-between">
                       <p className={`text-xs font-semibold flex items-center gap-1.5 ${card.allDone ? "text-emerald" : "text-electric"}`}>
@@ -251,7 +251,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                         {card.category}
                       </p>
                       <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); setEditingSection(null); }}
-                        className="p-1 rounded-sm hover:bg-muted/20 transition-colors text-muted-foreground/60 hover:text-foreground">
+                        className="p-1 rounded-lg hover:bg-muted/20 transition-colors text-muted-foreground/60 hover:text-foreground">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
@@ -275,7 +275,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                             <textarea
                               value={editBuffer}
                               onChange={(e) => setEditBuffer(e.target.value)}
-                              className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2.5 text-[12px] text-foreground leading-relaxed resize-none focus:outline-none focus:border-electric/50 transition-colors"
+                              className="w-full bg-background/60 border border-border/50 rounded-lg px-3 py-2.5 text-[12px] text-foreground leading-relaxed resize-none focus:outline-none focus:border-electric/50 transition-colors"
                               rows={Math.max(4, Math.ceil(editBuffer.length / 80))}
                               autoFocus
                             />
@@ -284,7 +284,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                                 className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors px-2 py-1">Cancel</button>
                               <button onClick={() => saveInlineEdit(card.sectionHeading, editBuffer)}
                                 disabled={savingEdit || editBuffer === card.sectionContent}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
                                 {savingEdit ? <><Loader2 className="h-3 w-3 animate-spin" />Saving...</> : "Save"}
                               </button>
                             </div>
@@ -296,7 +296,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                             </p>
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingSection(card.sectionHeading); setEditBuffer(card.sectionContent); }}
-                              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 border border-transparent hover:border-border/40 transition-all">
+                              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 border border-transparent hover:border-border/40 transition-all">
                               <Pencil className="h-3 w-3" /> Edit
                             </button>
                           </div>
@@ -310,7 +310,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                         <p className="text-[10px] font-semibold text-electric uppercase tracking-wider">{op.label}</p>
 
                         {aiResults[op.id] && (
-                          <div className="bg-electric/[0.04] border border-electric/15 rounded-sm p-3.5 space-y-2">
+                          <div className="bg-electric/[0.04] border border-electric/15 rounded-lg p-3.5 space-y-2">
                             <div className="flex items-center gap-1.5">
                               <Sparkles className="h-3 w-3 text-electric" />
                               <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
@@ -321,7 +321,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                                 className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Dismiss</button>
                               <button onClick={() => applyToNarrative(op, aiResults[op.id])}
                                 disabled={applyingOp === op.id}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
                                 {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
                               </button>
                             </div>
@@ -334,21 +334,21 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
                               value={userInputs[op.id] || ""}
                               onChange={(e) => setUserInputs(prev => ({ ...prev, [op.id]: e.target.value }))}
                               placeholder={op.prompt}
-                              className="w-full bg-background/60 border border-border/50 rounded-sm px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors"
+                              className="w-full bg-background/60 border border-border/50 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors"
                               rows={2}
                             />
                             <div className="mt-2 flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 {op.aiAssistAvailable && !aiResults[op.id] && (
                                   <button onClick={() => handleAiAssist(op)} disabled={loadingAi === op.id}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50">
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium text-electric/70 hover:text-electric border border-electric/20 hover:border-electric/40 transition-colors disabled:opacity-50">
                                     {loadingAi === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Researching...</> : <><Sparkles className="h-3 w-3" />Help me find this</>}
                                   </button>
                                 )}
                               </div>
                               <button onClick={() => applyToNarrative(op, userInputs[op.id] || "")}
                                 disabled={!userInputs[op.id]?.trim() || applyingOp === op.id}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
                                 {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
                               </button>
                             </div>
@@ -363,12 +363,12 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
           </div>
 
           {isFree && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-sm bg-background/70 backdrop-blur-[2px]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-background/70 backdrop-blur-[2px]">
               <Lock className="h-5 w-5 text-electric mb-2.5" />
               <p className="text-sm font-semibold text-foreground mb-1">Upgrade to unlock your narrative guide</p>
               <p className="text-xs text-muted-foreground mb-4 text-center px-6">Personalized guidance with AI-powered research</p>
               <button onClick={() => window.dispatchEvent(new CustomEvent('rhetoric:upgrade-required'))}
-                className="px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity glow-blue">
+                className="px-4 py-2 text-xs font-medium bg-electric text-primary-foreground rounded-lg hover:opacity-90 transition-opacity glow-blue">
                 Upgrade to Hobby
               </button>
             </div>
@@ -414,11 +414,11 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
         {strength.tier === "ready" || strength.tier === "exceptional" ? (
           <div className="flex gap-2">
             <button onClick={() => switchToOutputs()}
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-sm hover:opacity-90 transition-opacity">
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
               Export materials
             </button>
             <a href="/raise/investors"
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border/60 rounded-sm hover:bg-muted/10 hover:border-border transition-colors text-foreground/70">
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border/60 rounded-lg hover:bg-muted/10 hover:border-border transition-colors text-foreground/70">
               Find investors
             </a>
           </div>
