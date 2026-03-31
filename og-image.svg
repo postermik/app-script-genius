@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7f5f0"/>
+      <stop offset="100%" stop-color="#efe9df"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle border -->
+  <rect x="0.5" y="0.5" width="1199" height="629" fill="none" stroke="#d6cfc4" stroke-width="1"/>
+
+  <!-- Narrative lines mark (scaled from 20x20 viewBox, positioned left-center) -->
+  <g transform="translate(160, 220)">
+    <rect x="0" y="0" width="84" height="12" rx="6" fill="#4a4742"/>
+    <rect x="0" y="36" width="108" height="12" rx="6" fill="#4a4742"/>
+    <rect x="0" y="72" width="60" height="12" rx="6" fill="#4a4742"/>
+  </g>
+
+  <!-- Brand name -->
+  <text x="160" y="380" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#2c2a27" letter-spacing="-1.5">Rhetoric</text>
+
+  <!-- Tagline -->
+  <text x="164" y="430" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="400" fill="#8a847a" letter-spacing="0.5">Craft your narrative</text>
+
+  <!-- Right side decorative lines (faded, adds visual interest) -->
+  <g transform="translate(750, 180)" opacity="0.08">
+    <rect x="0" y="0" width="320" height="8" rx="4" fill="#4a4742"/>
+    <rect x="40" y="40" width="280" height="8" rx="4" fill="#4a4742"/>
+    <rect x="0" y="80" width="360" height="8" rx="4" fill="#4a4742"/>
+    <rect x="60" y="120" width="240" height="8" rx="4" fill="#4a4742"/>
+    <rect x="0" y="160" width="300" height="8" rx="4" fill="#4a4742"/>
+    <rect x="20" y="200" width="340" height="8" rx="4" fill="#4a4742"/>
+    <rect x="0" y="240" width="200" height="8" rx="4" fill="#4a4742"/>
+    <rect x="80" y="280" width="280" height="8" rx="4" fill="#4a4742"/>
+  </g>
+
+  <!-- URL -->
+  <text x="164" y="530" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="500" fill="#b5aea3" letter-spacing="1">getrhetoric.ai</text>
+</svg>
