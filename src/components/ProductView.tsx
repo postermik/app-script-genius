@@ -26,7 +26,7 @@ const MODES: { value: OutputMode | "auto"; label: string }[] = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, setIntakeSelections, session } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, setIntakeSelections } = useDecksmith();
   const { subscribed } = useSubscription();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [showIntake, setShowIntake] = useState(false);
@@ -36,13 +36,13 @@ export function ProductView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
-  // Personalized greeting
-  const firstName = session?.user?.user_metadata?.full_name?.split(" ")[0]
-    || session?.user?.email?.split("@")[0]
-    || "";
+  // Rotating greetings by time of day
   const hour = new Date().getHours();
-  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const greeting = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
+  const mornings = ["Good morning.", "Morning. Let's build.", "Fresh day, fresh narrative."];
+  const afternoons = ["Good afternoon.", "Afternoon. Ready to build?", "Let's pick up where you left off."];
+  const evenings = ["Good evening.", "Evening. Let's sharpen something.", "Burning the midnight oil?"];
+  const pool = hour < 12 ? mornings : hour < 17 ? afternoons : evenings;
+  const greeting = pool[Math.floor(Date.now() / 86400000) % pool.length];
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
 
@@ -162,22 +162,66 @@ export function ProductView() {
             {isGenerating && <GenerationStepper />}
           </div>
         </div>
-        {!isGenerating && !showIntake && (
+        {!isGenerating && !showIntake && projects.length > 0 && (
           <div className="max-w-[960px] w-full mt-20 mb-12 animate-fade-in">
-            <p className="text-[11px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-5">Recent Projects</p>
-            {projects.length === 0 ? (
-              <div className="card-gradient border border-border rounded-lg p-12 flex flex-col items-center text-center">
-                <FileText className="h-10 w-10 text-muted-foreground/20 mb-4" />
-                <p className="text-sm text-foreground/70">No projects yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Paste your narrative above to get started.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.slice(0, 6).map((project) => (
-                  <RecentProjectTile key={project.id} project={project} onOpen={() => openProject(project)} onDelete={() => deleteProject(project.id)} />
-                ))}
-              </div>
+            {/* Hero card: most recent project */}
+            {(() => {
+              const latest = projects[0];
+              const latestOd = (latest as any).output_data || {};
+              const latestBrand = latestOd?.brand_colors?.dark?.primary || latestOd?.brand_colors?.primary || null;
+              const latestPill = MODE_HEADER_COLORS[latest.mode]?.pill || "text-blue-600 bg-blue-50";
+              return (
+                <div onClick={() => openProject(latest)}
+                  className="bg-card border border-border rounded-lg p-5 mb-6 flex items-center justify-between group hover:border-muted-foreground/30 hover:shadow-sm transition-all cursor-pointer relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-lg ${!latestBrand ? (latest.mode === "sales" ? "bg-orange-400" : latest.mode === "strategy" ? "bg-indigo-400" : latest.mode?.includes("board") ? "bg-amber-400" : "bg-electric/70") : ""}`}
+                    style={latestBrand ? { backgroundColor: latestBrand } : undefined} />
+                  <div className="flex-1 mt-0.5">
+                    <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1.5">Continue where you left off</p>
+                    <p className="text-[15px] font-semibold text-foreground mb-1.5">{latest.title}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${latestPill}`}>
+                        {MODE_LABELS[latest.mode] || latest.mode}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(latest.updated_at), { addSuffix: true })}</span>
+                    </div>
+                  </div>
+                  <span className="flex items-center text-sm font-medium text-electric group-hover:text-foreground transition-colors ml-4 shrink-0">
+                    Continue <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* Project grid: skip first (hero), fill empty slots */}
+            {(projects.length > 1 || projects.length <= 3) && (
+              <>
+                <p className="text-[11px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-4">Recent Projects</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projects.slice(1, 7).map((project) => (
+                    <RecentProjectTile key={project.id} project={project} onOpen={() => openProject(project)} onDelete={() => deleteProject(project.id)} />
+                  ))}
+                  {/* Empty state placeholders to fill remaining grid slots */}
+                  {projects.length < 4 && Array.from({ length: Math.max(0, 4 - projects.length) }).map((_, i) => (
+                    <div key={`empty-${i}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      className="border border-dashed border-border/60 rounded-lg p-5 flex flex-col items-center justify-center min-h-[190px] cursor-pointer hover:border-muted-foreground/30 transition-colors group">
+                      <div className="w-9 h-9 rounded-full border border-dashed border-border/60 group-hover:border-muted-foreground/30 flex items-center justify-center mb-2 transition-colors">
+                        <span className="text-muted-foreground/40 text-lg leading-none">+</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">New project</p>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
+          </div>
+        )}
+        {!isGenerating && !showIntake && projects.length === 0 && (
+          <div className="max-w-[960px] w-full mt-20 mb-12 animate-fade-in">
+            <div className="card-gradient border border-border rounded-lg p-12 flex flex-col items-center text-center">
+              <FileText className="h-10 w-10 text-muted-foreground/20 mb-4" />
+              <p className="text-sm text-foreground/70">No projects yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Paste your narrative above to get started.</p>
+            </div>
           </div>
         )}
       </div>
@@ -197,14 +241,14 @@ const MODE_LABELS: Record<string, string> = {
   fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy", sales: "Sales",
 };
 
-const MODE_HEADER_COLORS: Record<string, { bg: string; text: string }> = {
-  fundraising: { bg: "bg-blue-50", text: "text-blue-600" },
-  board_update: { bg: "bg-amber-50", text: "text-amber-700" },
-  board_meeting: { bg: "bg-amber-50", text: "text-amber-700" },
-  strategy: { bg: "bg-indigo-50", text: "text-indigo-600" },
-  product_vision: { bg: "bg-emerald-50", text: "text-emerald-600" },
-  investor_update: { bg: "bg-blue-50", text: "text-blue-600" },
-  sales: { bg: "bg-orange-50", text: "text-orange-600" },
+const MODE_HEADER_COLORS: Record<string, { pill: string }> = {
+  fundraising: { pill: "text-blue-600 bg-blue-50" },
+  board_update: { pill: "text-amber-700 bg-amber-50" },
+  board_meeting: { pill: "text-amber-700 bg-amber-50" },
+  strategy: { pill: "text-indigo-600 bg-indigo-50" },
+  product_vision: { pill: "text-emerald-600 bg-emerald-50" },
+  investor_update: { pill: "text-blue-600 bg-blue-50" },
+  sales: { pill: "text-orange-600 bg-orange-50" },
 };
 
 function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
@@ -220,70 +264,51 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
   const od = (project as any).output_data || {};
   const firstSlideHeadline = (od?.slide_framework?.deckFramework || od?.slide_framework?.deliverable?.deckFramework || [])?.[0]?.headline || "";
   const elevatorPitch = od?.elevator_pitch?.elevatorPitch?.thirtySecond || "";
-
-  // Brand colors for header
   const brandPrimary = od?.brand_colors?.dark?.primary || od?.brand_colors?.primary || null;
-  const headerColors = MODE_HEADER_COLORS[project.mode] || MODE_HEADER_COLORS.fundraising;
+  const pillColors = MODE_HEADER_COLORS[project.mode]?.pill || "text-blue-600 bg-blue-50";
 
-  // Company initial from title
-  const initial = (project.title || "?").replace(/^(Evaluation:\s*|Rhetoric:\s*)/i, "").charAt(0).toUpperCase();
-
-  // Best preview
   const preview = elevatorPitch || firstSlideHeadline || (project.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 120).trim();
 
   return (
-    <div onClick={onOpen} className="bg-card border border-border rounded-lg flex flex-col group hover:border-muted-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden">
-      {/* Visual header */}
+    <div onClick={onOpen} className="bg-card border border-border rounded-lg p-5 flex flex-col group hover:border-muted-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden relative min-h-[190px]">
+      {/* Accent bar */}
       <div
-        className={`relative h-[72px] flex items-center justify-between px-4 ${!brandPrimary ? headerColors.bg : ""}`}
-        style={brandPrimary ? { backgroundColor: brandPrimary + "18" } : undefined}
-      >
-        {/* Monogram */}
-        <span
-          className={`text-2xl font-bold ${!brandPrimary ? headerColors.text : ""}`}
-          style={brandPrimary ? { color: brandPrimary } : undefined}
-        >
-          {initial}
-        </span>
-        {/* Mode pill */}
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${!brandPrimary ? headerColors.text + " " + headerColors.bg : ""}`}
-          style={brandPrimary ? { color: brandPrimary, backgroundColor: brandPrimary + "15" } : undefined}
-        >
-          {MODE_LABELS[project.mode] || project.mode}
-        </span>
-        {/* Hover actions */}
-        <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={copyPrompt} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors" title="Copy prompt">
-            {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-background/60 transition-colors" title="Delete">
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
+        className={`absolute top-0 left-0 right-0 h-1 rounded-t-lg ${!brandPrimary ? (project.mode === "sales" ? "bg-orange-400" : project.mode === "strategy" ? "bg-indigo-400" : project.mode?.includes("board") ? "bg-amber-400" : "bg-electric/70") : ""}`}
+        style={brandPrimary ? { backgroundColor: brandPrimary } : undefined}
+      />
 
-      {/* Card body */}
-      <div className="px-4 pt-3 pb-4 flex flex-col flex-1">
-        <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1">
+      <div className="flex items-start justify-between mb-1 mt-0.5">
+        <h3 className="text-sm font-semibold text-foreground line-clamp-2 min-h-[40px] flex-1 min-w-0">
           {project.title}
           {project.detected_intent === "evaluate" && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
           )}
         </h3>
-        <p className="text-[11px] text-muted-foreground mb-2">
-          {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
-        </p>
-
-        {preview && (
-          <p className="text-[12px] text-foreground/50 line-clamp-2 leading-relaxed flex-1">{preview}</p>
-        )}
-
-        <div className="mt-auto flex items-center justify-end pt-2">
-          <span className="flex items-center text-xs font-medium text-electric group-hover:text-foreground transition-colors">
-            Open <ArrowRight className="h-3 w-3 ml-1" />
-          </span>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+          <button onClick={copyPrompt} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+            {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground mb-2.5">
+        {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+      </p>
+
+      {preview && (
+        <p className="text-[12px] text-foreground/50 line-clamp-2 leading-relaxed flex-1">{preview}</p>
+      )}
+
+      <div className="mt-auto flex items-center justify-between pt-3">
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${pillColors}`}>
+          {MODE_LABELS[project.mode] || project.mode}
+        </span>
+        <span className="flex items-center text-xs font-medium text-electric group-hover:text-foreground transition-colors">
+          Open <ArrowRight className="h-3 w-3 ml-1" />
+        </span>
       </div>
     </div>
   );
