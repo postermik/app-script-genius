@@ -43,13 +43,6 @@ export function ProductView() {
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const greeting = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [showIntake, setShowIntake] = useState(false);
-  const [chipPurpose, setChipPurpose] = useState<IntakePurpose | undefined>(undefined);
-  const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
-  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
 
