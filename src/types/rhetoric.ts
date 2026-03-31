@@ -136,7 +136,7 @@ export const CORE_NARRATIVE_SECTIONS: Record<IntakePurpose, string[]> = {
   fundraising: ["Problem", "Solution", "Why Now", "Market", "Traction", "Vision"],
   board_meeting: ["Challenges", "Progress & Metrics", "Strategic Updates", "Market Position", "Key Asks", "Next Quarter Priorities"],
   strategy: ["Problem", "Current State", "Strategic Insight", "Market Landscape", "Action Plan", "Vision"],
-  sales: ["Client Pain", "Solution", "Differentiators", "Proof Points", "Process", "Why Us"],
+  sales: ["Client Pain", "Our Approach", "Proof", "How We Engage", "Why Us"],
 };
 
 // ── Intent-based output options ──

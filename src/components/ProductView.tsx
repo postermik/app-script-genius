@@ -156,7 +156,7 @@ export function ProductView() {
           </div>
         </div>
         {!isGenerating && !showIntake && (
-          <div className="max-w-[720px] w-full mt-16 mb-12 animate-fade-in">
+          <div className="max-w-[960px] w-full mt-16 mb-12 animate-fade-in">
             <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-6">Recent Projects</p>
             {projects.length === 0 ? (
               <div className="card-gradient border border-border rounded-lg p-10 flex flex-col items-center text-center">
@@ -165,7 +165,7 @@ export function ProductView() {
                 <p className="text-xs text-muted-foreground/70 mt-1">Paste your narrative above to get started.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {projects.slice(0, 6).map((project) => (
                   <RecentProjectTile key={project.id} project={project} onOpen={() => openProject(project)} onDelete={() => deleteProject(project.id)} />
                 ))}
@@ -187,7 +187,7 @@ export function ProductView() {
 }
 
 const MODE_LABELS: Record<string, string> = {
-  fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy",
+  fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy", sales: "Sales",
 };
 
 const MODE_ACCENTS: Record<string, string> = {
@@ -197,6 +197,7 @@ const MODE_ACCENTS: Record<string, string> = {
   strategy: "bg-indigo",
   product_vision: "bg-emerald",
   investor_update: "bg-electric/80",
+  sales: "bg-orange-500",
 };
 
 function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
@@ -210,10 +211,21 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
   };
 
   const accentColor = MODE_ACCENTS[project.mode] || "bg-electric/80";
-  const preview = (project.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 90).trim();
+
+  // Extract rich preview data from output_data
+  const od = (project as any).output_data || {};
+  const slideCount = od?.slide_framework?.deckFramework?.length || od?.slide_framework?.deliverable?.deckFramework?.length || 0;
+  const firstSlideHeadline = (od?.slide_framework?.deckFramework || od?.slide_framework?.deliverable?.deckFramework || [])?.[0]?.headline || "";
+  const elevatorPitch = od?.elevator_pitch?.elevatorPitch?.thirtySecond || "";
+  const scoreVal = od?.score?.overall || null;
+  const outputCount = ["elevator_pitch", "investor_qa", "pitch_email", "investment_memo", "slide_framework", "board_memo", "strategic_memo", "key_metrics_summary"]
+    .filter(k => od?.[k] && !od?.[`${k}_error`]).length;
+
+  // Best preview: elevator pitch > first slide headline > raw input
+  const preview = elevatorPitch || firstSlideHeadline || (project.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 120).trim();
 
   return (
-    <div onClick={onOpen} className="bg-card border border-border rounded-lg p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden relative">
+    <div onClick={onOpen} className="bg-card border border-border rounded-lg p-5 flex flex-col group hover:border-muted-foreground/20 hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden relative min-h-[180px]">
       {/* Mode accent bar */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${accentColor} rounded-t-lg`} />
 
@@ -238,13 +250,23 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
         {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
       </p>
 
-      {/* Preview snippet */}
+      {/* Generated content preview */}
       {preview && (
-        <p className="text-[11px] text-muted-foreground/70 line-clamp-2 leading-relaxed mb-3">{preview}...</p>
+        <p className="text-[11px] text-muted-foreground/70 line-clamp-3 leading-relaxed mb-3 flex-1">{preview}</p>
       )}
 
-      <div className="mt-auto">
-        <span className="flex items-center text-xs text-electric hover:text-foreground transition-colors">
+      {/* Stats row */}
+      <div className="mt-auto flex items-center gap-3 pt-2 border-t border-border/50">
+        {slideCount > 0 && (
+          <span className="text-[10px] text-muted-foreground/60">{slideCount} slides</span>
+        )}
+        {outputCount > 0 && (
+          <span className="text-[10px] text-muted-foreground/60">{outputCount} output{outputCount > 1 ? "s" : ""}</span>
+        )}
+        {scoreVal && (
+          <span className={`text-[10px] font-medium ${scoreVal >= 70 ? "text-emerald" : scoreVal >= 40 ? "text-amber-500" : "text-muted-foreground/60"}`}>{scoreVal}/100</span>
+        )}
+        <span className="ml-auto flex items-center text-xs text-electric group-hover:text-foreground transition-colors">
           Open <ArrowRight className="h-3 w-3 ml-1" />
         </span>
       </div>

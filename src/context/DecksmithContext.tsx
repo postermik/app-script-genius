@@ -1774,56 +1774,63 @@ Return JSON: { "deckFramework": [...] }`,
         description: "What specific problem does your target client have? Be concrete, not abstract.",
         prompt: "What is the #1 pain point your target clients experience? What does it cost them?",
         completed: /pain|problem|struggle|challenge|frustrat|waste|cost.*\$|lose|losing|broken/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Positioning", points: 15, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Client Pain", points: 15, layer: 1,
       });
       opportunities.push({
         id: "target_profile", label: "Specify your target client",
         description: "Who exactly are you selling to? Title, company size, industry.",
         prompt: "Describe your ideal client: their title, company size, industry, and what makes them ready to buy.",
         completed: /CEO|CTO|COO|VP|founder|director|manager|company size|revenue.*\$|employees|headcount|small business|enterprise|mid.market/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Targeting", points: 12, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Client Pain", points: 12, layer: 1,
       });
       opportunities.push({
-        id: "differentiators", label: "State your differentiators",
-        description: "Why you and not someone else? What do you do that competitors can't or won't?",
-        prompt: "What are 2-3 things that make you different from competitors or alternative solutions?",
-        completed: /different|unique|only|unlike|competitor|vs\.|versus|compared to|advantage|proprietary|exclusive/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Differentiators", category: "Positioning", points: 15, layer: 1,
+        id: "approach", label: "Explain your approach",
+        description: "How do you solve the problem? Not what you sell, but how you work.",
+        prompt: "Describe your approach: what makes the way you work different from typical vendors?",
+        completed: /approach|method|process|framework|system|audit|assess|implement|deploy|build/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Our Approach", category: "Our Approach", points: 12, layer: 1,
       });
       opportunities.push({
         id: "proof_points", label: "Include proof points or case studies",
         description: "Real results from real clients. Numbers, outcomes, testimonials.",
         prompt: "Share 1-3 client results: who they were, what you did, and the measurable outcome.",
         completed: /case study|client.*result|saved|reduced|increased|improved|\d+%|\d+x|testimonial|review|reference/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Proof Points", category: "Credibility", points: 15, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "Proof", category: "Proof", points: 15, layer: 1,
       });
       opportunities.push({
         id: "engagement_model", label: "Define engagement models and pricing",
         description: "How do you work with clients? What does it cost? How does the engagement start?",
         prompt: "Describe your engagement model: how clients start, what they pay, and what the process looks like.",
         completed: /pricing|price|\$\d|engagement|tier|package|subscription|retainer|per month|per project|scope|SOW|proposal|audit|assessment/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Process", category: "Commercial", points: 12, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "How We Engage", category: "How We Engage", points: 12, layer: 1,
       });
       opportunities.push({
         id: "guarantee", label: "Add a guarantee or risk reversal",
         description: "Reduce buyer risk. Money-back, performance guarantee, pilot program.",
         prompt: "Do you offer any guarantee, trial period, or risk reversal for new clients?",
         completed: /guarantee|money.back|risk.free|pilot|trial|refund|no.risk|free.*if|rebuild.*free/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Commercial", points: 10, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "How We Engage", category: "How We Engage", points: 10, layer: 1,
+      });
+      opportunities.push({
+        id: "differentiators", label: "State your differentiators",
+        description: "Why you and not someone else? What do you do that competitors can't or won't?",
+        prompt: "What are 2-3 things that make you different from competitors or alternative solutions?",
+        completed: /different|unique|only|unlike|competitor|vs\.|versus|compared to|advantage|proprietary|exclusive/i.test(allText),
+        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 15, layer: 1,
       });
       opportunities.push({
         id: "cta", label: "Include a clear call to action",
         description: "What should the prospect do next? Book a call, request a proposal, start a trial.",
         prompt: "What is the next step you want a prospect to take after seeing this deck?",
         completed: /book.*call|schedule|discovery|demo|contact|reach out|get started|sign up|proposal|next step/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Conversion", points: 10, layer: 1,
+        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 10, layer: 1,
       });
       opportunities.push({
         id: "selectivity", label: "Signal selectivity or scarcity",
         description: "You choose your clients, not the other way around. This builds trust and urgency.",
         prompt: "Do you limit the number of clients you take? Any waitlist, capacity constraints, or selection criteria?",
         completed: /selective|limit|capacity|\d+ clients|waitlist|handpick|curated|exclusive|invitation/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Conversion", points: 8, layer: 2,
+        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 8, layer: 2,
       });
     }
 
