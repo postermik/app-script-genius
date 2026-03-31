@@ -1077,6 +1077,7 @@ Return JSON: { "deckFramework": [...] }`,
           };
           await supabase.from("projects").update({ output_data: metadataUpdate as any }).eq("id", activeProjectId);
           console.log("[Persistence] Final metadata save complete. Keys:", Object.keys(metadataUpdate));
+          loadProjects(); // Refresh projects array with complete data
         });
       }
 
@@ -2243,6 +2244,15 @@ No markdown fences. No commentary outside the JSON.`;
   }, [output, rawInput, audienceVariants, voiceProfile, currentProjectId]);
 
   const openProject = useCallback((project: Project) => {
+    // Guard: if reopening the current project while outputs exist in memory, skip.
+    // The in-memory state is more recent than the projects array which may be stale.
+    const currentOutputKeys = Object.keys(outputDataRef.current).filter(k => !k.endsWith('_error') && !k.endsWith('_rawResponse'));
+    if (project.id === currentProjectId && currentOutputKeys.length > 0) {
+      console.log("[Persistence] Skipping openProject for current project (in-memory outputs exist):", currentOutputKeys);
+      return;
+    }
+    console.trace("[Persistence] openProject called for:", project.id, "current:", currentProjectId);
+
     // Dismiss any lingering toasts from previous generation
     toast.dismiss();
     
