@@ -105,7 +105,7 @@ export function ProductView() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col items-center px-6 pt-16">
         <div className="max-w-[720px] w-full animate-fade-in">
-          <h1 className="text-3xl sm:text-[40px] font-medium text-foreground leading-[1.1] tracking-tight text-center mb-10" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>{greeting}</h1>
+          <h1 className="text-3xl sm:text-[40px] font-normal text-foreground leading-[1.1] tracking-tight text-center mb-10">{greeting}</h1>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
@@ -182,7 +182,7 @@ export function ProductView() {
                     <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1.5">Continue where you left off</p>
                     <p className="text-[15px] font-semibold text-foreground mb-1">{latest.title}</p>
                     {latestPreview && (
-                      <p className="text-[12px] text-foreground/50 line-clamp-1 leading-relaxed mb-2">{latestPreview}</p>
+                      <p className="text-[12px] text-foreground/50 leading-relaxed mb-2">{truncateAtWord(latestPreview, 100)}</p>
                     )}
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${latestPill}`}>
@@ -247,6 +247,13 @@ const MODE_LABELS: Record<string, string> = {
   fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy", sales: "Sales",
 };
 
+function truncateAtWord(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const trimmed = text.slice(0, maxLen);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > 0 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
+}
+
 const MODE_HEADER_COLORS: Record<string, { pill: string }> = {
   fundraising: { pill: "text-blue-600 bg-blue-50" },
   board_update: { pill: "text-amber-700 bg-amber-50" },
@@ -301,7 +308,7 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
       </div>
 
       {preview && (
-        <p className="text-[12px] text-foreground/50 leading-relaxed flex-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{preview}</p>
+        <p className="text-[12px] text-foreground/50 leading-relaxed flex-1">{truncateAtWord(preview, 120)}</p>
       )}
 
       <div className="mt-auto flex items-center justify-between pt-3">
