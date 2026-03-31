@@ -113,6 +113,8 @@ interface DecksmithContextType {
   setDeckTheme: (theme: DeckTheme) => void;
   brandColors: BrandColors | null;
   setBrandColors: (colors: BrandColors | null) => void;
+  isNarrativeDirty: () => boolean;
+  clearNarrativeDirty: () => void;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -155,6 +157,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
   const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
+  const narrativeDirtyRef = useRef(false);
 
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
   const [isGeneratingOutputs, setIsGeneratingOutputs] = useState(false);
@@ -194,6 +197,13 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     intakeSelectionsRef.current = s;
     setIntakeSelections(s);
   }, []);
+
+  // Track when narrative content changes so Guide tab only re-summarizes on actual edits
+  const narrativeMountedRef = useRef(false);
+  useEffect(() => {
+    if (!narrativeMountedRef.current) { narrativeMountedRef.current = true; return; }
+    if (coreNarrative) narrativeDirtyRef.current = true;
+  }, [coreNarrative]);
 
   // Batch save removed — incremental saves handle output content.
   // Metadata-only save happens at end of generate() via saveQueueRef.
@@ -1655,7 +1665,7 @@ Return JSON: { "deckFramework": [...] }`,
           description: "Investors care more about direction than magnitude. Show the trend.",
           prompt: "How has your key metric changed over time? (e.g. 3 users in month 1, 15 in month 2)",
           completed: /month over month|MoM|week over week|grew from|increased from|doubled|tripled|trajectory/i.test(sectionText("Traction")),
-          aiAssistAvailable: false, sectionHeading: "Traction", category: "Traction", points: 6, layer: L2,
+          aiAssistAvailable: true, sectionHeading: "Traction", category: "Traction", points: 6, layer: L2,
         });
       }
 
@@ -1688,42 +1698,42 @@ Return JSON: { "deckFramework": [...] }`,
         description: "Board members expect to see the numbers that matter most, with context on what changed.",
         prompt: "What are your top 3-5 metrics this period? (revenue, growth, burn, runway, etc.)",
         completed: /revenue|ARR|MRR|burn|runway|growth|churn|NRR|users|customers/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Traction", category: "Metrics", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Traction", category: "Metrics", points: 15, layer: 1,
       });
       opportunities.push({
         id: "progress_vs_plan", label: "Report progress against plan",
         description: "What did you say you'd do last time? How did it go?",
         prompt: "What were your milestones from last period and how did you perform against them?",
         completed: /delivered|shipped|launched|completed|achieved|missed|behind|ahead|on track/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Traction", category: "Progress", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Traction", category: "Progress", points: 12, layer: 1,
       });
       opportunities.push({
         id: "risks_flagged", label: "Flag key risks",
         description: "Boards respect transparency. Surface what keeps you up at night and how you're addressing it.",
         prompt: "What are the top 2-3 risks or challenges right now?",
         completed: /risk|challenge|concern|threat|headwind|obstacle/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Problem", category: "Risks", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Problem", category: "Risks", points: 15, layer: 1,
       });
       opportunities.push({
         id: "board_asks", label: "State your asks",
         description: "Every board meeting should end with specific, actionable asks. Not FYIs.",
         prompt: "What do you need from the board? (introductions, approval, guidance, decisions)",
         completed: /ask|request|need from|approval|decision|guidance|introduction/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Asks", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Vision", category: "Asks", points: 15, layer: 1,
       });
       opportunities.push({
         id: "cash_runway", label: "Report cash and runway",
         description: "How much do you have and how long does it last? Every board wants to know.",
         prompt: "What's your current cash position and runway in months?",
         completed: /cash|runway|months.*remaining|bank|balance.*\$|burn.*rate/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Market", category: "Cash", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Cash", points: 12, layer: 1,
       });
       opportunities.push({
         id: "next_milestones", label: "Define next period priorities",
         description: "What will you accomplish before the next update? Be specific.",
         prompt: "What are your key priorities and milestones for the next period?",
         completed: /milestone|next quarter|next month|goal|target|plan to|aim to|objective|priority|priorities/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Plan", points: 10, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Vision", category: "Plan", points: 10, layer: 1,
       });
     } else if (purpose === "strategy") {
       opportunities.push({
@@ -1738,35 +1748,35 @@ Return JSON: { "deckFramework": [...] }`,
         description: "Strong strategy documents show the alternatives, not just the chosen path.",
         prompt: "What are the 2-3 strategic options you're weighing?",
         completed: /option|alternative|approach|path|scenario|strategy.*or|considered|evaluated/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Solution", category: "Options", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Solution", category: "Options", points: 15, layer: 1,
       });
       opportunities.push({
         id: "recommendation", label: "State your recommendation",
         description: "Be clear about what you're recommending and why.",
         prompt: "Which option do you recommend and what's the core reason?",
         completed: /recommend|propose|suggest|our approach|chosen|decision|going with/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Solution", category: "Recommendation", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Solution", category: "Recommendation", points: 12, layer: 1,
       });
       opportunities.push({
         id: "execution_plan", label: "Define execution plan",
         description: "Strategy without execution details is just a slide deck. Who does what, by when?",
         prompt: "What are the key execution steps and who owns them?",
         completed: /timeline|phase|milestone|owner|responsible|execute|implement|by Q|by end of/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Execution", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Vision", category: "Execution", points: 12, layer: 1,
       });
       opportunities.push({
         id: "success_metrics", label: "Define success metrics",
         description: "How will you know this strategy is working? Pick 2-3 measurable indicators.",
         prompt: "What metrics will indicate success? (e.g., revenue target, adoption rate, cost reduction)",
         completed: /success.*metric|KPI|measure|indicator|track|target.*\d|goal.*\d/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Traction", category: "Success", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Traction", category: "Success", points: 12, layer: 1,
       });
       opportunities.push({
         id: "dependencies", label: "Name dependencies and risks",
         description: "What could block this? What's outside your control?",
         prompt: "What external dependencies or risks could derail execution?",
         completed: /depend|blocker|risk|assumption|require|contingent|if.*then/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Market", category: "Dependencies", points: 10, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Dependencies", points: 10, layer: 1,
       });
     } else if (purpose === "sales") {
       opportunities.push({
@@ -1774,63 +1784,63 @@ Return JSON: { "deckFramework": [...] }`,
         description: "What specific problem does your target client have? Be concrete, not abstract.",
         prompt: "What is the #1 pain point your target clients experience? What does it cost them?",
         completed: /pain|problem|struggle|challenge|frustrat|waste|cost.*\$|lose|losing|broken/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Client Pain", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Client Pain", category: "Client Pain", points: 15, layer: 1,
       });
       opportunities.push({
         id: "target_profile", label: "Specify your target client",
         description: "Who exactly are you selling to? Title, company size, industry.",
         prompt: "Describe your ideal client: their title, company size, industry, and what makes them ready to buy.",
         completed: /CEO|CTO|COO|VP|founder|director|manager|company size|revenue.*\$|employees|headcount|small business|enterprise|mid.market/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Client Pain", category: "Client Pain", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Client Pain", category: "Client Pain", points: 12, layer: 1,
       });
       opportunities.push({
         id: "approach", label: "Explain your approach",
         description: "How do you solve the problem? Not what you sell, but how you work.",
         prompt: "Describe your approach: what makes the way you work different from typical vendors?",
         completed: /approach|method|process|framework|system|audit|assess|implement|deploy|build/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Our Approach", category: "Our Approach", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Our Approach", category: "Our Approach", points: 12, layer: 1,
       });
       opportunities.push({
         id: "proof_points", label: "Include proof points or case studies",
         description: "Real results from real clients. Numbers, outcomes, testimonials.",
         prompt: "Share 1-3 client results: who they were, what you did, and the measurable outcome.",
         completed: /case study|client.*result|saved|reduced|increased|improved|\d+%|\d+x|testimonial|review|reference/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Proof", category: "Proof", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Proof", category: "Proof", points: 15, layer: 1,
       });
       opportunities.push({
         id: "engagement_model", label: "Define engagement models and pricing",
         description: "How do you work with clients? What does it cost? How does the engagement start?",
         prompt: "Describe your engagement model: how clients start, what they pay, and what the process looks like.",
         completed: /pricing|price|\$\d|engagement|tier|package|subscription|retainer|per month|per project|scope|SOW|proposal|audit|assessment/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "How We Engage", category: "How We Engage", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "How We Engage", category: "How We Engage", points: 12, layer: 1,
       });
       opportunities.push({
         id: "guarantee", label: "Add a guarantee or risk reversal",
         description: "Reduce buyer risk. Money-back, performance guarantee, pilot program.",
         prompt: "Do you offer any guarantee, trial period, or risk reversal for new clients?",
         completed: /guarantee|money.back|risk.free|pilot|trial|refund|no.risk|free.*if|rebuild.*free/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "How We Engage", category: "How We Engage", points: 10, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "How We Engage", category: "How We Engage", points: 10, layer: 1,
       });
       opportunities.push({
         id: "differentiators", label: "State your differentiators",
         description: "Why you and not someone else? What do you do that competitors can't or won't?",
         prompt: "What are 2-3 things that make you different from competitors or alternative solutions?",
         completed: /different|unique|only|unlike|competitor|vs\.|versus|compared to|advantage|proprietary|exclusive/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Why Us", category: "Why Us", points: 15, layer: 1,
       });
       opportunities.push({
         id: "cta", label: "Include a clear call to action",
         description: "What should the prospect do next? Book a call, request a proposal, start a trial.",
         prompt: "What is the next step you want a prospect to take after seeing this deck?",
         completed: /book.*call|schedule|discovery|demo|contact|reach out|get started|sign up|proposal|next step/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 10, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Why Us", category: "Why Us", points: 10, layer: 1,
       });
       opportunities.push({
         id: "selectivity", label: "Signal selectivity or scarcity",
         description: "You choose your clients, not the other way around. This builds trust and urgency.",
         prompt: "Do you limit the number of clients you take? Any waitlist, capacity constraints, or selection criteria?",
         completed: /selective|limit|capacity|\d+ clients|waitlist|handpick|curated|exclusive|invitation/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Why Us", category: "Why Us", points: 8, layer: 2,
+        aiAssistAvailable: true, sectionHeading: "Why Us", category: "Why Us", points: 8, layer: 2,
       });
     }
 
@@ -1902,19 +1912,17 @@ Return JSON: { "deckFramework": [...] }`,
   const aiAssistOpportunity = useCallback(async (opportunityId: string, context: string): Promise<string> => {
     const cn = coreNarrativeRef.current;
     const narrativeContext = cn?.sections?.map((s: any) => `${s.heading}: ${s.content}`).join("\n\n") || rawInput;
-
-    const prompts: Record<string, string> = {
-      specific_pain: `Based on this startup description, research and suggest 2-3 specific, quantified pain points the target market faces. Use real industry data from your training knowledge. Return only the pain points, each on a new line with a number or statistic.\n\nStartup context:\n${narrativeContext}`,
-      market_figures: `Based on this startup description, provide TAM, SAM, and SOM estimates with sources and assumptions. Use real market data from your training knowledge. Format as:\nTAM: $XB (basis)\nSAM: $YB (assumption)\nSOM: $ZM (assumption)\n\nStartup context:\n${narrativeContext}`,
-      competitors_named: `Based on this startup description, identify 3-5 specific competitors or alternatives that investors would expect to see addressed. Include company names and one line about what they do. Return as a simple list.\n\nStartup context:\n${narrativeContext}`,
-      why_now: `Based on this startup description, suggest 2-3 specific "why now" timing arguments. What changed recently (technology, regulation, market shift, behavior change) that makes this possible or urgent? Use real, verifiable trends. Return as a simple list.\n\nStartup context:\n${narrativeContext}`,
-    };
-
-    const prompt = prompts[opportunityId];
-    if (!prompt) return "AI assist is not available for this item.";
+    const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
 
     const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-      body: { mode: "refine", input: rawInput, section: `ai-assist-${opportunityId}`, path: "assist", tone: prompt, currentContent: context || narrativeContext, max_tokens: 1500, model: "claude-haiku-4-5-20251001" },
+      body: {
+        mode: "ai_assist",
+        opportunityId,
+        narrativeContext: context || narrativeContext,
+        input: rawInput,
+        purpose,
+        max_tokens: 3000,
+      },
     });
     if (error) throw error;
     return data.content || "Could not generate suggestions. Please try again.";
@@ -2351,6 +2359,8 @@ No markdown fences. No commentary outside the JSON.`;
         dismissedSuggestions, dismissSuggestion, updateNarrativeSection,
         deckTheme, setDeckTheme: setDeckThemeAndPersist,
         brandColors, setBrandColors: setBrandColorsAndPersist,
+        isNarrativeDirty: () => narrativeDirtyRef.current,
+        clearNarrativeDirty: () => { narrativeDirtyRef.current = false; },
       }}
     >
       {children}

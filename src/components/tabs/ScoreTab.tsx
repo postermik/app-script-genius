@@ -29,7 +29,7 @@ interface Props {
 }
 
 export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
-  const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection } = useDecksmith();
+  const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection, isNarrativeDirty, clearNarrativeDirty } = useDecksmith();
 
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
@@ -82,21 +82,33 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
   const qaItems = outputData?.investor_qa?.investorQA || [];
   const emailVariants = outputData?.pitch_email?.pitchEmails || [];
 
-  // Load summary ONCE per session
+  // Load summary ONCE per session, then only when narrative changes
   const summaryLoadedRef = useRef(false);
   useEffect(() => {
-    if (!coreNarrative?.sections?.length || summaryLoadedRef.current) return;
-    summaryLoadedRef.current = true;
-    setLoadingSummary(true);
-    generateGuideSummary()
-      .then(result => setSummary(result))
-      .catch(() => {})
-      .finally(() => setLoadingSummary(false));
-  }, [!!coreNarrative?.sections?.length]);
+    if (!coreNarrative?.sections?.length) return;
+    // First load: always generate summary
+    if (!summaryLoadedRef.current) {
+      summaryLoadedRef.current = true;
+      setLoadingSummary(true);
+      generateGuideSummary()
+        .then(result => { setSummary(result); clearNarrativeDirty(); })
+        .catch(() => {})
+        .finally(() => setLoadingSummary(false));
+      return;
+    }
+    // Subsequent: only regenerate if narrative content actually changed
+    if (isNarrativeDirty()) {
+      setLoadingSummary(true);
+      generateGuideSummary()
+        .then(result => { setSummary(result); clearNarrativeDirty(); })
+        .catch(() => {})
+        .finally(() => setLoadingSummary(false));
+    }
+  }, [!!coreNarrative?.sections?.length, coreNarrative]);
 
   const refreshSummary = async () => {
     setLoadingSummary(true);
-    try { const result = await generateGuideSummary(); setSummary(result); }
+    try { const result = await generateGuideSummary(); setSummary(result); clearNarrativeDirty(); }
     catch {} finally { setLoadingSummary(false); }
   };
 
@@ -223,11 +235,25 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {card.preview && (
                       <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{card.preview}</p>
                     )}
+                    {/* Covered cards: show what was addressed */}
+                    {card.allDone && !isActive && card.completedOpportunities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {card.completedOpportunities.map(cop => (
+                          <span key={cop.id} className="inline-flex items-center gap-0.5 text-[9px] text-emerald/70 bg-emerald/5 px-1.5 py-0.5 rounded-full">
+                            <Check className="h-2 w-2" /> {cop.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {card.primaryOp && !isActive && (
                       <p className={`text-[11px] mt-2 flex items-center gap-1.5 opacity-80 ${card.isMissing ? "text-red-500" : "text-amber-600"}`}>
                         {card.isMissing ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <Sparkles className="h-3 w-3 shrink-0" />}
                         {card.primaryOp.description}
                       </p>
+                    )}
+                    {/* P3: Section mapping label */}
+                    {card.sectionHeading && !isActive && (
+                      <p className="text-[9px] text-muted-foreground/40 mt-1.5">updates {card.sectionHeading}</p>
                     )}
                   </div>
                 );
@@ -247,10 +273,15 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                   <div className={`rounded-lg border ${borderColor} bg-card p-5 space-y-4`}>
                     {/* Header with close X */}
                     <div className="flex items-center justify-between">
-                      <p className={`text-xs font-semibold flex items-center gap-1.5 ${card.allDone ? "text-emerald" : "text-electric"}`}>
-                        {card.allDone && <Check className="h-3 w-3" />}
-                        {card.category}
-                      </p>
+                      <div>
+                        <p className={`text-xs font-semibold flex items-center gap-1.5 ${card.allDone ? "text-emerald" : "text-electric"}`}>
+                          {card.allDone && <Check className="h-3 w-3" />}
+                          {card.category}
+                        </p>
+                        {card.sectionHeading && (
+                          <p className="text-[9px] text-muted-foreground/40 mt-0.5">updates {card.sectionHeading} section</p>
+                        )}
+                      </div>
                       <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); setEditingSection(null); }}
                         className="p-1 rounded-lg hover:bg-muted/20 transition-colors text-muted-foreground/60 hover:text-foreground">
                         <X className="h-4 w-4" />
@@ -309,6 +340,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {op && (
                       <div className="border-t border-border/30 pt-3 space-y-3">
                         <p className="text-[10px] font-semibold text-electric uppercase tracking-wider">{op.label}</p>
+                        <p className="text-[11px] text-foreground/60 leading-relaxed">{op.description}</p>
 
                         {aiResults[op.id] && (
                           <div className="bg-electric/[0.04] border border-electric/15 rounded-lg p-3.5 space-y-2">
@@ -323,7 +355,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               <button onClick={() => applyToNarrative(op, aiResults[op.id])}
                                 disabled={applyingOp === op.id}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
-                                {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                                {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : card.sectionHeading ? `Add to ${card.sectionHeading}` : "Add to narrative"}
                               </button>
                             </div>
                           </div>
@@ -350,7 +382,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               <button onClick={() => applyToNarrative(op, userInputs[op.id] || "")}
                                 disabled={!userInputs[op.id]?.trim() || applyingOp === op.id}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
-                                {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : "Add to narrative"}
+                                {applyingOp === op.id ? <><Loader2 className="h-3 w-3 animate-spin" />Applying...</> : card.sectionHeading ? `Add to ${card.sectionHeading}` : "Add to narrative"}
                               </button>
                             </div>
                           </div>
