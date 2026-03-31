@@ -19,7 +19,9 @@ export function headlinePt(text: string): number {
 }
 
 export function textH(text: string, pt: number, w: number = CW): number {
-  const cpl = Math.round(60 * (w / CW));
+  // Characters per inch varies with font size: ~12 at 11pt, ~5.5 at 24pt
+  const cpi = 12 * (11 / pt);
+  const cpl = Math.max(10, Math.floor(w * cpi));
   const lines = Math.max(1, Math.ceil(text.length / cpl));
   return lines * (pt / 72 * 1.35);
 }
@@ -56,7 +58,7 @@ export function parseSlide(raw: any): SlideData {
     headline: truncate(typeof raw === "string" ? raw : (raw?.headline || ""), CHAR_LIMITS.HEADLINE_MAX),
     subheadline: truncate(raw?.subheadline || raw?.subheader || "", CHAR_LIMITS.SUBHEADLINE_MAX),
     bodyContent: (Array.isArray(raw?.bodyContent) ? raw.bodyContent : []).map((b: string) => truncate(b.replace(/^[-\u2022*]\s*/, ""), CHAR_LIMITS.BULLET_MAX)),
-    categoryLabel: truncate(raw?.categoryLabel || "", CHAR_LIMITS.CATEGORY_MAX),
+    categoryLabel: truncate((raw?.categoryLabel || "").replace(/_/g, " "), CHAR_LIMITS.CATEGORY_MAX),
     closingStatement: truncate(raw?.closingStatement || "", CHAR_LIMITS.CLOSING_MAX),
     dataPoints: raw?.metadata?.dataPoints || [],
     cards: raw?.cards, tiers: raw?.tiers, competitors: raw?.competitors,
@@ -74,8 +76,8 @@ function hdr(s: SlideData): { els: El[]; y: number } {
   }
   const pt = headlinePt(s.headline);
   const hh = Math.max(textH(s.headline, pt), 0.38);
-  els.push({ t:"text", x:S.ML, y, w:CW, h:hh+0.08, text:s.headline, pt, bold:true, color:"head" });
-  y += hh + 0.12;
+  els.push({ t:"text", x:S.ML, y, w:CW, h:hh+0.12, text:s.headline, pt, bold:true, color:"head" });
+  y += hh + 0.18;
   return { els, y };
 }
 
@@ -239,13 +241,14 @@ function layoutConcentric(s: SlideData): El[] {
     els.push({ t:"text", x:circX-0.4, y:mid+0.12, w:0.8, h:0.2, text:labels[i], pt:9, color:"cat", align:"center" });
   }
 
-  // Legend (right side)
-  const legX = circX + radii[0] + 0.3;
+  // Legend (right side) - all connectors start from outermost circle edge for clean alignment
+  const connectorX = circX + radii[0] + 0.15; // just outside the largest circle
+  const legX = connectorX + 0.3;
   const legW = S.W - S.MR - legX;
   for (let i = 0; i < Math.min(items.length, 3); i++) {
     const mid = (tops[i] + tops[i+1]) / 2;
-    els.push({ t:"ellipse", cx:circX+radii[i], cy:mid, rx:0.04, ry:0.04, fill:"primary" });
-    els.push({ t:"line", x1:circX+radii[i]+0.04, y1:mid, x2:legX, y2:mid, color:"primary" });
+    els.push({ t:"ellipse", cx:connectorX, cy:mid, rx:0.04, ry:0.04, fill:"primary" });
+    els.push({ t:"line", x1:connectorX+0.04, y1:mid, x2:legX-0.05, y2:mid, color:"primary" });
     els.push({ t:"text", x:legX, y:mid-0.25, w:legW, h:0.2, text:labels[i], pt:10, bold:true, color:"cat", valign:"bottom" });
     els.push({ t:"text", x:legX, y:mid-0.05, w:legW, h:0.3, text:items[i], pt:9, color:"body" });
   }
@@ -271,7 +274,8 @@ function layoutMatrix(s: SlideData): El[] {
       const px = aX + c.x * aW; const py = aY + (1 - c.y) * aH;
       const dr = last ? 0.12 : 0.08;
       els.push({ t:"ellipse", cx:px, cy:py, rx:dr, ry:dr, fill:last?"primary":"sub" });
-      els.push({ t:"text", x:px-0.5, y:py-(last?0.32:0.28), w:1, h:0.2, text:c.name, pt:last?11:9, bold:last, color:last?"head":"body", align:"center" });
+      els.push({ t:"text", x:px-0.8, y:py-(last?0.38:0.32), w:1.6, h:0.2, text:c.name, pt:last?11:9, bold:last, color:last?"head":"body", align:"center" });
+      if (c.description) els.push({ t:"text", x:px-0.8, y:py-(last?0.2:0.14), w:1.6, h:0.2, text:c.description, pt:7, color:"sub", align:"center" });
     }
   } else {
     const items = (s.bodyContent || []).slice(0,6);
@@ -300,21 +304,20 @@ function layoutFlywheel(s: SlideData): El[] {
   const r = Math.min(aH * 0.4, CW * 0.14);
   const angles = n===3 ? [-90,30,150] : n===4 ? [-90,0,90,180] : n===5 ? [-90,-18,54,126,198] : [-90,-30,30,90,150,210];
 
+  // Draw the wheel circle (outline)
+  els.push({ t:"ellipse", cx:cxF, cy:cyF, rx:r, ry:r, stroke:"accent", sw:2 });
+
   for (let i = 0; i < n; i++) {
     const a = angles[i] * Math.PI / 180;
     const nx = cxF + r*Math.cos(a); const ny = cyF + r*Math.sin(a);
-    // Connector to next
-    const j = (i+1) % n; const a2 = angles[j]*Math.PI/180;
-    const nx2 = cxF + r*Math.cos(a2); const ny2 = cyF + r*Math.sin(a2);
-    els.push({ t:"rect", x:Math.min(nx,nx2), y:Math.min(ny,ny2)-0.01, w:Math.abs(nx2-nx)||0.02, h:Math.abs(ny2-ny)||0.02, fill:"accent" });
-    // Node
+    // Node circle on the wheel
     els.push({ t:"ellipse", cx:nx, cy:ny, rx:0.16, ry:0.16, fill:"primary" });
     els.push({ t:"text", x:nx-0.16, y:ny-0.16, w:0.32, h:0.32, text:String(i+1), pt:12, bold:true, color:"#ffffff", align:"center", valign:"middle" });
-    // Label
-    const tx = cxF + (r+0.7)*Math.cos(a); const ty = cyF + (r+0.5)*Math.sin(a);
+    // Label outside the wheel
+    const tx = cxF + (r+0.7)*Math.cos(a); const ty = cyF + (r+0.55)*Math.sin(a);
     if (useStruct) {
       els.push({ t:"text", x:tx-1.1, y:ty-0.15, w:2.2, h:0.25, text:steps[i].label, pt:10, bold:true, color:"head", align:"center", valign:"middle" });
-      if (steps[i].description) els.push({ t:"text", x:tx-1.1, y:ty+0.1, w:2.2, h:0.3, text:steps[i].description, pt:8, color:"sub", align:"center" });
+      if (steps[i].description) els.push({ t:"text", x:tx-1.1, y:ty+0.1, w:2.2, h:0.35, text:steps[i].description, pt:8, color:"sub", align:"center" });
     } else {
       const ci = body[i].indexOf(":"); const title = ci > 0 ? body[i].substring(0,ci).trim() : body[i].substring(0,30);
       els.push({ t:"text", x:tx-1.1, y:ty-0.15, w:2.2, h:0.25, text:title, pt:10, bold:true, color:"head", align:"center", valign:"middle" });
