@@ -115,6 +115,9 @@ interface DecksmithContextType {
   setBrandColors: (colors: BrandColors | null) => void;
   isNarrativeDirty: () => boolean;
   clearNarrativeDirty: () => void;
+  guideSummary: string;
+  loadingGuideSummary: boolean;
+  refreshGuideSummary: () => Promise<void>;
 }
 
 const DecksmithContext = createContext<DecksmithContextType | null>(null);
@@ -158,6 +161,9 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [scoringComplete, setScoringComplete] = useState(false);
   const inFlightOutputsRef = useRef<Set<string>>(new Set());
   const narrativeDirtyRef = useRef(false);
+  const [guideSummary, setGuideSummary] = useState("");
+  const [loadingGuideSummary, setLoadingGuideSummary] = useState(false);
+  const guideSummaryLoadedRef = useRef(false);
 
   const [completedOutputs, setCompletedOutputs] = useState<Set<string>>(new Set());
   const [isGeneratingOutputs, setIsGeneratingOutputs] = useState(false);
@@ -1954,6 +1960,39 @@ RULES: Maximum 3 sentences. No lists. No bullet points. No em dashes. No headers
     return data.content || "";
   }, [rawInput, computeNarrativeStrength]);
 
+  // Auto-load guide summary once, then only when narrative changes
+  useEffect(() => {
+    const cn = coreNarrativeRef.current;
+    if (!cn?.sections?.length) return;
+    // First load
+    if (!guideSummaryLoadedRef.current) {
+      guideSummaryLoadedRef.current = true;
+      setLoadingGuideSummary(true);
+      generateGuideSummary()
+        .then(result => { setGuideSummary(result); narrativeDirtyRef.current = false; })
+        .catch(() => {})
+        .finally(() => setLoadingGuideSummary(false));
+      return;
+    }
+    // Subsequent: only when dirty
+    if (narrativeDirtyRef.current) {
+      setLoadingGuideSummary(true);
+      generateGuideSummary()
+        .then(result => { setGuideSummary(result); narrativeDirtyRef.current = false; })
+        .catch(() => {})
+        .finally(() => setLoadingGuideSummary(false));
+    }
+  }, [coreNarrative, generateGuideSummary]);
+
+  const refreshGuideSummary = useCallback(async () => {
+    setLoadingGuideSummary(true);
+    try {
+      const result = await generateGuideSummary();
+      setGuideSummary(result);
+      narrativeDirtyRef.current = false;
+    } catch {} finally { setLoadingGuideSummary(false); }
+  }, [generateGuideSummary]);
+
   const rescoreNarrative = useCallback(async () => {
     if (!output) return;
     const previousScore: number = (output?.score?.overall ?? 0);
@@ -2361,6 +2400,7 @@ No markdown fences. No commentary outside the JSON.`;
         brandColors, setBrandColors: setBrandColorsAndPersist,
         isNarrativeDirty: () => narrativeDirtyRef.current,
         clearNarrativeDirty: () => { narrativeDirtyRef.current = false; },
+        guideSummary, loadingGuideSummary, refreshGuideSummary,
       }}
     >
       {children}

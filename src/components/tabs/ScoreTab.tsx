@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Check, ChevronDown, ChevronUp, Sparkles, Loader2, Lock, Compass, X, Pencil, AlertTriangle } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Check, Sparkles, Loader2, Lock, Compass, X, Pencil, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
@@ -29,15 +29,13 @@ interface Props {
 }
 
 export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
-  const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection, isNarrativeDirty, clearNarrativeDirty } = useDecksmith();
+  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection, guideSummary, loadingGuideSummary, refreshGuideSummary } = useDecksmith();
 
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
   const [aiResults, setAiResults] = useState<Record<string, string>>({});
   const [loadingAi, setLoadingAi] = useState<string | null>(null);
   const [applyingOp, setApplyingOp] = useState<string | null>(null);
-  const [summary, setSummary] = useState("");
-  const [loadingSummary, setLoadingSummary] = useState(false);
   const [manuallyApplied, setManuallyApplied] = useState<Set<string>>(new Set());
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editBuffer, setEditBuffer] = useState("");
@@ -82,36 +80,6 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
   const qaItems = outputData?.investor_qa?.investorQA || [];
   const emailVariants = outputData?.pitch_email?.pitchEmails || [];
 
-  // Load summary ONCE per session, then only when narrative changes
-  const summaryLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!coreNarrative?.sections?.length) return;
-    // First load: always generate summary
-    if (!summaryLoadedRef.current) {
-      summaryLoadedRef.current = true;
-      setLoadingSummary(true);
-      generateGuideSummary()
-        .then(result => { setSummary(result); clearNarrativeDirty(); })
-        .catch(() => {})
-        .finally(() => setLoadingSummary(false));
-      return;
-    }
-    // Subsequent: only regenerate if narrative content actually changed
-    if (isNarrativeDirty()) {
-      setLoadingSummary(true);
-      generateGuideSummary()
-        .then(result => { setSummary(result); clearNarrativeDirty(); })
-        .catch(() => {})
-        .finally(() => setLoadingSummary(false));
-    }
-  }, [!!coreNarrative?.sections?.length, coreNarrative]);
-
-  const refreshSummary = async () => {
-    setLoadingSummary(true);
-    try { const result = await generateGuideSummary(); setSummary(result); clearNarrativeDirty(); }
-    catch {} finally { setLoadingSummary(false); }
-  };
-
   const handleAiAssist = async (op: NarrativeOpportunity) => {
     setLoadingAi(op.id);
     try {
@@ -143,7 +111,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
       setUserInputs(prev => ({ ...prev, [op.id]: "" }));
       setAiResults(prev => ({ ...prev, [op.id]: "" }));
       setActiveCard(null);
-      refreshSummary();
+      refreshGuideSummary();
     } catch (e: any) {
       toast.error("Failed to apply. Please try again.");
       console.error("[Guide] Apply error:", e);
@@ -179,19 +147,19 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
       <div className="card-gradient rounded-lg border border-border p-5">
         <div className="flex items-center justify-between mb-2">
           <p className={`text-sm font-bold ${getTierColor(strength.tier)}`}>{strength.tierLabel}</p>
-          {summary && (
-            <button onClick={refreshSummary} disabled={loadingSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
-              <Compass className={`h-3 w-3 ${loadingSummary ? "animate-spin" : ""}`} />
+          {guideSummary && (
+            <button onClick={refreshGuideSummary} disabled={loadingGuideSummary} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1">
+              <Compass className={`h-3 w-3 ${loadingGuideSummary ? "animate-spin" : ""}`} />
             </button>
           )}
         </div>
-        {loadingSummary && !summary ? (
+        {loadingGuideSummary && !guideSummary ? (
           <div className="flex items-center gap-2 py-1 mb-3">
             <Loader2 className="h-3 w-3 animate-spin text-electric" />
             <span className="text-xs text-muted-foreground">Reviewing your narrative...</span>
           </div>
-        ) : summary ? (
-          <p className="text-[13px] text-foreground/80 leading-relaxed mb-4">{summary}</p>
+        ) : guideSummary ? (
+          <p className="text-[13px] text-foreground/80 leading-relaxed mb-4">{guideSummary}</p>
         ) : (
           <p className="text-[13px] text-muted-foreground/60 mb-4">{strength.tierDescription}</p>
         )}
@@ -207,7 +175,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
       {/* NARRATIVE CARDS */}
       {cards.length > 0 && (
         <div className="relative">
-          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your narrative</p>
+          <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5 px-0.5">Your narrative</p>
           <div className={isFree ? "pointer-events-none select-none" : ""} style={isFree ? { filter: "blur(5px)", opacity: 0.45 } : {}}>
             <div className="grid grid-cols-2 gap-2">
               {cards.filter(c => c.category !== "Materials").map((card) => {
@@ -239,8 +207,8 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {card.allDone && !isActive && card.completedOpportunities.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {card.completedOpportunities.map(cop => (
-                          <span key={cop.id} className="inline-flex items-center gap-0.5 text-[9px] text-emerald/70 bg-emerald/5 px-1.5 py-0.5 rounded-full">
-                            <Check className="h-2 w-2" /> {cop.label}
+                          <span key={cop.id} className="inline-flex items-center gap-0.5 text-[10px] text-emerald bg-emerald/8 px-1.5 py-0.5 rounded-full">
+                            <Check className="h-2.5 w-2.5" /> {cop.label}
                           </span>
                         ))}
                       </div>
@@ -253,7 +221,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     )}
                     {/* P3: Section mapping label */}
                     {card.sectionHeading && !isActive && (
-                      <p className="text-[9px] text-muted-foreground/40 mt-1.5">updates {card.sectionHeading}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1.5">updates {card.sectionHeading}</p>
                     )}
                   </div>
                 );
@@ -279,7 +247,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                           {card.category}
                         </p>
                         {card.sectionHeading && (
-                          <p className="text-[9px] text-muted-foreground/40 mt-0.5">updates {card.sectionHeading} section</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5">updates {card.sectionHeading} section</p>
                         )}
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); setEditingSection(null); }}
@@ -292,15 +260,15 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {card.completedOpportunities.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {card.completedOpportunities.map(cop => (
-                          <span key={cop.id} className="inline-flex items-center gap-1 text-[10px] text-emerald/70 bg-emerald/5 px-2 py-0.5 rounded-full">
+                          <span key={cop.id} className="inline-flex items-center gap-1 text-[10px] text-emerald bg-emerald/8 px-2 py-0.5 rounded-full">
                             <Check className="h-2.5 w-2.5" /> {cop.label}
                           </span>
                         ))}
                       </div>
                     )}
 
-                    {/* Section content: editable */}
-                    {card.sectionContent && (
+                    {/* Section content: always show for non-Materials cards */}
+                    {card.category !== "Materials" && (
                       <div>
                         {isEditing ? (
                           <div className="space-y-2">
@@ -313,7 +281,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                             />
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => setEditingSection(null)}
-                                className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors px-2 py-1">Cancel</button>
+                                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Cancel</button>
                               <button onClick={() => saveInlineEdit(card.sectionHeading, editBuffer)}
                                 disabled={savingEdit || editBuffer === card.sectionContent}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
@@ -321,9 +289,9 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               </button>
                             </div>
                           </div>
-                        ) : (
+                        ) : card.sectionContent ? (
                           <div className="group relative">
-                            <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">
+                            <p className="text-[12px] text-foreground/80 leading-relaxed whitespace-pre-wrap">
                               {card.sectionContent}
                             </p>
                             <button
@@ -332,6 +300,8 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               <Pencil className="h-3 w-3" /> Edit
                             </button>
                           </div>
+                        ) : (
+                          <p className="text-[12px] text-muted-foreground/50 italic leading-relaxed">No content in this section yet. Use the input below to add information.</p>
                         )}
                       </div>
                     )}
@@ -418,23 +388,23 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
               {purpose === "sales" ? "Your pitch is ready. Export your materials or refine your approach." : purpose === "board_meeting" ? "Your update is ready. Export your materials." : "Your narrative is ready. Export your materials or start finding investors."}
             </p>
           )}
-          <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
+          <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5 px-0.5">Your materials</p>
           <div className="flex flex-wrap gap-2 mb-4">
             {slideFw.length > 0 && (
-              <button onClick={() => switchToOutputs('slide_framework')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/></svg>
+              <button onClick={() => switchToOutputs('slide_framework')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/50 text-[11px] text-foreground/60 hover:text-foreground/80 hover:border-border/70 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.6"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.6"/></svg>
                 {slideFw.length} slides
               </button>
             )}
             {qaItems.length > 0 && (
-              <button onClick={() => switchToOutputs('investor_qa')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M6 6.5c0-1.1.9-1.5 2-1.5s2 .7 2 1.5c0 1.5-2 1.5-2 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/><circle cx="8" cy="12" r="0.5" fill="currentColor" opacity="0.5"/></svg>
+              <button onClick={() => switchToOutputs('investor_qa')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/50 text-[11px] text-foreground/60 hover:text-foreground/80 hover:border-border/70 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1" opacity="0.6"/><path d="M6 6.5c0-1.1.9-1.5 2-1.5s2 .7 2 1.5c0 1.5-2 1.5-2 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.6"/><circle cx="8" cy="12" r="0.5" fill="currentColor" opacity="0.6"/></svg>
                 {qaItems.length} Q&A
               </button>
             )}
             {emailVariants.length > 0 && (
-              <button onClick={() => switchToOutputs('pitch_email')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/40 text-[11px] text-muted-foreground/60 hover:text-foreground/80 hover:border-border/60 transition-colors">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5"/><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.5"/></svg>
+              <button onClick={() => switchToOutputs('pitch_email')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/30 border border-border/50 text-[11px] text-foreground/60 hover:text-foreground/80 hover:border-border/70 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4l6 4 6-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.6"/><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1" opacity="0.6"/></svg>
                 {emailVariants.length} emails
               </button>
             )}
