@@ -1,139 +1,88 @@
 import type { NarrativeOutputData } from "@/types/narrative";
 import type { DeckTheme } from "@/components/SlidePreview";
-import { CHAR_LIMITS, getHeadlineFontSize, truncate, resolveLayout } from "@/lib/slideLayouts";
+import type { SlideCanvasData } from "@/components/SlideCanvas";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { SlideCanvas } from "@/components/SlideCanvas";
 
 interface ExportOptions { output: NarrativeOutputData; isPro: boolean; excludedSlides: Set<number>; slideOrder: number[]; deckTheme: DeckTheme; }
-type RGB=[number,number,number];
-interface PC { bg:RGB;fg:RGB;primary:RGB;cat:RGB;head:RGB;body:RGB;sub:RGB;close:RGB;accent:RGB;border:RGB; }
 
-function getColors(theme:DeckTheme):PC{
-  const hex=(h:string):RGB=>{const c2=h.replace("#","");return[parseInt(c2.substring(0,2),16),parseInt(c2.substring(2,4),16),parseInt(c2.substring(4,6),16)];};
-  if(theme.scheme==="light")return{bg:[255,255,255],fg:[51,65,81],primary:[59,130,246],cat:[59,130,246],head:[30,41,59],body:[71,85,105],sub:[100,116,139],close:[59,130,246],accent:[226,232,240],border:[226,232,240]};
-  if(theme.scheme==="custom"){const b=hex(theme.secondary||"#0b0f14");const br=(b[0]*299+b[1]*587+b[2]*114)/1000;const il=br>128;const p=hex(theme.primary||"#3b82f6");
-    return{bg:b,fg:il?[51,65,81]:[203,213,225],primary:p,cat:p,head:il?[30,41,59]:[226,232,240],body:il?[71,85,105]:[203,213,225],sub:il?[100,116,139]:[148,163,184],close:p,accent:hex(theme.accent||"#1e3a5f"),border:il?[226,232,240]:[30,58,95]};}
-  return{bg:[11,15,20],fg:[203,213,225],primary:[59,130,246],cat:[96,165,250],head:[226,232,240],body:[203,213,225],sub:[148,163,184],close:[96,165,250],accent:[30,58,95],border:[30,58,95]};
+// Render a SlideCanvas to a PNG data URL
+async function captureSlide(slideData: SlideCanvasData, theme: DeckTheme): Promise<string> {
+  // html-to-image handles SVG elements natively (concentric circles, flywheel, staircase, matrix)
+  const { toPng } = await import("html-to-image");
+
+  const container = document.createElement("div");
+  container.style.cssText = "position:fixed;left:-9999px;top:0;width:1920px;height:1080px;overflow:hidden;";
+  document.body.appendChild(container);
+
+  const root = createRoot(container);
+  root.render(createElement(SlideCanvas, { slide: slideData, theme }));
+
+  // Wait for React render + paint + font loading
+  await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 150))));
+
+  const dataUrl = await toPng(container.firstElementChild as HTMLElement || container, {
+    width: 1920, height: 1080, quality: 0.92,
+    pixelRatio: 1, cacheBust: true,
+  });
+
+  root.unmount();
+  document.body.removeChild(container);
+  return dataUrl;
 }
 
-function sf(raw:any){
-  return{
-    headline:truncate(typeof raw==="string"?raw:(raw?.headline||""),CHAR_LIMITS.HEADLINE_MAX),
-    subheadline:truncate(raw?.subheadline||raw?.subheader||"",CHAR_LIMITS.SUBHEADLINE_MAX),
-    bodyContent:(Array.isArray(raw?.bodyContent)?raw.bodyContent:[]).map((b:string)=>truncate(b.replace(/^[-\u2022*]\s*/,""),CHAR_LIMITS.BULLET_MAX)) as string[],
-    categoryLabel:truncate(raw?.categoryLabel||"",CHAR_LIMITS.CATEGORY_MAX),
-    closingStatement:truncate(raw?.closingStatement||"",CHAR_LIMITS.CLOSING_MAX),
-    dataPoints:(raw?.metadata?.dataPoints||[]) as string[],
-    // Structured fields
-    cards: raw?.cards as { category: string; stats: { label: string; value: string; }[]; }[] | undefined,
-    tiers: raw?.tiers as { label: string; amount: string; description: string; }[] | undefined,
-    competitors: raw?.competitors as { name: string; description: string; x: number; y: number; }[] | undefined,
-    flywheelSteps: raw?.flywheelSteps as { label: string; description: string; leadsTo: string; }[] | undefined,
-    milestones: raw?.milestones as { amount: string; bullets: string[]; }[] | undefined,
-  };
-}
+export async function exportPdf({ output, isPro, excludedSlides, slideOrder, deckTheme }: ExportOptions) {
+  const { jsPDF } = await import("jspdf");
+  const title = (output as any).title || "Narrative Deck";
+  const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: [10, 5.625] });
 
-export async function exportPdf({output,isPro,excludedSlides,slideOrder,deckTheme}:ExportOptions){
-  const{jsPDF}=await import("jspdf");const title=(output as any).title||"Narrative Deck";const c=getColors(deckTheme);
-  const pdf=new jsPDF({orientation:"landscape",unit:"in",format:[10,7.5]});const W=10,H=7.5,ML=0.75,CW=W-ML*2;
-  const sc=(col:RGB,t:"fill"|"text"="text")=>{t==="fill"?pdf.setFillColor(col[0],col[1],col[2]):pdf.setTextColor(col[0],col[1],col[2]);};
-  const bg2=()=>{sc(c.bg,"fill");pdf.rect(0,0,W,H,"F");};
-  const drawLine=(x1:number,y1:number,x2:number,y2:number,col:RGB)=>{pdf.setDrawColor(col[0],col[1],col[2]);pdf.setLineWidth(0.01);pdf.line(x1,y1,x2,y2);};
+  const d = (output.data || (output as any).supporting || {}) as any;
+  const del = (output as any).deliverable || {};
+  const fw = d.deckFramework || del.deckFramework || d.boardDeckOutline || del.boardDeckOutline || [];
+  const ordered = slideOrder.length > 0 ? slideOrder : fw.map((_: any, i: number) => i);
+  const active = ordered.filter((i: number) => !excludedSlides.has(i));
 
   // Title slide
-  bg2();sc(c.primary,"fill");pdf.rect(0,0,W,0.04,"F");pdf.rect(0,H-0.04,W,0.04,"F");
-  pdf.setFont("helvetica","bold");pdf.setFontSize(22);sc(c.head);pdf.text(title,W/2,3,{align:"center"});
-  pdf.setFontSize(10);sc(c.sub);pdf.text(output.mode.replace(/_/g," ").toUpperCase(),W/2,3.5,{align:"center"});
-  if(!isPro){pdf.setFontSize(8);sc(c.sub);pdf.text("Generated by Rhetoric",W/2,5.5,{align:"center"});}
+  const titleSlide: SlideCanvasData = {
+    headline: title,
+    categoryLabel: output.mode.replace(/_/g, " ").toUpperCase(),
+    layoutRecommendation: "full-bleed-statement",
+  };
+  const titleImg = await captureSlide(titleSlide, deckTheme);
+  pdf.addImage(titleImg, "PNG", 0, 0, 10, 5.625);
 
-  const d=(output.data||(output as any).supporting||{}) as any;const del=(output as any).deliverable||{};
-  const fw=d.deckFramework||del.deckFramework||d.boardDeckOutline||del.boardDeckOutline||[];
-  const ordered=slideOrder.length>0?slideOrder:fw.map((_:any,i:number)=>i);
-  const active=ordered.filter((i:number)=>!excludedSlides.has(i));
+  // Content slides
+  for (let i = 0; i < active.length; i++) {
+    const raw = fw[active[i]];
+    if (!raw) continue;
+    pdf.addPage();
 
-  for(const idx of active){const raw=fw[idx];if(!raw)continue;pdf.addPage();bg2();const f=sf(raw);
-    const layout=resolveLayout(raw?.layoutRecommendation,raw?.selectedLayout,raw?.categoryLabel,raw?.metadata?.dataPoints);
-    let y=0.6;
+    const slideData: SlideCanvasData = {
+      headline: raw.headline || (typeof raw === "string" ? raw : ""),
+      subheadline: raw.subheadline || raw.subheader,
+      bodyContent: raw.bodyContent,
+      categoryLabel: raw.categoryLabel,
+      closingStatement: raw.closingStatement,
+      layoutRecommendation: raw.layoutRecommendation,
+      selectedLayout: raw.selectedLayout,
+      dataPoints: raw.metadata?.dataPoints,
+      cards: raw.cards,
+      tiers: raw.tiers,
+      competitors: raw.competitors,
+      axisLabels: raw.axisLabels,
+      flywheelSteps: raw.flywheelSteps,
+      milestones: raw.milestones,
+    };
 
-    // Header (shared across all layouts)
-    if(f.categoryLabel){pdf.setFont("helvetica","bold");pdf.setFontSize(9);sc(c.cat);pdf.text(f.categoryLabel.toUpperCase(),ML,y);y+=0.26;}
-    const hs=getHeadlineFontSize(f.headline)>=20?18:getHeadlineFontSize(f.headline)>=18?16:14;
-    pdf.setFont("helvetica","bold");pdf.setFontSize(hs);sc(c.head);const hl=pdf.splitTextToSize(f.headline,CW);pdf.text(hl,ML,y);y+=hl.length*(hs/72*1.3)+0.12;
-    if(f.subheadline){pdf.setFont("helvetica","normal");pdf.setFontSize(11);sc(c.sub);const sl=pdf.splitTextToSize(f.subheadline,CW);pdf.text(sl,ML,y);y+=sl.length*0.18+0.1;}
+    const img = await captureSlide(slideData, deckTheme);
+    pdf.addImage(img, "PNG", 0, 0, 10, 5.625);
 
-    // Layout-specific content
-    if(layout==="data-cards" && f.cards && f.cards.length > 0){
-      // Render structured data cards as formatted stat blocks
-      const n=f.cards.length;const colW=CW/n-0.15;
-      const availH=H-y-0.5-(f.closingStatement?0.35:0);
-      for(let i=0;i<n;i++){
-        const cx=ML+i*(colW+0.2);const card=f.cards[i];
-        pdf.setDrawColor(c.border[0],c.border[1],c.border[2]);pdf.setLineWidth(0.01);pdf.rect(cx,y,colW,availH);
-        sc(c.primary,"fill");pdf.rect(cx,y,colW,0.04,"F");
-        pdf.setFont("helvetica","bold");pdf.setFontSize(9);sc(c.primary);pdf.text(card.category,cx+0.1,y+0.22);
-        drawLine(cx+0.1,y+0.3,cx+colW-0.1,y+0.3,c.border);
-        let sy=y+0.45;
-        const statSpacing=Math.min(0.55,(availH-0.55)/Math.max(card.stats.length,1));
-        for(const stat of card.stats){
-          pdf.setFont("helvetica","normal");pdf.setFontSize(8);sc(c.sub);pdf.text(stat.label,cx+0.1,sy);
-          pdf.setFont("helvetica","bold");pdf.setFontSize(14);sc(c.head);pdf.text(stat.value,cx+0.1,sy+0.2);
-          sy+=statSpacing;
-        }
-      }
-    } else if(layout==="concentric" && f.tiers && f.tiers.length > 0){
-      // Render TAM/SAM/SOM as formatted blocks (PDF can't easily draw circles)
-      for(const tier of f.tiers){
-        sc(c.primary,"fill");pdf.rect(ML,y,0.04,0.4,"F");
-        pdf.setFont("helvetica","bold");pdf.setFontSize(9);sc(c.cat);pdf.text(tier.label,ML+0.15,y+0.12);
-        pdf.setFont("helvetica","bold");pdf.setFontSize(16);sc(c.head);pdf.text(tier.amount,ML+0.15,y+0.32);
-        pdf.setFont("helvetica","normal");pdf.setFontSize(10);sc(c.body);
-        const desc=pdf.splitTextToSize(tier.description,CW-1.5);pdf.text(desc,ML+1.5,y+0.15);
-        y+=0.55;
-      }
-    } else if(layout==="matrix" && f.competitors && f.competitors.length > 0){
-      // Render competitors as a table
-      for(const comp of f.competitors){
-        const isUser=f.competitors.indexOf(comp)===f.competitors.length-1;
-        if(isUser){pdf.setFont("helvetica","bold");sc(c.primary);}else{pdf.setFont("helvetica","normal");sc(c.body);}
-        pdf.setFontSize(11);pdf.text(isUser?`${comp.name} (You)`:comp.name,ML+0.2,y+0.05);
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.sub);
-        const desc=pdf.splitTextToSize(comp.description,CW-0.4);pdf.text(desc,ML+0.2,y+0.22);
-        y+=0.4+desc.length*0.12;
-      }
-    } else if((layout==="flywheel") && f.flywheelSteps && f.flywheelSteps.length > 0){
-      // Render flywheel as numbered steps
-      f.flywheelSteps.forEach((step,i)=>{
-        sc(c.primary,"fill");pdf.circle(ML+0.12,y+0.02,0.12,"F");
-        pdf.setFont("helvetica","bold");pdf.setFontSize(10);sc([255,255,255]);pdf.text(String(i+1),ML+0.08,y+0.06);
-        pdf.setFont("helvetica","bold");pdf.setFontSize(11);sc(c.head);pdf.text(step.label,ML+0.35,y+0.05);
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.sub);
-        const desc=pdf.splitTextToSize(step.description,CW-0.5);pdf.text(desc,ML+0.35,y+0.22);
-        if(step.leadsTo && i<(f.flywheelSteps?.length||0)-1){
-          pdf.setFontSize(8);sc(c.cat);pdf.text(`-> ${step.leadsTo}`,ML+0.35,y+0.22+desc.length*0.14+0.05);
-          y+=0.15;
-        }
-        y+=0.32+desc.length*0.14;
-      });
-    } else if(layout==="staircase" && f.milestones && f.milestones.length > 0){
-      // Render milestones as formatted blocks
-      for(let i=0;i<f.milestones.length;i++){
-        const ms=f.milestones[i];const isLast=i===f.milestones.length-1;
-        if(isLast){sc(c.primary,"fill");pdf.rect(ML,y-0.05,CW,0.04,"F");}
-        pdf.setFont("helvetica","bold");pdf.setFontSize(14);sc(isLast?c.primary:c.head);
-        pdf.text(ms.amount||`Year ${i+1}`,ML+0.1,y+0.15);
-        pdf.setFont("helvetica","normal");pdf.setFontSize(9);sc(c.body);
-        for(const b of ms.bullets.slice(0,3)){
-          y+=0.18;sc(c.primary);pdf.text("\u2022",ML+0.1,y+0.08);sc(c.body);
-          const bl=pdf.splitTextToSize(b,CW-0.5);pdf.text(bl,ML+0.25,y+0.08);y+=bl.length*0.12;
-        }
-        y+=0.25;
-      }
-    } else {
-      // Default: bullets
-      if(f.bodyContent.length>0){pdf.setFont("helvetica","normal");const bs=f.bodyContent.length>4?10:11;pdf.setFontSize(bs);
-        for(const l of f.bodyContent.slice(0,6)){if(y>H-0.7)break;sc(c.primary);pdf.text("\u2022",ML,y);sc(c.body);const w=pdf.splitTextToSize(l,CW-0.3);pdf.text(w,ML+0.25,y);y+=w.length*0.18+0.06;}}
+    if (!isPro) {
+      pdf.setFontSize(7); pdf.setTextColor(160, 160, 160);
+      pdf.text("Generated by Rhetoric", 0.6, 5.4);
     }
-
-    if(f.closingStatement&&y<H-0.4){pdf.setFont("helvetica","bold");pdf.setFontSize(10);sc(c.close);pdf.text(f.closingStatement,ML,H-0.45);}
-    if(!isPro){pdf.setFontSize(7);sc(c.sub);pdf.text("Generated by Rhetoric",ML,H-0.25);}
   }
-  pdf.save(`${title.replace(/[^a-zA-Z0-9 ]/g,"")}.pdf`);
+
+  pdf.save(`${title.replace(/[^a-zA-Z0-9 ]/g, "")}.pdf`);
 }
