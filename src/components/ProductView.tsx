@@ -7,7 +7,7 @@ import { UpgradeModal } from "@/components/UpgradeModal";
 import { Loader2, Copy, Trash2, ArrowRight, Lock, Upload, FileText, Check, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { OutputMode, Project } from "@/types/narrative";
-import type { IntakeSelections } from "@/types/rhetoric";
+import type { IntakeSelections, IntakePurpose } from "@/types/rhetoric";
 import { sortBySpeed } from "@/lib/outputOrder";
 import { formatDistanceToNow } from "date-fns";
 import { parseDeckFile } from "@/lib/parseDeck";
@@ -30,6 +30,7 @@ export function ProductView() {
   const { subscribed } = useSubscription();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [showIntake, setShowIntake] = useState(false);
+  const [chipPurpose, setChipPurpose] = useState<IntakePurpose | undefined>(undefined);
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,14 +107,15 @@ export function ProductView() {
             {!isGenerating && !showIntake && !isFreeAndLocked && (
               <div className="flex flex-wrap gap-2 -mt-2">
                 {[
-                  { label: "Fundraise", template: "We're [COMPANY NAME] ([WEBSITE]). We're building [ONE SENTENCE DESCRIPTION]. We're raising $[AMOUNT] at [STAGE: pre-seed/seed/series A] to [KEY MILESTONE]. We have [TRACTION: users, revenue, growth]. Our team has [RELEVANT BACKGROUND]." },
-                  { label: "Board update", template: "[COMPANY NAME] Q[X] [YEAR] Board Update\n\nKey metrics: Revenue $[X], Growth [X]%, Burn $[X]/mo, Runway [X] months\nHighlights: [2-3 wins this quarter]\nChallenges: [1-2 risks or misses]\nAsks: [What you need from the board]" },
-                  { label: "Strategy memo", template: "[COMPANY NAME] Strategic Memo: [TOPIC]\n\nContext: [What changed that requires a strategic decision]\nOptions: [2-3 paths we could take]\nRecommendation: [Which path and why]\nSuccess metrics: [How we'll know it's working]" },
-                  { label: "Evaluate my deck", template: "" },
+                  { label: "Fundraise", purpose: "fundraising" as IntakePurpose, template: "We're [COMPANY NAME] ([WEBSITE]). We're building [ONE SENTENCE DESCRIPTION]. We're raising $[AMOUNT] at [STAGE: pre-seed/seed/series A] to [KEY MILESTONE]. We have [TRACTION: users, revenue, growth]. Our team has [RELEVANT BACKGROUND]." },
+                  { label: "Sales pitch", purpose: "sales" as IntakePurpose, template: "We're [COMPANY NAME] ([WEBSITE]). We help [TARGET CLIENTS] solve [CLIENT PAIN POINT] through [YOUR SERVICE/PRODUCT]. Our approach: [HOW YOU'RE DIFFERENT]. Results: [PROOF POINTS: case studies, metrics, client wins]. We're looking to pitch [PROSPECT NAME/TYPE]." },
+                  { label: "Board update", purpose: "board_meeting" as IntakePurpose, template: "[COMPANY NAME] Q[X] [YEAR] Board Update\n\nKey metrics: Revenue $[X], Growth [X]%, Burn $[X]/mo, Runway [X] months\nHighlights: [2-3 wins this quarter]\nChallenges: [1-2 risks or misses]\nAsks: [What you need from the board]" },
+                  { label: "Strategy memo", purpose: "strategy" as IntakePurpose, template: "[COMPANY NAME] Strategic Memo: [TOPIC]\n\nContext: [What changed that requires a strategic decision]\nOptions: [2-3 paths we could take]\nRecommendation: [Which path and why]\nSuccess metrics: [How we'll know it's working]" },
+                  { label: "Evaluate my deck", purpose: undefined, template: "" },
                 ].map(chip => (
                   <button key={chip.label} onClick={() => {
                     if (chip.label === "Evaluate my deck") { fileInputRef.current?.click(); }
-                    else { setRawInput(chip.template); }
+                    else { setRawInput(chip.template); setChipPurpose(chip.purpose); setShowIntake(true); }
                   }}
                     className="text-xs px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-muted transition-colors font-medium">
                     {chip.label}
@@ -122,7 +124,7 @@ export function ProductView() {
               </div>
             )}
             {showIntake && !isGenerating && (
-              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => setShowIntake(false)} />
+              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => { setShowIntake(false); setChipPurpose(undefined); }} defaultPurpose={chipPurpose} />
             )}
             {!showIntake && !isFreeAndLocked && !isGenerating && (
               <div className="space-y-3">

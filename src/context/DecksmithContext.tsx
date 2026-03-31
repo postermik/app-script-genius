@@ -764,15 +764,28 @@ Return ONLY valid JSON, no markdown fences.`;
       }
     }
 
+    // ── PURPOSE-AWARE FRAMING: adapt prompts based on intent ──
+    const isSales = purpose === "sales";
+    const purposeFrame = isSales
+      ? "CONTEXT: This is for a SALES presentation to potential clients or customers, NOT for investors. Frame everything around client pain, your solution, proof of results, and why they should buy from you. Use language that sells: outcomes, ROI, case studies, competitive advantages.\n\n"
+      : "";
+
     const outputPrompts: Record<string, string> = {
-      elevator_pitch: `${gapContext}${noSlideWarning} You are generating an ELEVATOR PITCH. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
-      pitch_email: `${gapContext}${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
-      investor_qa: `${gapContext}${noSlideWarning} You are generating INVESTOR Q&A. Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`,
+      elevator_pitch: `${gapContext}${noSlideWarning} You are generating an ELEVATOR PITCH${isSales ? " for sales conversations with potential clients" : ""}. Return JSON: { "elevatorPitch": { "thirtySecond": "A concise 30-second pitch paragraph", "sixtySecond": "A longer 60-second pitch paragraph" } }. Output MUST contain ONLY the elevatorPitch object.`,
+      pitch_email: isSales
+        ? `${gapContext}${noSlideWarning} You are generating SALES FOLLOW-UP EMAILS for client outreach. Generate 3 variants (Cold Outreach, Post-Meeting Follow-Up, Proposal Follow-Up). Each should focus on client pain, your solution, and a clear next step. Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`
+        : `${gapContext}${noSlideWarning} You are generating PITCH EMAILS. Generate 3 variants (Direct Ask, Warm Intro Request, Follow-Up). Return JSON: { "pitchEmails": [{ "label": "...", "subject": "...", "body": "..." }] }. Output MUST contain ONLY the pitchEmails array.`,
+      investor_qa: isSales
+        ? `${gapContext}${noSlideWarning} You are generating OBJECTION HANDLING for sales conversations. Generate 5-7 common objections a prospect would raise (pricing concerns, competitor comparisons, implementation risk, timing, ROI skepticism) with persuasive responses grounded in proof points and client outcomes. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`
+        : `${gapContext}${noSlideWarning} You are generating INVESTOR Q&A. Generate 5-7 likely investor questions with suggested answers. Return JSON: { "investorQA": [{ "question": "...", "answer": "..." }] }. Output MUST contain ONLY the investorQA array.`,
       investment_memo: `${gapContext}${noSlideWarning} You are generating an INVESTMENT MEMO with sections: Thesis, Problem, Solution, Market, Traction & Differentiation, Risks, Why Now, The Ask. Return JSON: { "investmentMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the investmentMemo object.`,
       board_memo: `${gapContext}${noSlideWarning} You are generating a BOARD MEMO with sections: Executive Summary, Key Metrics & Progress, Challenges & Risks, Strategic Priorities, Financial Overview, Asks from the Board. Return JSON: { "boardMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the boardMemo object.`,
       key_metrics_summary: `${gapContext}${noSlideWarning} You are generating a KEY METRICS SUMMARY organized by category (Growth, Unit Economics, Engagement, Financial). Each metric needs name, value, trend (up/down/flat), and brief context. Return JSON: { "keyMetrics": { "categories": [{ "category": "...", "metrics": [{ "name": "...", "value": "...", "trend": "up|down|flat", "context": "..." }] }] } }. Output MUST contain ONLY the keyMetrics object.`,
-      strategic_memo: `${gapContext}${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
-      slide_framework: `${gapContext}You are generating a SLIDE FRAMEWORK (pitch deck). Generate 10-12 slides.
+      strategic_memo: isSales
+        ? `${gapContext}${noSlideWarning} You are generating a COMPETITIVE BRIEF for sales enablement with sections: Market Position, Competitor Analysis, Key Differentiators, Winning Arguments, Common Objections, Pricing Defense. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`
+        : `${gapContext}${noSlideWarning} You are generating a STRATEGIC MEMO with sections: Situation Assessment, Strategic Options, Recommended Path, Resource Requirements, Success Metrics, Timeline. Return JSON: { "strategicMemo": { "sections": [{ "heading": "...", "content": "..." }] } }. Output MUST contain ONLY the strategicMemo object.`,
+      slide_framework: `${gapContext}${purposeFrame}You are generating a ${isSales ? "SALES DECK for client presentations" : "SLIDE FRAMEWORK (pitch deck)"}. Generate 10-12 slides.
+${isSales ? "\nSALES DECK STRUCTURE: Open with client pain (not your company). Then: your solution, how it works, proof points/case studies, competitive advantages, pricing/engagement model, next steps. Frame every slide around what the CLIENT gets, not what you do.\n" : ""}
 
 CRITICAL FORMAT RULES FOR EVERY SLIDE:
 - headline: A sharp claim or argument, NOT a full sentence or topic label. MAX 60 CHARACTERS. Think billboard copy, not memo prose. BAD: "Founders lose months to broken narrative infrastructure when capital sits behind better storytelling" (too long). GOOD: "Capital sits behind better storytelling" (punchy, short). BAD: "Market Opportunity" (topic label). GOOD: "$2.8B market trapped in agency middlemen"
@@ -794,7 +807,7 @@ Return JSON: { "deckFramework": [...] }`,
     const prompt = outputPrompts[outputType] || "";
     const noEmDash = "STYLE RULE: Never use em dashes anywhere in your output. Use commas, periods, colons, or semicolons instead.\n";
     const overridePrefix = outputType !== "slide_framework" ? `IMPORTANT: This request is for "${outputType}" ONLY. Do NOT generate slides or deckFramework.\n\n` : "";
-    const fullInput = `${overridePrefix}${strategicContext}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
+    const fullInput = `${overridePrefix}${purposeFrame}${strategicContext}CORE NARRATIVE CONTEXT:\n${coreNarrativeText}\n\n---\n${noEmDash}${prompt}\nReturn ONLY valid JSON, no markdown fences.`;
 
     const maxTokens =
       outputType === "slide_framework" ? 7000 :
@@ -1755,17 +1768,18 @@ Return JSON: { "deckFramework": [...] }`,
     // Tier labels adapt to the purpose
     const isBoard = purpose === "board_meeting" || purpose === "board_update";
     const isStrategy = purpose === "strategy";
+    const isSalesPurpose = purpose === "sales";
 
     let tier: NarrativeStrength["tier"];
     let tierLabel: string;
     let tierDescription: string;
     if (percentage >= 90) {
       tier = "exceptional"; tierLabel = "Exceptional";
-      tierDescription = isBoard ? "Your update is thorough and actionable." : isStrategy ? "This memo is ready for the room." : "Your narrative is ready for any room.";
+      tierDescription = isBoard ? "Your update is thorough and actionable." : isStrategy ? "This memo is ready for the room." : isSalesPurpose ? "Your pitch is ready to close." : "Your narrative is ready for any room.";
     } else if (percentage >= 70) {
       tier = "ready";
-      tierLabel = isBoard ? "Board Ready" : isStrategy ? "Ready to Share" : "Investor Ready";
-      tierDescription = isBoard ? "Strong update. A few additions would make it complete." : isStrategy ? "Clear strategy. Tighten a few areas before sharing." : "Strong foundation. A few additions would make it stand out.";
+      tierLabel = isBoard ? "Board Ready" : isStrategy ? "Ready to Share" : isSalesPurpose ? "Client Ready" : "Investor Ready";
+      tierDescription = isBoard ? "Strong update. A few additions would make it complete." : isStrategy ? "Clear strategy. Tighten a few areas before sharing." : isSalesPurpose ? "Strong pitch. Add proof points to close harder." : "Strong foundation. A few additions would make it stand out.";
     } else if (percentage >= 40) {
       tier = "sharpening"; tierLabel = "Getting Sharp";
       tierDescription = isBoard ? "Your update is taking shape. Keep building." : isStrategy ? "The strategy is forming. Add more detail." : "Your story is taking shape. Keep building.";

@@ -56,7 +56,7 @@ export interface RhetoricOutput {
 
 // ── Intake types ──
 
-export type IntakePurpose = "fundraising" | "board_meeting" | "strategy";
+export type IntakePurpose = "fundraising" | "board_meeting" | "strategy" | "sales";
 export type OutputDeliverable = 
   | "core_narrative"
   | "slide_framework" 
@@ -136,6 +136,7 @@ export const CORE_NARRATIVE_SECTIONS: Record<IntakePurpose, string[]> = {
   fundraising: ["Problem", "Solution", "Why Now", "Market", "Traction", "Vision"],
   board_meeting: ["Challenges", "Progress & Metrics", "Strategic Updates", "Market Position", "Key Asks", "Next Quarter Priorities"],
   strategy: ["Problem", "Current State", "Strategic Insight", "Market Landscape", "Action Plan", "Vision"],
+  sales: ["Client Pain", "Solution", "Differentiators", "Proof Points", "Process", "Why Us"],
 };
 
 // ── Intent-based output options ──
@@ -163,6 +164,13 @@ export const INTENT_OUTPUTS: Record<IntakePurpose, OutputOption[]> = {
     { value: "elevator_pitch", label: "Elevator Pitch", preSelected: false },
     { value: "slide_framework", label: "Slide Framework", preSelected: false },
   ],
+  sales: [
+    { value: "slide_framework", label: "Sales Deck", preSelected: true },
+    { value: "elevator_pitch", label: "Elevator Pitch", preSelected: true },
+    { value: "investor_qa", label: "Objection Handling", preSelected: true },
+    { value: "pitch_email", label: "Follow-up Emails", preSelected: true },
+    { value: "strategic_memo", label: "Competitive Brief", preSelected: false },
+  ],
 };
 
 // Helper to determine intent from any output shape
@@ -184,7 +192,7 @@ export function getDeliverable(output: any): Deliverable | null {
   // Try to find deckFramework from any location
   const deckFramework = d.deckFramework || s.deckFramework || output?.deckFramework;
   
-  if (mode === "fundraising") {
+  if (mode === "fundraising" || mode === "sales") {
     if (deckFramework?.length) return { type: "deck", deckFramework };
     return null;
   }

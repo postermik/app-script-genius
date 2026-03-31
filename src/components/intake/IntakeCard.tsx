@@ -5,6 +5,7 @@ import { INTENT_OUTPUTS } from "@/types/rhetoric";
 
 const PURPOSES: { value: IntakePurpose; label: string }[] = [
   { value: "fundraising", label: "Fundraising" },
+  { value: "sales", label: "Sales" },
   { value: "board_meeting", label: "Board Meeting" },
   { value: "strategy", label: "Strategy" },
 ];
@@ -19,7 +20,6 @@ const STAGES: { value: IntakeStage; label: string }[] = [
 
 function detectFromInput(input: string): IntakeSelections {
   // Board meeting requires STRONG, explicit signals.
-  // A single word "board" is not enough — the user may be describing their product.
   const boardSignals = [
     /board of directors/i,
     /board meeting/i,
@@ -45,12 +45,32 @@ function detectFromInput(input: string): IntakeSelections {
     /\bokr\b/i,
   ];
 
+  const salesSignals = [
+    /sales deck/i,
+    /sales pitch/i,
+    /sales presentation/i,
+    /sales call/i,
+    /sell(?:ing)? (?:our|my|the) /i,
+    /pitch(?:ing)? (?:to )?(?:clients|customers|prospects|companies|brands)/i,
+    /client presentation/i,
+    /proposal for/i,
+    /close (?:the |a )?deal/i,
+    /prospecting/i,
+    /outbound sales/i,
+    /service offering/i,
+    /consulting pitch/i,
+    /\brfp\b/i,
+    /pitch(?:ing)? (?:our|my) services/i,
+    /win(?:ning)? (?:the |a )?(?:client|account|contract|deal)/i,
+    /business development/i,
+    /(?:our|my) (?:agency|firm|consultancy|practice) /i,
+  ];
 
-  // Count signal matches per purpose (more matches = stronger signal)
+  // Count signal matches per purpose
   const boardScore = boardSignals.filter(re => re.test(input)).length;
   const strategyScore = strategySignals.filter(re => re.test(input)).length;
+  const salesScore = salesSignals.filter(re => re.test(input)).length;
 
-  // Count individual fundraising keyword hits
   const fundraisingKeywords = [
     /rais(ing|e)/i, /fundrais/i, /investor/i, /pre.?seed/i, /seed round/i,
     /series\s*[abcde]/i, /\bsafe\b/i, /valuation/i, /pitch deck/i,
@@ -59,7 +79,9 @@ function detectFromInput(input: string): IntakeSelections {
   const fundraisingScore = fundraisingKeywords.filter(re => re.test(input)).length;
 
   let purpose: IntakePurpose;
-  if (fundraisingScore > 0 && fundraisingScore >= boardScore) {
+  if (salesScore > 0 && salesScore >= fundraisingScore && salesScore >= boardScore && salesScore >= strategyScore) {
+    purpose = "sales";
+  } else if (fundraisingScore > 0 && fundraisingScore >= boardScore) {
     purpose = "fundraising";
   } else if (boardScore > strategyScore && boardScore > 0) {
     purpose = "board_meeting";
@@ -87,14 +109,32 @@ interface Props {
   rawInput: string;
   onGenerate: (selections: IntakeSelections) => void;
   onCancel: () => void;
+  defaultPurpose?: IntakePurpose;
 }
 
-export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
-  const [selections, setSelections] = useState<IntakeSelections>(() => detectFromInput(rawInput));
+export function IntakeCard({ rawInput, onGenerate, onCancel, defaultPurpose }: Props) {
+  const [selections, setSelections] = useState<IntakeSelections>(() => {
+    const detected = detectFromInput(rawInput);
+    if (defaultPurpose) {
+      const preSelected = INTENT_OUTPUTS[defaultPurpose]
+        .filter(o => o.preSelected)
+        .map(o => o.value);
+      return { ...detected, purpose: defaultPurpose, outputs: preSelected };
+    }
+    return detected;
+  });
 
   useEffect(() => {
-    setSelections(detectFromInput(rawInput));
-  }, [rawInput]);
+    const detected = detectFromInput(rawInput);
+    if (defaultPurpose) {
+      const preSelected = INTENT_OUTPUTS[defaultPurpose]
+        .filter(o => o.preSelected)
+        .map(o => o.value);
+      setSelections({ ...detected, purpose: defaultPurpose, outputs: preSelected });
+    } else {
+      setSelections(detected);
+    }
+  }, [rawInput, defaultPurpose]);
 
   const handlePurposeChange = (purpose: IntakePurpose) => {
     const preSelected = INTENT_OUTPUTS[purpose]
@@ -115,7 +155,7 @@ export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
   const intentOutputs = INTENT_OUTPUTS[selections.purpose];
 
   return (
-    <div className="animate-fade-in card-gradient border border-border rounded-sm p-6 space-y-5">
+    <div className="animate-fade-in card-gradient border border-border rounded-lg p-6 space-y-5">
       {/* Row 1: Purpose */}
       <div>
         <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5">
@@ -203,14 +243,14 @@ export function IntakeCard({ rawInput, onGenerate, onCancel }: Props) {
       <div className="flex items-center justify-end gap-2 pt-1">
         <button
           onClick={onCancel}
-          className="text-xs px-4 py-2.5 rounded-sm font-medium text-secondary-foreground hover:text-foreground transition-colors"
+          className="text-xs px-4 py-2.5 rounded-lg font-medium text-secondary-foreground hover:text-foreground transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={() => onGenerate(selections)}
           disabled={selections.outputs.length === 0}
-          className="py-2.5 px-6 bg-primary text-primary-foreground font-medium text-sm rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center gap-2 glow-blue"
+          className="py-2.5 px-6 bg-primary text-primary-foreground font-medium text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-30 flex items-center gap-2 glow-blue"
         >
           <Sparkles className="h-3.5 w-3.5" />
           Generate
