@@ -13,8 +13,8 @@ export const CB = S.H - S.MB;              // 5.275
 // ── Font sizing ──
 export function headlinePt(text: string): number {
   if (text.length <= 40) return 28;
-  if (text.length <= 60) return 24;
-  if (text.length <= 80) return 22;
+  if (text.length <= 52) return 24;
+  if (text.length <= 72) return 22;
   return 18;
 }
 
@@ -259,23 +259,24 @@ function layoutConcentric(s: SlideData): El[] {
 function layoutMatrix(s: SlideData): El[] {
   const { els, y: hy } = hdr(s);
   const axes = s.axisLabels || { x:"Speed + Affordability", y:"Quality" };
-  const aX = S.ML + 0.6; const aY = hy + 0.1;
-  const aW = CW - 0.8;   const aH = CB - hy - 0.4;
+  const aX = S.ML + 0.8; const aY = hy + 0.1;
+  const aW = CW - 1.0;   const aH = CB - hy - 0.4;
 
   // Axes
   els.push({ t:"rect", x:aX, y:aY, w:0.015, h:aH, fill:"border" });
   els.push({ t:"rect", x:aX, y:aY+aH, w:aW, h:0.015, fill:"border" });
-  els.push({ t:"text", x:S.ML, y:aY+aH/2-0.2, w:0.5, h:0.4, text:axes.y, pt:8, color:"sub", align:"center", valign:"middle" });
-  els.push({ t:"text", x:aX+aW/2-0.5, y:aY+aH+0.05, w:1, h:0.2, text:axes.x, pt:8, color:"sub", align:"center" });
+  els.push({ t:"text", x:S.ML-0.1, y:aY+aH/2-0.3, w:0.8, h:0.6, text:axes.y, pt:7, color:"sub", align:"center", valign:"middle" });
+  els.push({ t:"text", x:aX+aW/2-0.7, y:aY+aH+0.03, w:1.4, h:0.25, text:axes.x, pt:7, color:"sub", align:"center" });
 
   if (s.competitors && s.competitors.length > 0) {
     for (let i = 0; i < s.competitors.length; i++) {
       const c = s.competitors[i]; const last = i === s.competitors.length - 1;
       const px = aX + c.x * aW; const py = aY + (1 - c.y) * aH;
-      const dr = last ? 0.12 : 0.08;
+      const dr = last ? 0.1 : 0.06;
+      // Dot first, then name and description below it with clear gap
       els.push({ t:"ellipse", cx:px, cy:py, rx:dr, ry:dr, fill:last?"primary":"sub" });
-      els.push({ t:"text", x:px-0.8, y:py-(last?0.38:0.32), w:1.6, h:0.2, text:c.name, pt:last?11:9, bold:last, color:last?"head":"body", align:"center" });
-      if (c.description) els.push({ t:"text", x:px-0.8, y:py-(last?0.2:0.14), w:1.6, h:0.2, text:c.description, pt:7, color:"sub", align:"center" });
+      els.push({ t:"text", x:px-0.9, y:py+dr+0.04, w:1.8, h:0.2, text:c.name, pt:last?10:9, bold:last, color:last?"head":"body", align:"center" });
+      if (c.description) els.push({ t:"text", x:px-0.9, y:py+dr+0.22, w:1.8, h:0.25, text:c.description, pt:7, color:"sub", align:"center" });
     }
   } else {
     const items = (s.bodyContent || []).slice(0,6);
@@ -283,8 +284,8 @@ function layoutMatrix(s: SlideData): El[] {
       const ci = items[i].indexOf(":"); const name = ci > 0 ? items[i].substring(0,ci).trim() : items[i];
       const last = i === items.length - 1;
       const px = aX + ((i*0.15+0.2)%0.8)*aW; const py = aY + (0.2+i*0.12)*aH;
-      els.push({ t:"ellipse", cx:px, cy:py, rx:0.08, ry:0.08, fill:last?"primary":"sub" });
-      els.push({ t:"text", x:px-0.5, y:py-0.28, w:1, h:0.2, text:name, pt:9, color:"body", align:"center" });
+      els.push({ t:"ellipse", cx:px, cy:py, rx:0.06, ry:0.06, fill:last?"primary":"sub" });
+      els.push({ t:"text", x:px-0.5, y:py+0.1, w:1, h:0.2, text:name, pt:9, color:"body", align:"center" });
     }
   }
   return els;
@@ -308,20 +309,37 @@ function layoutFlywheel(s: SlideData): El[] {
   els.push({ t:"ellipse", cx:cxF, cy:cyF, rx:r, ry:r, stroke:"accent", sw:2 });
 
   for (let i = 0; i < n; i++) {
-    const a = angles[i] * Math.PI / 180;
+    const aDeg = angles[i];
+    const a = aDeg * Math.PI / 180;
     const nx = cxF + r*Math.cos(a); const ny = cyF + r*Math.sin(a);
     // Node circle on the wheel
     els.push({ t:"ellipse", cx:nx, cy:ny, rx:0.16, ry:0.16, fill:"primary" });
     els.push({ t:"text", x:nx-0.16, y:ny-0.16, w:0.32, h:0.32, text:String(i+1), pt:12, bold:true, color:"#ffffff", align:"center", valign:"middle" });
-    // Label outside the wheel
-    const tx = cxF + (r+0.7)*Math.cos(a); const ty = cyF + (r+0.55)*Math.sin(a);
-    if (useStruct) {
-      els.push({ t:"text", x:tx-1.1, y:ty-0.15, w:2.2, h:0.25, text:steps[i].label, pt:10, bold:true, color:"head", align:"center", valign:"middle" });
-      if (steps[i].description) els.push({ t:"text", x:tx-1.1, y:ty+0.1, w:2.2, h:0.35, text:steps[i].description, pt:8, color:"sub", align:"center" });
-    } else {
-      const ci = body[i].indexOf(":"); const title = ci > 0 ? body[i].substring(0,ci).trim() : body[i].substring(0,30);
-      els.push({ t:"text", x:tx-1.1, y:ty-0.15, w:2.2, h:0.25, text:title, pt:10, bold:true, color:"head", align:"center", valign:"middle" });
-    }
+
+    // Label outside: determine alignment based on angle so text extends AWAY from circle
+    const isRight = aDeg > -90 && aDeg < 90;
+    const isLeft = aDeg > 90 || aDeg < -90;
+    const isTop = aDeg === -90;
+    const isBottom = aDeg === 180 || aDeg === -180;
+    const labelAlign = isTop || isBottom ? "center" : isRight ? "left" : "right";
+
+    // Push labels further from center
+    const tx = cxF + (r + 1.0) * Math.cos(a);
+    const ty = cyF + (r + 0.6) * Math.sin(a);
+    // Position text box: for left-aligned, start at the node side; for right-aligned, end at the node side
+    const lw = 2.2;
+    const lx = labelAlign === "center" ? tx - lw/2 : labelAlign === "left" ? tx - 0.3 : tx - lw + 0.3;
+
+    const getLabel = () => {
+      if (useStruct) return steps[i].label;
+      const ci = body[i].indexOf(":");
+      return ci > 0 ? body[i].substring(0,ci).trim() : body[i].substring(0,30);
+    };
+    const getDesc = () => useStruct ? steps[i].description : "";
+
+    els.push({ t:"text", x:lx, y:ty-0.2, w:lw, h:0.25, text:getLabel(), pt:10, bold:true, color:"head", align:labelAlign, valign:"middle" });
+    const desc = getDesc();
+    if (desc) els.push({ t:"text", x:lx, y:ty+0.05, w:lw, h:0.35, text:desc, pt:8, color:"sub", align:labelAlign });
   }
   return els;
 }
@@ -336,16 +354,17 @@ function layoutStaircase(s: SlideData): El[] {
   const n = ms.length; const gap = 0.12;
   const stepW = (CW - gap*(n-1)) / n;
   const maxH = CB - hy - 0.15; const baseY = CB;
-  const pcts = [0.3, 0.5, 0.7, 0.9];
+  const pcts = [0.35, 0.55, 0.75, 0.92];
 
   for (let i = 0; i < n; i++) {
-    const h = maxH * (pcts[i] || 0.9);
+    const h = maxH * (pcts[i] || 0.92);
     const sx = S.ML + i*(stepW+gap); const sy = baseY - h;
     const last = i === n - 1;
     els.push({ t:"rect", x:sx, y:sy, w:stepW, h, fill:last?"primary:0.08":undefined, stroke:last?"primary":"border", sw:last?1.5:1, r:0.03 });
     if (ms[i].amount) els.push({ t:"text", x:sx+0.05, y:sy+0.08, w:stepW-0.1, h:0.25, text:ms[i].amount, pt:14, bold:true, color:last?"primary":"head", align:"center" });
     const bY = sy + (ms[i].amount ? 0.38 : 0.1);
-    els.push({ t:"bullets", x:sx+0.06, y:bY, w:stepW-0.12, h:h*0.6, items:ms[i].bullets.slice(0,3), pt:8, color:"sub", bulletColor:"primary", lineH:1.3 });
+    const bH = h - (ms[i].amount ? 0.45 : 0.15); // fill to near bottom of bar
+    els.push({ t:"bullets", x:sx+0.06, y:bY, w:stepW-0.12, h:Math.max(0.2, bH), items:ms[i].bullets.slice(0,3), pt:8, color:"sub", bulletColor:"primary", lineH:1.3 });
   }
   return els;
 }
