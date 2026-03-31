@@ -6,6 +6,8 @@ import {
   BookOpen, BarChart3, Lightbulb, Compass, ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { INTENT_OUTPUTS } from "@/types/rhetoric";
+import type { IntakePurpose } from "@/types/rhetoric";
 
 // stepper v3
 
@@ -27,32 +29,34 @@ const OUTPUT_STEP_MAP: Record<string, OutputStep> = {
   strategic_memo:     { key: "strategic_memo",     label: "Strategic memo",   icon: Lightbulb },
 };
 
-// Toast labels per output key
-const TOAST_LABELS: Record<string, string> = {
-  core_narrative:      "Core Narrative done",
-  elevator_pitch:      "Elevator Pitch done",
-  investor_qa:         "Investor Q&A done",
-  pitch_email:         "Pitch Email done",
-  investment_memo:     "Investment Memo done",
-  slide_framework:     "Slide Framework done",
-  board_memo:          "Board Memo done",
-  key_metrics_summary: "Key Metrics done",
-  strategic_memo:      "Strategic Memo done",
-  _scoring:            "Scoring complete",
-};
+// Get purpose-aware label for a given output key
+function getStepLabel(key: string, purpose?: IntakePurpose): string {
+  if (purpose) {
+    const match = INTENT_OUTPUTS[purpose]?.find(o => o.value === key);
+    if (match) return match.label;
+  }
+  return OUTPUT_STEP_MAP[key]?.label || key.replace(/_/g, " ");
+}
+
+// Get purpose-aware step
+function getStep(key: string, purpose?: IntakePurpose): OutputStep {
+  const base = OUTPUT_STEP_MAP[key] || { key, label: key.replace(/_/g, " "), icon: Target };
+  return { ...base, label: getStepLabel(key, purpose) };
+}
 
 export function GenerationStepper() {
   const { isGenerating, isGeneratingSlides, intakeSelections, completedOutputs, isGeneratingOutputs } = useDecksmith();
   const [collapsed, setCollapsed] = useState(false);
 
   const completedKeys = new Set<string>(completedOutputs);
+  const purpose = intakeSelections?.purpose;
 
   const fromIntake = intakeSelections?.outputs;
   const selectedOutputs: string[] = fromIntake && fromIntake.length > 0 ? fromIntake : ["slide_framework"];
 
-  const steps: OutputStep[] = [OUTPUT_STEP_MAP.core_narrative];
+  const steps: OutputStep[] = [getStep("core_narrative", purpose)];
   for (const o of selectedOutputs) {
-    if (o !== "core_narrative" && OUTPUT_STEP_MAP[o]) steps.push(OUTPUT_STEP_MAP[o]);
+    if (o !== "core_narrative" && OUTPUT_STEP_MAP[o]) steps.push(getStep(o, purpose));
   }
   steps.push({ key: "_scoring", label: "Scoring", icon: Target });
 
@@ -73,9 +77,7 @@ export function GenerationStepper() {
     const newKeys = [...completedKeys].filter(k => !prev.has(k));
 
     for (const key of newKeys) {
-      const label = TOAST_LABELS[key];
-      if (!label) continue;
-
+      const label = key === "_scoring" ? "Scoring complete" : `${getStepLabel(key, purpose)} done`;
       if (key === "core_narrative") {
         window.scrollTo({ top: 0, behavior: "smooth" });
         setTimeout(() => {

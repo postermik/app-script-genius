@@ -982,12 +982,12 @@ Return JSON: { "deckFramework": [...] }`,
       const coreNarrativeText = cn.sections.map(s => `${s.heading}: ${s.content}`).join("\n\n");
 
       // Step 2: Fire outputs sequentially so stepper and tabs update one at a time
-      // slide_framework runs first because Phase 1 produces strategicInsights that improve all other outputs
+      // Fast outputs first for quick user feedback, then heavy outputs
       const ORDERED_OUTPUTS = [
-        "slide_framework",
         "elevator_pitch",
         "investor_qa",
         "pitch_email",
+        "slide_framework",
         "investment_memo",
         "board_memo",
         "key_metrics_summary",
@@ -1074,6 +1074,16 @@ Return JSON: { "deckFramework": [...] }`,
   }, [rawInput, selectedMode, voiceProfile, generationCount, isGenerating, saveProject, saveOutputIncremental, startLoadingPhases, stopLoadingPhases, intakeSelections, generateCoreNarrative, generateSingleOutput]);
 
   // ── Generate a single output on demand (post-generation) ──
+  // Purpose-aware label for toasts and messages
+  const purposeAwareLabel = (outputType: string): string => {
+    const purpose = intakeSelections?.purpose;
+    if (purpose) {
+      const match = INTENT_OUTPUTS[purpose]?.find(o => o.value === outputType);
+      if (match) return match.label;
+    }
+    return outputType.replace(/_/g, " ");
+  };
+
   const generateOutput = useCallback(async (outputType: OutputDeliverable) => {
     if (!rawInput.trim() || !coreNarrative) return;
     // Prevent duplicate in-flight calls for the same output
@@ -1114,16 +1124,16 @@ Return JSON: { "deckFramework": [...] }`,
             if (strategicInsights) updated.strategicInsights = strategicInsights;
             return updated;
           });
-          toast.success("Slide framework generated!");
+          toast.success(`${purposeAwareLabel(outputType)} generated!`);
         }
       } else {
-        toast.success(`${outputType.replace(/_/g, " ")} generated!`);
+        toast.success(`${purposeAwareLabel(outputType)} generated!`);
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
         console.error(`[Generation] On-demand ✗ FAILED: ${outputType}:`, e.message);
         setOutputData(prev => ({ ...prev, [`${outputType}_error`]: e.message, [`${outputType}_rawResponse`]: e.rawResponse || null }));
-        toast.error(`Failed to generate ${outputType.replace(/_/g, " ")}. Please retry.`);
+        toast.error(`Failed to generate ${purposeAwareLabel(outputType)}. Please retry.`);
       }
     } finally {
       inFlightOutputsRef.current.delete(outputType);
