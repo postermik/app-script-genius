@@ -207,7 +207,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {card.allDone && !isActive && card.completedOpportunities.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {card.completedOpportunities.map(cop => (
-                          <span key={cop.id} className="inline-flex items-center gap-0.5 text-[10px] text-emerald bg-emerald/8 px-1.5 py-0.5 rounded-full">
+                          <span key={cop.id} className="inline-flex items-center gap-0.5 text-[10px] text-emerald bg-emerald/8 border border-emerald/20 px-1.5 py-0.5 rounded-full">
                             <Check className="h-2.5 w-2.5" /> {cop.label}
                           </span>
                         ))}
@@ -219,10 +219,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                         {card.primaryOp.description}
                       </p>
                     )}
-                    {/* P3: Section mapping label */}
-                    {card.sectionHeading && !isActive && (
-                      <p className="text-[10px] text-muted-foreground/60 mt-1.5">updates {card.sectionHeading}</p>
-                    )}
+                    {/* No section mapping label on collapsed cards - redundant with card title */}
                   </div>
                 );
               })}
@@ -241,15 +238,12 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                   <div className={`rounded-lg border ${borderColor} bg-card p-5 space-y-4`}>
                     {/* Header with close X */}
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`text-xs font-semibold flex items-center gap-1.5 ${card.allDone ? "text-emerald" : "text-electric"}`}>
-                          {card.allDone && <Check className="h-3 w-3" />}
-                          {card.category}
-                        </p>
-                        {card.sectionHeading && (
-                          <p className="text-[10px] text-muted-foreground/60 mt-0.5">updates {card.sectionHeading} section</p>
+                      <p className={`text-xs font-semibold flex items-center gap-1.5 ${card.allDone ? "text-emerald" : "text-electric"}`}>
+                        {card.category}
+                        {card.allDone && (
+                          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald/10 text-emerald">Covered</span>
                         )}
-                      </div>
+                      </p>
                       <button onClick={(e) => { e.stopPropagation(); setActiveCard(null); setEditingSection(null); }}
                         className="p-1 rounded-lg hover:bg-muted/20 transition-colors text-muted-foreground/60 hover:text-foreground">
                         <X className="h-4 w-4" />
@@ -260,7 +254,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                     {card.completedOpportunities.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {card.completedOpportunities.map(cop => (
-                          <span key={cop.id} className="inline-flex items-center gap-1 text-[10px] text-emerald bg-emerald/8 px-2 py-0.5 rounded-full">
+                          <span key={cop.id} className="inline-flex items-center gap-1 text-[10px] text-emerald bg-emerald/8 border border-emerald/20 px-2 py-0.5 rounded-full">
                             <Check className="h-2.5 w-2.5" /> {cop.label}
                           </span>
                         ))}
@@ -297,7 +291,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingSection(card.sectionHeading); setEditBuffer(card.sectionContent); }}
                               className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 border border-transparent hover:border-border/40 transition-all">
-                              <Pencil className="h-3 w-3" /> Edit
+                              <Pencil className="h-3 w-3" /> Edit core narrative section
                             </button>
                           </div>
                         ) : (

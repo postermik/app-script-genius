@@ -156,6 +156,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   const [generationOutputs, setGenerationOutputs] = useState<OutputDeliverable[]>([]);
   const [coreNarrative, setCoreNarrative] = useState<CoreNarrativeData | null>(null);
   const [outputData, setOutputData] = useState<Record<string, any>>({});
+
+  // Debug: track when outputData is cleared while it had content
+  const prevOutputDataKeysRef = useRef<string[]>([]);
+  const outputDataDebugRef = useRef(outputData);
+  outputDataDebugRef.current = outputData;
+  if (typeof window !== 'undefined') {
+    const curKeys = Object.keys(outputData).filter(k => !k.endsWith('_error') && !k.endsWith('_rawResponse'));
+    if (prevOutputDataKeysRef.current.length > 0 && curKeys.length === 0) {
+      console.warn("[OutputData] CLEARED while it had:", prevOutputDataKeysRef.current);
+      console.trace("[OutputData] Clear trace");
+    }
+    prevOutputDataKeysRef.current = curKeys;
+  }
   const [deckTheme, setDeckTheme] = useState<DeckTheme>(DEFAULT_DECK_THEME);
   const [brandColors, setBrandColors] = useState<BrandColors | null>(null);
   const [scoringComplete, setScoringComplete] = useState(false);
@@ -1960,29 +1973,32 @@ RULES: Maximum 3 sentences. No lists. No bullet points. No em dashes. No headers
     return data.content || "";
   }, [rawInput, computeNarrativeStrength]);
 
+  // Stable ref for guide summary generator (avoids effect dependency chain)
+  const generateGuideSummaryRef = useRef(generateGuideSummary);
+  generateGuideSummaryRef.current = generateGuideSummary;
+
   // Auto-load guide summary once, then only when narrative changes
   useEffect(() => {
     const cn = coreNarrativeRef.current;
     if (!cn?.sections?.length) return;
-    // First load
-    if (!guideSummaryLoadedRef.current) {
-      guideSummaryLoadedRef.current = true;
+    const doGenerate = () => {
       setLoadingGuideSummary(true);
-      generateGuideSummary()
+      generateGuideSummaryRef.current()
         .then(result => { setGuideSummary(result); narrativeDirtyRef.current = false; })
         .catch(() => {})
         .finally(() => setLoadingGuideSummary(false));
+    };
+    // First load
+    if (!guideSummaryLoadedRef.current) {
+      guideSummaryLoadedRef.current = true;
+      doGenerate();
       return;
     }
     // Subsequent: only when dirty
     if (narrativeDirtyRef.current) {
-      setLoadingGuideSummary(true);
-      generateGuideSummary()
-        .then(result => { setGuideSummary(result); narrativeDirtyRef.current = false; })
-        .catch(() => {})
-        .finally(() => setLoadingGuideSummary(false));
+      doGenerate();
     }
-  }, [coreNarrative, generateGuideSummary]);
+  }, [coreNarrative]);
 
   const refreshGuideSummary = useCallback(async () => {
     setLoadingGuideSummary(true);
