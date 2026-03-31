@@ -26,8 +26,23 @@ const MODES: { value: OutputMode | "auto"; label: string }[] = [
 
 export function ProductView() {
   const navigate = useNavigate();
-  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, setIntakeSelections } = useDecksmith();
+  const { rawInput, setRawInput, selectedMode, setSelectedMode, output, isGenerating, generate, reset, projects, loadProjects, openProject, deleteProject, duplicateProject, setIntakeSelections, session } = useDecksmith();
   const { subscribed } = useSubscription();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [showIntake, setShowIntake] = useState(false);
+  const [chipPurpose, setChipPurpose] = useState<IntakePurpose | undefined>(undefined);
+  const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
+
+  // Personalized greeting
+  const firstName = session?.user?.user_metadata?.full_name?.split(" ")[0]
+    || session?.user?.email?.split("@")[0]
+    || "";
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [showIntake, setShowIntake] = useState(false);
   const [chipPurpose, setChipPurpose] = useState<IntakePurpose | undefined>(undefined);
@@ -95,10 +110,9 @@ export function ProductView() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="flex-1 flex flex-col items-center px-6 pt-20">
+      <div className="flex-1 flex flex-col items-center px-6 pt-16">
         <div className="max-w-[720px] w-full animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-3">What are you building?</h1>
-          <p className="text-sm text-muted-foreground text-center mb-10">Paste your pitch, describe your startup, or upload a deck to evaluate.</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-10">{greeting}</h1>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
@@ -156,7 +170,7 @@ export function ProductView() {
           </div>
         </div>
         {!isGenerating && !showIntake && (
-          <div className="max-w-[960px] w-full mt-16 mb-12 animate-fade-in">
+          <div className="max-w-[960px] w-full mt-20 mb-12 animate-fade-in">
             <p className="text-[11px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-5">Recent Projects</p>
             {projects.length === 0 ? (
               <div className="card-gradient border border-border rounded-lg p-12 flex flex-col items-center text-center">
@@ -190,14 +204,14 @@ const MODE_LABELS: Record<string, string> = {
   fundraising: "Fundraising", board_update: "Board Meeting", board_meeting: "Board Meeting", strategy: "Strategy", sales: "Sales",
 };
 
-const MODE_ACCENTS: Record<string, string> = {
-  fundraising: "bg-electric/80",
-  board_update: "bg-amber-500",
-  board_meeting: "bg-amber-500",
-  strategy: "bg-indigo",
-  product_vision: "bg-emerald",
-  investor_update: "bg-electric/80",
-  sales: "bg-orange-500",
+const MODE_HEADER_COLORS: Record<string, { bg: string; text: string }> = {
+  fundraising: { bg: "bg-blue-50", text: "text-blue-600" },
+  board_update: { bg: "bg-amber-50", text: "text-amber-700" },
+  board_meeting: { bg: "bg-amber-50", text: "text-amber-700" },
+  strategy: { bg: "bg-indigo-50", text: "text-indigo-600" },
+  product_vision: { bg: "bg-emerald-50", text: "text-emerald-600" },
+  investor_update: { bg: "bg-blue-50", text: "text-blue-600" },
+  sales: { bg: "bg-orange-50", text: "text-orange-600" },
 };
 
 function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; onOpen: () => void; onDelete: () => void }) {
@@ -210,68 +224,73 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Extract rich preview data from output_data
   const od = (project as any).output_data || {};
-  const slideCount = od?.slide_framework?.deckFramework?.length || od?.slide_framework?.deliverable?.deckFramework?.length || 0;
   const firstSlideHeadline = (od?.slide_framework?.deckFramework || od?.slide_framework?.deliverable?.deckFramework || [])?.[0]?.headline || "";
   const elevatorPitch = od?.elevator_pitch?.elevatorPitch?.thirtySecond || "";
-  const scoreVal = od?.score?.overall || null;
-  const outputCount = ["elevator_pitch", "investor_qa", "pitch_email", "investment_memo", "slide_framework", "board_memo", "strategic_memo", "key_metrics_summary"]
-    .filter(k => od?.[k] && !od?.[`${k}_error`]).length;
 
-  // Brand color accent: prefer project brand colors, fall back to mode color
+  // Brand colors for header
   const brandPrimary = od?.brand_colors?.dark?.primary || od?.brand_colors?.primary || null;
-  const accentClass = !brandPrimary ? (MODE_ACCENTS[project.mode] || "bg-electric/80") : "";
-  const accentStyle = brandPrimary ? { backgroundColor: brandPrimary } : undefined;
+  const headerColors = MODE_HEADER_COLORS[project.mode] || MODE_HEADER_COLORS.fundraising;
 
-  // Best preview: elevator pitch > first slide headline > raw input
+  // Company initial from title
+  const initial = (project.title || "?").replace(/^(Evaluation:\s*|Rhetoric:\s*)/i, "").charAt(0).toUpperCase();
+
+  // Best preview
   const preview = elevatorPitch || firstSlideHeadline || (project.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 120).trim();
 
   return (
-    <div onClick={onOpen} className="bg-card border border-border rounded-lg p-5 flex flex-col group hover:border-muted-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden relative min-h-[190px]">
-      {/* Mode accent bar - uses brand color when available */}
-      <div className={`absolute top-0 left-0 right-0 h-1.5 ${accentClass} rounded-t-lg`} style={accentStyle} />
-
-      <div className="flex items-start justify-between mb-1.5 mt-1">
-        <h3 className="text-sm font-semibold text-foreground line-clamp-2 flex-1 min-w-0">
-          {project.title}
-          {project.detected_intent === "evaluate" && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
-          )}
-        </h3>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
-          <button onClick={copyPrompt} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+    <div onClick={onOpen} className="bg-card border border-border rounded-lg flex flex-col group hover:border-muted-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden">
+      {/* Visual header */}
+      <div
+        className={`relative h-[72px] flex items-center justify-between px-4 ${!brandPrimary ? headerColors.bg : ""}`}
+        style={brandPrimary ? { backgroundColor: brandPrimary + "18" } : undefined}
+      >
+        {/* Monogram */}
+        <span
+          className={`text-2xl font-bold ${!brandPrimary ? headerColors.text : ""}`}
+          style={brandPrimary ? { color: brandPrimary } : undefined}
+        >
+          {initial}
+        </span>
+        {/* Mode pill */}
+        <span
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${!brandPrimary ? headerColors.text + " " + headerColors.bg : ""}`}
+          style={brandPrimary ? { color: brandPrimary, backgroundColor: brandPrimary + "15" } : undefined}
+        >
+          {MODE_LABELS[project.mode] || project.mode}
+        </span>
+        {/* Hover actions */}
+        <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={copyPrompt} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors" title="Copy prompt">
             {copied ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3" />}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-background/60 transition-colors" title="Delete">
             <Trash2 className="h-3 w-3" />
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground mb-2.5">
-        {MODE_LABELS[project.mode] || project.mode} · {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
-      </p>
+      {/* Card body */}
+      <div className="px-4 pt-3 pb-4 flex flex-col flex-1">
+        <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1">
+          {project.title}
+          {project.detected_intent === "evaluate" && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
+          )}
+        </h3>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
+        </p>
 
-      {/* Generated content preview */}
-      {preview && (
-        <p className="text-[12px] text-foreground/50 line-clamp-3 leading-relaxed mb-3 flex-1">{preview}</p>
-      )}
+        {preview && (
+          <p className="text-[12px] text-foreground/50 line-clamp-2 leading-relaxed flex-1">{preview}</p>
+        )}
 
-      {/* Stats row */}
-      <div className="mt-auto flex items-center gap-3 pt-2.5 border-t border-border/60">
-        {slideCount > 0 && (
-          <span className="text-[11px] text-muted-foreground">{slideCount} slides</span>
-        )}
-        {outputCount > 0 && (
-          <span className="text-[11px] text-muted-foreground">{outputCount} output{outputCount > 1 ? "s" : ""}</span>
-        )}
-        {scoreVal && (
-          <span className={`text-[11px] font-semibold ${scoreVal >= 70 ? "text-emerald" : scoreVal >= 40 ? "text-amber-500" : "text-muted-foreground"}`}>{scoreVal}/100</span>
-        )}
-        <span className="ml-auto flex items-center text-xs font-medium text-electric group-hover:text-foreground transition-colors">
-          Open <ArrowRight className="h-3 w-3 ml-1" />
-        </span>
+        <div className="mt-auto flex items-center justify-end pt-2">
+          <span className="flex items-center text-xs font-medium text-electric group-hover:text-foreground transition-colors">
+            Open <ArrowRight className="h-3 w-3 ml-1" />
+          </span>
+        </div>
       </div>
     </div>
   );
