@@ -20,6 +20,7 @@ function getTierColor(tier: string) {
 interface Props {
   score: any;
   mode: string;
+  purpose?: string;
   showRescore?: boolean;
   slides?: { categoryLabel: string; headline: string }[];
   onRescore?: () => void;
@@ -27,7 +28,7 @@ interface Props {
   hasPendingImprovements?: boolean;
 }
 
-export function ScoreTab({ score, mode, slides = [] }: Props) {
+export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
   const { computeNarrativeStrength, aiAssistOpportunity, generateGuideSummary, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection } = useDecksmith();
 
   const [activeCard, setActiveCard] = useState<string | null>(null);
@@ -382,7 +383,7 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
           {/* Ready message when narrative is strong (70%+ = ready or exceptional tier) */}
           {(strength.tier === "ready" || strength.tier === "exceptional") && (
             <p className="text-xs text-foreground/60 mb-3 leading-relaxed">
-              Your narrative is ready. Export your materials or start finding investors.
+              {purpose === "sales" ? "Your pitch is ready. Export your materials or refine your approach." : purpose === "board_meeting" ? "Your update is ready. Export your materials." : "Your narrative is ready. Export your materials or start finding investors."}
             </p>
           )}
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground/60 mb-2.5 px-0.5">Your materials</p>
@@ -417,10 +418,12 @@ export function ScoreTab({ score, mode, slides = [] }: Props) {
               className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium bg-electric text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
               Export materials
             </button>
-            <a href="/raise/investors"
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border/60 rounded-lg hover:bg-muted/10 hover:border-border transition-colors text-foreground/70">
-              Find investors
-            </a>
+            {(!purpose || purpose === "fundraising") && (
+              <a href="/raise/investors"
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border/60 rounded-lg hover:bg-muted/10 hover:border-border transition-colors text-foreground/70">
+                Find investors
+              </a>
+            )}
           </div>
         ) : (
           <p className="text-xs text-secondary-foreground text-center leading-relaxed">

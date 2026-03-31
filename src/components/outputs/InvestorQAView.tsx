@@ -7,9 +7,10 @@ interface Props {
   onRefineItem?: (index: number) => void;
   refiningIndex?: number | null;
   onEditItem?: (index: number, field: string, value: string) => void;
+  title?: string;
 }
 
-export function InvestorQAView({ items, onRefineItem, refiningIndex, onEditItem }: Props) {
+export function InvestorQAView({ items, onRefineItem, refiningIndex, onEditItem, title }: Props) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [savedIndex, setSavedIndex] = useState<number | null>(null);
@@ -17,7 +18,7 @@ export function InvestorQAView({ items, onRefineItem, refiningIndex, onEditItem 
   return (
     <div className="space-y-2">
       <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-electric mb-4">
-        Investor Questions & Suggested Answers
+        {title || "Investor Questions & Suggested Answers"}
       </p>
       {items.map((item, i) => {
         const expanded = expandedIndex === i;

@@ -64,6 +64,16 @@ function detectFromInput(input: string): IntakeSelections {
     /win(?:ning)? (?:the |a )?(?:client|account|contract|deal)/i,
     /business development/i,
     /(?:our|my) (?:agency|firm|consultancy|practice) /i,
+    /prospective clients/i,
+    /discovery call/i,
+    /book a (?:\d+-minute )?(?:call|meeting|demo)/i,
+    /engagement model/i,
+    /not (?:a |an )?(?:fundrais|investor|pitch deck)/i,
+    /for (?:prospective |potential )?(?:clients|customers|buyers|prospects)/i,
+    /(?:three|3|two|2) (?:engagement|service|pricing) (?:model|tier|option|plan)/i,
+    /done.for.you/i,
+    /client(?:s)? per month/i,
+    /measurable ROI/i,
   ];
 
   // Count signal matches per purpose
@@ -217,7 +227,8 @@ export function IntakeCard({ rawInput, onGenerate, onCancel, defaultPurpose }: P
         </div>
       </div>
 
-      {/* Row 3: Stage */}
+      {/* Row 3: Stage (not relevant for sales) */}
+      {selections.purpose !== "sales" && (
       <div>
         <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5">
           Stage
@@ -238,6 +249,7 @@ export function IntakeCard({ rawInput, onGenerate, onCancel, defaultPurpose }: P
           ))}
         </div>
       </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-1">

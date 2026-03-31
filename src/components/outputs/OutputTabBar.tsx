@@ -67,6 +67,15 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpos
     setShowAddOptions(false);
   };
 
+  // Purpose-aware label: use INTENT_OUTPUTS label when available, fall back to static map
+  const getLabel = (tab: OutputDeliverable): string => {
+    if (purpose) {
+      const match = INTENT_OUTPUTS[purpose]?.find(o => o.value === tab);
+      if (match) return match.label;
+    }
+    return OUTPUT_LABELS[tab] || tab;
+  };
+
   return (
     <div className="border-b border-border mb-6 overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
       <div className="flex items-center gap-0 min-w-max">
@@ -89,7 +98,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpos
                       : "text-secondary-foreground hover:text-foreground"
               }`}
             >
-              {OUTPUT_LABELS[tab] || tab}
+              {getLabel(tab)}
               {active && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-electric rounded-full" />
               )}
@@ -113,7 +122,7 @@ export function OutputTabBar({ tabs, activeTab, onTabChange, onAddOutput, purpos
                   : "text-muted-foreground/50 hover:text-muted-foreground border-b-transparent"
               }`}
             >
-              {OUTPUT_LABELS[output] || output}
+              {getLabel(output)}
             </button>
           );
         })}

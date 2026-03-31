@@ -86,7 +86,7 @@ function synthesizeInvestorQA(output: any, outputData: Record<string, any>): Inv
   return fallback.length > 0 ? fallback : null;
 }
 
-function synthesizePitchEmails(output: any, outputData: Record<string, any>): PitchEmailVariant[] | null {
+function synthesizePitchEmails(output: any, outputData: Record<string, any>, purpose?: string): PitchEmailVariant[] | null {
   const od = outputData?.pitch_email;
   console.log("[Render] pitch_email structure:", Object.keys(od || {}));
 
@@ -106,6 +106,15 @@ function synthesizePitchEmails(output: any, outputData: Record<string, any>): Pi
   const title = output?.title || "our company";
   if (!thesis) return null;
   const shortThesis = thesis.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+
+  if (purpose === "sales") {
+    return [
+      { label: "Cold Outreach", subject: `${title}: solving {pain_point} for {company_type}`, body: `Hi {prospect_name},\n\n${shortThesis}\n\nWe work with companies like yours on [specific use case]. Would a 30-minute discovery call make sense this week?\n\nBest,\n[Your name]` },
+      { label: "Post-Meeting Follow-Up", subject: `Re: ${title}: next steps`, body: `Hi {prospect_name},\n\nGreat speaking with you about {topic}. As discussed, here's a summary of what we'd recommend as a starting point.\n\n[Key takeaways from the call]\n\nHappy to put together a formal proposal. Would [date] work for a follow-up?\n\nBest,\n[Your name]` },
+      { label: "Proposal Follow-Up", subject: `Re: ${title} proposal`, body: `Hi {prospect_name},\n\nFollowing up on the proposal I sent over. Happy to answer any questions or adjust scope based on your priorities.\n\nWould it help to schedule a quick call this week?\n\nBest,\n[Your name]` },
+    ];
+  }
+
   return [
     { label: "Direct Ask", subject: `{firm_name} + ${title}: Quick intro`, body: `Hi {investor_name},\n\nI'm building ${title}. ${shortThesis}\n\nWe're raising and I'd love 20 minutes to walk you through our traction. Would next week work?\n\nBest,\n[Your name]` },
     { label: "Warm Intro Request", subject: `Intro request: ${title}`, body: `Hi {mutual_connection},\n\nI'd love an intro to {investor_name} at {firm_name}. ${shortThesis}\n\nHappy to send a one-pager if helpful. Thanks!\n\n[Your name]` },
@@ -249,7 +258,7 @@ function AllOutputsReadyCard({ selectedOutputs, completedOutputs, isGenerating, 
         className="w-full flex items-center justify-between px-4 py-3 rounded-sm border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 hover:border-emerald/30 transition-colors group"
       >
         <p className="text-xs text-foreground/80">
-          <span className="font-medium text-emerald">Your narrative is ready.</span>{" "}
+          <span className="font-medium text-emerald">{purpose === "sales" ? "Your pitch is ready." : "Your narrative is ready."}</span>{" "}
           See how it scores against professional expectations
         </p>
         <ArrowRight className="h-3.5 w-3.5 text-emerald group-hover:translate-x-0.5 transition-transform" />
@@ -559,7 +568,7 @@ export function OutputView() {
     if (intakeSelections) {
       setIntakeSelections({ ...intakeSelections, outputs: updated });
     } else {
-      setIntakeSelections({ purpose: "fundraising", outputs: updated, stage: "seed" });
+      setIntakeSelections({ purpose: (output?.mode as any) || "fundraising", outputs: updated, stage: "seed" });
     }
     setActiveOutputTab(newOutputs[0]);
     toast.success(`Added ${newOutputs.map(o => o.replace(/_/g, " ")).join(", ")}`);
@@ -620,11 +629,12 @@ export function OutputView() {
         if (isGeneratingOutputs && !completedOutputs.has("investor_qa")) return <QAShimmer />;
         const qaItems = synthesizeInvestorQA(output, outputData);
         if (!qaItems) return <p className="text-sm text-muted-foreground text-center py-12">No Q&A data available.</p>;
-        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} onEditItem={handleEditQAItem} />;
+        const qaTitle = intakeSelections?.purpose === "sales" ? "Objections & Suggested Responses" : undefined;
+        return <InvestorQAView items={qaItems} onRefineItem={handleRefineQAItem} refiningIndex={refiningQAIndex} onEditItem={handleEditQAItem} title={qaTitle} />;
       }
       case "pitch_email": {
         if (isGeneratingOutputs && !completedOutputs.has("pitch_email")) return <EmailShimmer />;
-        const emails = synthesizePitchEmails(output, outputData);
+        const emails = synthesizePitchEmails(output, outputData, intakeSelections?.purpose);
         if (!emails) return <p className="text-sm text-muted-foreground text-center py-12">No email data available.</p>;
         return <PitchEmailView variants={emails} onEditVariant={handleEditEmailVariant} />;
       }
@@ -690,7 +700,7 @@ export function OutputView() {
             )}
 
             {activeTab === "score" && isLoading && <ScoreShimmer />}
-            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />}
+            {activeTab === "score" && !isLoading && score && <ScoreTab score={score} mode={output!.mode} purpose={intakeSelections?.purpose} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />}
             {activeTab === "score" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No score data available.</p>
             )}
@@ -700,7 +710,7 @@ export function OutputView() {
               <AnalysisTab analysis={analysis} score={score} mode={output!.mode} />
             )}
             {activeTab === "analysis" && !isLoading && (!analysis || !score) && score && (
-              <ScoreTab score={score} mode={output!.mode} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />
+              <ScoreTab score={score} mode={output!.mode} purpose={intakeSelections?.purpose} onRescore={handleRescore} isRescoring={isRescoring} hasPendingImprovements={(appliedSuggestions?.size ?? 0) > 0} slides={(outputData?.slide_framework?.deckFramework || outputData?.slide_framework?.deliverable?.deckFramework || []).map((s: any) => ({ categoryLabel: s.categoryLabel || "", headline: s.headline || "" }))} />
             )}
             {activeTab === "analysis" && !isLoading && !score && (
               <p className="text-sm text-muted-foreground text-center py-12">No analysis data available.</p>
@@ -744,6 +754,13 @@ export function buildTabs(output: any): { key: string; label: string; sections: 
       { key: "summary", label: "Executive Summary", sections: [{ key: "exec-summary", path: "executiveSummary", label: "Executive Summary", content: d.executiveSummary || "" }] },
       { key: "metrics", label: "Metrics Narrative", sections: [{ key: "metrics-narr", path: "metricsNarrative", label: "Metrics Narrative", content: d.metricsNarrative || "" }] },
       { key: "deck", label: "Board Deck Outline", sections: [] },
+    ];
+  }
+  if (mode === "sales") {
+    return [
+      { key: "thesis", label: "Positioning", sections: [{ key: "thesis-content", path: "thesis.content", label: "Value Proposition", content: d.thesis?.content || "" }, { key: "thesis-insight", path: "thesis.coreInsight", label: "Core Differentiator", content: d.thesis?.coreInsight || "" }, { key: "market-logic", path: "marketLogic", label: "Market Logic", content: Array.isArray(d.marketLogic) ? d.marketLogic.join("\n") : (d.marketLogic || "") }, { key: "risks", path: "risks", label: "Common Objections", content: d.risks || "" }] },
+      { key: "narrative", label: "Sales Narrative", sections: [{ key: "world-today", path: "narrativeStructure.worldToday", label: "Client Pain", content: d.narrativeStructure?.worldToday || "" }, { key: "new-model", path: "narrativeStructure.newModel", label: "Your Solution", content: d.narrativeStructure?.newModel || "" }, { key: "why-wins", path: "narrativeStructure.whyThisWins", label: "Why You Win", content: d.narrativeStructure?.whyThisWins || "" }] },
+      { key: "deck", label: "Sales Deck", sections: [] },
     ];
   }
   return [];
