@@ -38,10 +38,10 @@ export function ProductView() {
 
   // Rotating greetings by time of day
   const hour = new Date().getHours();
-  const mornings = ["Good morning.", "Morning. Let's build.", "Fresh day, fresh narrative."];
+  const mornings = ["Good morning.", "Morning. Time to build.", "Fresh day, fresh narrative."];
   const afternoons = ["Good afternoon.", "Afternoon. Ready to build?", "Let's pick up where you left off."];
-  const evenings = ["Good evening.", "Evening. Let's sharpen something.", "Burning the midnight oil?"];
-  const pool = hour < 12 ? mornings : hour < 17 ? afternoons : evenings;
+  const evenings = ["Good evening.", "Evening. Let's sharpen something.", "Winding down or warming up?"];
+  const pool = hour < 12 ? mornings : hour < 18 ? afternoons : evenings;
   const greeting = pool[Math.floor(Date.now() / 86400000) % pool.length];
 
   useEffect(() => { loadProjects(); loadDraftsUsed(); }, [loadProjects]);
@@ -105,7 +105,7 @@ export function ProductView() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col items-center px-6 pt-16">
         <div className="max-w-[720px] w-full animate-fade-in">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-[1.1] tracking-tight text-center mb-10">{greeting}</h1>
+          <h1 className="text-3xl sm:text-[40px] font-medium text-foreground leading-[1.1] tracking-tight text-center mb-10" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>{greeting}</h1>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
@@ -170,14 +170,20 @@ export function ProductView() {
               const latestOd = (latest as any).output_data || {};
               const latestBrand = latestOd?.brand_colors?.dark?.primary || latestOd?.brand_colors?.primary || null;
               const latestPill = MODE_HEADER_COLORS[latest.mode]?.pill || "text-blue-600 bg-blue-50";
+              const latestPitch = latestOd?.elevator_pitch?.elevatorPitch?.thirtySecond || "";
+              const latestHeadline = (latestOd?.slide_framework?.deckFramework || latestOd?.slide_framework?.deliverable?.deckFramework || [])?.[0]?.headline || "";
+              const latestPreview = latestPitch || latestHeadline || (latest.raw_input || "").replace(/^Evaluate this document:\s*/i, "").slice(0, 150).trim();
               return (
                 <div onClick={() => openProject(latest)}
                   className="bg-card border border-border rounded-lg p-5 mb-6 flex items-center justify-between group hover:border-muted-foreground/30 hover:shadow-sm transition-all cursor-pointer relative overflow-hidden">
                   <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-lg ${!latestBrand ? (latest.mode === "sales" ? "bg-orange-400" : latest.mode === "strategy" ? "bg-indigo-400" : latest.mode?.includes("board") ? "bg-amber-400" : "bg-electric/70") : ""}`}
                     style={latestBrand ? { backgroundColor: latestBrand } : undefined} />
-                  <div className="flex-1 mt-0.5">
+                  <div className="flex-1 mt-0.5 max-w-[75%]">
                     <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-1.5">Continue where you left off</p>
-                    <p className="text-[15px] font-semibold text-foreground mb-1.5">{latest.title}</p>
+                    <p className="text-[15px] font-semibold text-foreground mb-1">{latest.title}</p>
+                    {latestPreview && (
+                      <p className="text-[12px] text-foreground/50 line-clamp-1 leading-relaxed mb-2">{latestPreview}</p>
+                    )}
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${latestPill}`}>
                         {MODE_LABELS[latest.mode] || latest.mode}
@@ -203,11 +209,11 @@ export function ProductView() {
                   {/* Empty state placeholders to fill remaining grid slots */}
                   {projects.length < 4 && Array.from({ length: Math.max(0, 4 - projects.length) }).map((_, i) => (
                     <div key={`empty-${i}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                      className="border border-dashed border-border/60 rounded-lg p-5 flex flex-col items-center justify-center min-h-[190px] cursor-pointer hover:border-muted-foreground/30 transition-colors group">
-                      <div className="w-9 h-9 rounded-full border border-dashed border-border/60 group-hover:border-muted-foreground/30 flex items-center justify-center mb-2 transition-colors">
-                        <span className="text-muted-foreground/40 text-lg leading-none">+</span>
+                      className="border-2 border-dashed border-border rounded-lg p-5 flex flex-col items-center justify-center min-h-[190px] cursor-pointer hover:border-muted-foreground/40 transition-colors group">
+                      <div className="w-10 h-10 rounded-full border-2 border-dashed border-border group-hover:border-muted-foreground/40 flex items-center justify-center mb-2.5 transition-colors">
+                        <span className="text-muted-foreground/50 text-xl leading-none">+</span>
                       </div>
-                      <p className="text-xs text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">New project</p>
+                      <p className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">New project</p>
                     </div>
                   ))}
                 </div>
@@ -277,8 +283,8 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
         style={brandPrimary ? { backgroundColor: brandPrimary } : undefined}
       />
 
-      <div className="flex items-start justify-between mb-1 mt-0.5">
-        <h3 className="text-sm font-semibold text-foreground line-clamp-2 min-h-[40px] flex-1 min-w-0">
+      <div className="flex items-start justify-between mb-2 mt-0.5">
+        <h3 className="text-sm font-semibold text-foreground line-clamp-2 flex-1 min-w-0">
           {project.title}
           {project.detected_intent === "evaluate" && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-electric/10 text-electric border border-electric/20 shrink-0 ml-1.5">Eval</span>
@@ -294,18 +300,17 @@ function RecentProjectTile({ project, onOpen, onDelete }: { project: Project; on
         </div>
       </div>
 
-      <p className="text-[11px] text-muted-foreground mb-2.5">
-        {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
-      </p>
-
       {preview && (
-        <p className="text-[12px] text-foreground/50 line-clamp-2 leading-relaxed flex-1">{preview}</p>
+        <p className="text-[12px] text-foreground/50 leading-relaxed flex-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{preview}</p>
       )}
 
       <div className="mt-auto flex items-center justify-between pt-3">
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${pillColors}`}>
-          {MODE_LABELS[project.mode] || project.mode}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${pillColors}`}>
+            {MODE_LABELS[project.mode] || project.mode}
+          </span>
+          <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}</span>
+        </div>
         <span className="flex items-center text-xs font-medium text-electric group-hover:text-foreground transition-colors">
           Open <ArrowRight className="h-3 w-3 ml-1" />
         </span>
