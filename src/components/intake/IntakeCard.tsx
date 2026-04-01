@@ -227,8 +227,8 @@ export function IntakeCard({ rawInput, onGenerate, onCancel, defaultPurpose }: P
         </div>
       </div>
 
-      {/* Row 3: Stage (not relevant for sales) */}
-      {selections.purpose !== "sales" && (
+      {/* Row 3: Stage (fundraising only) */}
+      {selections.purpose === "fundraising" && (
       <div>
         <p className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground mb-2.5">
           Stage

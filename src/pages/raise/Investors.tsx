@@ -202,8 +202,8 @@ export default function Investors() {
       const stored = localStorage.getItem(`dismissed_investors_${session.user.id}`);
       if (stored) { try { setDismissedIds(new Set(JSON.parse(stored))); } catch {} }
       const { data: projectsData } = await supabase
-        .from("projects").select("id, title, raw_input, output_data")
-        .eq("user_id", session.user.id).order("updated_at", { ascending: false });
+        .from("projects").select("id, title, raw_input, output_data, mode")
+        .eq("user_id", session.user.id).eq("mode", "fundraising").order("updated_at", { ascending: false });
       if (projectsData && projectsData.length > 0) {
         setProjects(projectsData);
         setSelectedProjectId(projectsData[0].id);
@@ -379,7 +379,7 @@ export default function Investors() {
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Match investors to narrative</label>
           <Select value={selectedProjectId || undefined} onValueChange={handleProjectChange}>
             <SelectTrigger className="w-full max-w-xs h-9 text-sm"><SelectValue placeholder="Select a narrative..." /></SelectTrigger>
-            <SelectContent>{projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.title || "Untitled narrative"}</SelectItem>))}</SelectContent>
+            <SelectContent>{projects.map(p => (<SelectItem key={p.id} value={p.id}>{(p.title || "Untitled narrative").trim()}</SelectItem>))}</SelectContent>
           </Select>
         </div>
       )}
