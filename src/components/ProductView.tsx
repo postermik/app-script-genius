@@ -70,9 +70,9 @@ export function ProductView() {
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
   const hour = new Date().getHours();
-  const mornings = ["Good morning.", "Morning. Time to build.", "Fresh day, fresh narrative."];
-  const afternoons = ["Good afternoon.", "Afternoon. Ready to build?", "Let's pick up where you left off."];
-  const evenings = ["Good evening.", "Evening. Let's sharpen something.", "Winding down or warming up?"];
+  const mornings = ["What are you building today?", "Fresh morning, fresh narrative.", "Ready when you are."];
+  const afternoons = ["Let's pick up where you left off.", "What are you working on?", "Ready to sharpen something?"];
+  const evenings = ["Still time to build something great.", "Let's get something done tonight.", "Winding down or warming up?"];
   const pool = hour < 12 ? mornings : hour < 18 ? afternoons : evenings;
   const greeting = pool[Math.floor(Date.now() / 86400000) % pool.length];
 

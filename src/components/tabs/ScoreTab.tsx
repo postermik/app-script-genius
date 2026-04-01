@@ -7,14 +7,17 @@ import type { NarrativeOpportunity } from "@/context/DecksmithContext";
 // Strip markdown formatting from AI research results
 function cleanMarkdown(text: string): string {
   return text
-    .replace(/^#{1,4}\s+/gm, "")         // strip headings
-    .replace(/\*\*([^*]+)\*\*/g, "$1")    // strip bold
-    .replace(/\*([^*]+)\*/g, "$1")        // strip italic
-    .replace(/^-\s+/gm, "\u2022 ")       // convert - to bullet
-    .replace(/^\d+\.\s+/gm, (m) => m)    // keep numbered lists
-    .replace(/\n{3,}/g, "\n\n")           // collapse extra newlines
-    .replace(/^\u2022\s*$/gm, "")         // remove empty bullets
-    .replace(/\n{3,}/g, "\n\n")           // collapse again
+    .replace(/^#{1,4}\s+/gm, "")           // strip heading markers
+    .replace(/\*\*([^*]+)\*\*/g, "$1")      // strip bold markers
+    .replace(/\*([^*]+)\*/g, "$1")          // strip italic markers
+    .replace(/^[-*]\s*$/gm, "")             // remove lines that are just a dash/star/bullet
+    .replace(/^\.\s*$/gm, "")              // remove lines that are just a period
+    .replace(/^[-*]\s+/gm, "")             // strip bullet markers, keep text
+    .replace(/^\u2022\s*/gm, "")           // strip unicode bullets
+    .replace(/^>\s*/gm, "")               // strip blockquotes
+    .replace(/`([^`]+)`/g, "$1")           // strip inline code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // strip links, keep text
+    .replace(/\n{2,}/g, "\n\n")            // collapse multiple blank lines
     .trim();
 }
 
