@@ -66,6 +66,7 @@ export function ProductView() {
   const [draftsUsed, setDraftsUsed] = useState<number | null>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [heroCopied, setHeroCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
@@ -206,9 +207,21 @@ export function ProductView() {
                       <span className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(latest.updated_at), { addSuffix: true })}</span>
                     </div>
                   </div>
-                  <span className="flex items-center text-sm font-medium text-electric group-hover:text-foreground transition-colors ml-4 shrink-0">
-                    Continue <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                  </span>
+                  <div className="flex items-center gap-3 ml-4 shrink-0">
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(latest.raw_input || ""); setHeroCopied(true); toast.success("Prompt copied"); setTimeout(() => setHeroCopied(false), 2000); }}
+                        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Copy prompt">
+                        {heroCopied ? <Check className="h-3.5 w-3.5 text-emerald" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                      <button onClick={(e) => handleDelete(latest.id, e)}
+                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <span className="flex items-center text-sm font-medium text-electric group-hover:text-foreground transition-colors">
+                      Continue <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                    </span>
+                  </div>
                 </div>
               );
             })()}
