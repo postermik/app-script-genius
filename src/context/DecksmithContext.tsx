@@ -212,6 +212,8 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
   coreNarrativeRef.current = coreNarrative;
   const intakeSelectionsRef = useRef(intakeSelections);
   intakeSelectionsRef.current = intakeSelections;
+  const currentProjectIdRef = useRef(currentProjectId);
+  currentProjectIdRef.current = currentProjectId;
   const setIntakeSelectionsWithRef = useCallback((s: IntakeSelections | null) => {
     intakeSelectionsRef.current = s;
     setIntakeSelections(s);
@@ -381,13 +383,19 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
     setLoadingPhase("idle");
   }, []);
 
-  // Deep-replace em dashes in all string values of any parsed object
-  const sanitizeEmDash = (val) => {
+  // Sanitize all output data: fix em/en dashes, fix categoryLabel underscores
+  const sanitizeOutput = (val: any): any => {
     if (typeof val === 'string') return val.replace(/—/g, ',').replace(/–/g, ',').replace(/—/g, ',').replace(/–/g, ',');
-    if (Array.isArray(val)) return val.map(sanitizeEmDash);
+    if (Array.isArray(val)) return val.map(sanitizeOutput);
     if (val && typeof val === 'object') {
-      const out = {};
-      for (const [k, v] of Object.entries(val)) out[k] = sanitizeEmDash(v);
+      const out: any = {};
+      for (const [k, v] of Object.entries(val)) {
+        if (k === 'categoryLabel' && typeof v === 'string') {
+          out[k] = v.replace(/_/g, ' ').toUpperCase();
+        } else {
+          out[k] = sanitizeOutput(v);
+        }
+      }
       return out;
     }
     return val;
@@ -956,7 +964,7 @@ Return JSON: { "deckFramework": [...] }`,
       const { coreNarrative: cn, fullOutput } = await generateCoreNarrative(rawInput, purpose, abortController.signal);
       unsubscribeStreamWatch();
       
-      setCoreNarrative(sanitizeEmDash(cn));
+      setCoreNarrative(sanitizeOutput(cn));
       setStreamingText(""); // Clear now that coreNarrative is set — eliminates shimmer gap
       setOutput(fullOutput);
       setDetectedMode(fullOutput.mode);
@@ -1032,7 +1040,7 @@ Return JSON: { "deckFramework": [...] }`,
         const model = FAST_OUTPUTS.includes(outputType) ? HAIKU_MODEL : SONNET_MODEL;
         try {
           const result = await generateSingleOutput(outputType, rawInput, coreNarrativeText, purpose, abortController.signal, model);
-          setOutputData(prev => ({ ...prev, [outputType]: sanitizeEmDash(result) }));
+          setOutputData(prev => ({ ...prev, [outputType]: sanitizeOutput(result) }));
           setCompletedOutputs(prev => { const next = new Set(prev); next.add(outputType); return next; });
           window.dispatchEvent(new CustomEvent('output-complete', { detail: { type: outputType } }));
 
@@ -1220,7 +1228,7 @@ Return JSON: { "deckFramework": [...] }`,
       throw new Error("Invalid slide response from AI");
     }
 
-    return sanitizeEmDash(refinedSlide);
+    return sanitizeOutput(refinedSlide);
   }, [output, rawInput]);
 
   // ── Shared helper: update slide framework in state + persist to Supabase ──
@@ -2282,7 +2290,7 @@ No markdown fences. No commentary outside the JSON.`;
     // Guard: if reopening the current project while outputs exist in memory, skip.
     // The in-memory state is more recent than the projects array which may be stale.
     const currentOutputKeys = Object.keys(outputDataRef.current).filter(k => !k.endsWith('_error') && !k.endsWith('_rawResponse'));
-    if (project.id === currentProjectId && currentOutputKeys.length > 0) {
+    if (project.id === currentProjectIdRef.current && currentOutputKeys.length > 0) {
       console.log("[Persistence] Skipping openProject for current project (in-memory outputs exist):", currentOutputKeys);
       return;
     }
