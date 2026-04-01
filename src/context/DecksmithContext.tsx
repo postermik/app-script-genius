@@ -1363,7 +1363,7 @@ Return JSON: { "deckFramework": [...] }`,
         if (currentProjectId) {
           supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
             const existing = (proj?.output_data as any) || {};
-            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId).then();
           });
         }
       } else if (path.startsWith("coreNarrative.sections.") && cn?.sections?.length) {
@@ -1376,7 +1376,7 @@ Return JSON: { "deckFramework": [...] }`,
         if (currentProjectId) {
           supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
             const existing = (proj?.output_data as any) || {};
-            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId).then();
           });
         }
       } else {
@@ -1518,7 +1518,7 @@ Return JSON: { "deckFramework": [...] }`,
         if (currentProjectId) {
           supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data: proj }) => {
             const existing = (proj?.output_data as any) || {};
-            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+            supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId).then();
           });
         }
       }
@@ -1920,13 +1920,18 @@ Return JSON: { "deckFramework": [...] }`,
     let tier: NarrativeStrength["tier"];
     let tierLabel: string;
     let tierDescription: string;
-    if (percentage >= 90) {
-      tier = "exceptional"; tierLabel = "Exceptional";
+    if (percentage >= 98) {
+      tier = "exceptional";
+      tierLabel = isBoard ? "Fully Prepared" : isStrategy ? "Ready to Execute" : isSalesPurpose ? "Ready to Close" : "Pitch Perfect";
       tierDescription = isBoard ? "Your update is thorough and actionable." : isStrategy ? "This memo is ready for the room." : isSalesPurpose ? "Your pitch is ready to close." : "Your narrative is ready for any room.";
+    } else if (percentage >= 90) {
+      tier = "exceptional";
+      tierLabel = isBoard ? "Board Ready" : isStrategy ? "Strategy Ready" : isSalesPurpose ? "Client Ready" : "Investor Ready";
+      tierDescription = isBoard ? "Strong update. One or two additions and it's done." : isStrategy ? "Clear strategy. Tighten the last few areas." : isSalesPurpose ? "Strong pitch. One more detail to close harder." : "Almost there. A couple additions would make it stand out.";
     } else if (percentage >= 70) {
       tier = "ready";
-      tierLabel = isBoard ? "Board Ready" : isStrategy ? "Ready to Share" : isSalesPurpose ? "Client Ready" : "Investor Ready";
-      tierDescription = isBoard ? "Strong update. A few additions would make it complete." : isStrategy ? "Clear strategy. Tighten a few areas before sharing." : isSalesPurpose ? "Strong pitch. Add proof points to close harder." : "Strong foundation. A few additions would make it stand out.";
+      tierLabel = "Strong Foundation";
+      tierDescription = isBoard ? "Solid update. Keep building on what you have." : isStrategy ? "Good strategy taking shape. Add more detail." : isSalesPurpose ? "Strong pitch taking form. Add proof and pricing." : "Strong foundation. A few additions would elevate it.";
     } else if (percentage >= 40) {
       tier = "sharpening"; tierLabel = "Getting Sharp";
       tierDescription = isBoard ? "Your update is taking shape. Keep building." : isStrategy ? "The strategy is forming. Add more detail." : isSalesPurpose ? "Your pitch is taking shape. Add proof points and pricing." : "Your story is taking shape. Keep building.";
@@ -1962,7 +1967,7 @@ Return JSON: { "deckFramework": [...] }`,
         try {
           const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
           const existing = (proj?.output_data as any) || {};
-          await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+          await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId).then();
           console.log("[Persistence] Narrative section updated:", sectionHeading);
         } catch (e) {
           console.warn("[Persistence] Failed to save narrative section:", e);
