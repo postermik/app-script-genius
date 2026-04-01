@@ -221,8 +221,10 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
   // Track when narrative content changes so Guide tab only re-summarizes on actual edits
   const narrativeMountedRef = useRef(false);
+  const restoringProjectRef = useRef(false);
   useEffect(() => {
     if (!narrativeMountedRef.current) { narrativeMountedRef.current = true; return; }
+    if (restoringProjectRef.current) { restoringProjectRef.current = false; return; }
     if (coreNarrative) narrativeDirtyRef.current = true;
   }, [coreNarrative]);
 
@@ -2326,7 +2328,8 @@ No markdown fences. No commentary outside the JSON.`;
     // All persisted data now lives in output_data (fresh from DB)
     const persisted = freshOutputData || {};
 
-    // Restore core narrative
+    // Restore core narrative (suppress dirty flag so guide summary doesn't regenerate)
+    restoringProjectRef.current = true;
     if (persisted.core_narrative?.sections?.length) {
       console.log("[Persistence] Restoring core narrative from database");
       setCoreNarrative(persisted.core_narrative);
