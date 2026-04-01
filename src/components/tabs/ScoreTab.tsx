@@ -4,21 +4,37 @@ import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
 
-// Strip markdown formatting from AI research results
-function cleanMarkdown(text: string): string {
-  return text
-    .replace(/^#{1,4}\s+/gm, "")           // strip heading markers
-    .replace(/\*\*([^*]+)\*\*/g, "$1")      // strip bold markers
-    .replace(/\*([^*]+)\*/g, "$1")          // strip italic markers
-    .replace(/^[-*]\s*$/gm, "")             // remove lines that are just a dash/star/bullet
-    .replace(/^\.\s*$/gm, "")              // remove lines that are just a period
-    .replace(/^[-*]\s+/gm, "")             // strip bullet markers, keep text
-    .replace(/^\u2022\s*/gm, "")           // strip unicode bullets
-    .replace(/^>\s*/gm, "")               // strip blockquotes
-    .replace(/`([^`]+)`/g, "$1")           // strip inline code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // strip links, keep text
-    .replace(/\n{2,}/g, "\n\n")            // collapse multiple blank lines
-    .trim();
+// Clean AI research results: strip markdown and merge fragmented lines
+function cleanResearchResult(text: string): string {
+  // Strip markdown formatting
+  let cleaned = text
+    .replace(/^#{1,4}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/^[-*]\s*$/gm, "")
+    .replace(/^\.\s*$/gm, "")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/^\u2022\s*/gm, "")
+    .replace(/^>\s*/gm, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+  // Split into lines and merge short orphan fragments
+  const lines = cleaned.split("\n").map(l => l.trim());
+  const merged: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) { merged.push(""); continue; }
+    if (/^[.\-*•\s]+$/.test(line)) continue;
+    // Short line without sentence-ending punctuation: merge forward
+    if (line.length < 80 && !/[.!?:"]$/.test(line) && i + 1 < lines.length && lines[i + 1]?.trim()) {
+      lines[i + 1] = line + " " + lines[i + 1].trim();
+      continue;
+    }
+    merged.push(line);
+  }
+
+  return merged.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function getBarColor(pct: number) {
@@ -330,7 +346,7 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
                             </div>
                             <div className="max-h-[280px] overflow-y-auto">
-                              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{cleanMarkdown(aiResults[op.id])}</p>
+                              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{cleanResearchResult(aiResults[op.id])}</p>
                             </div>
                             <div className="flex items-center justify-end gap-2 pt-1">
                               <button onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}

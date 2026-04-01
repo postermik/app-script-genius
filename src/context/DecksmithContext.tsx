@@ -1618,28 +1618,28 @@ Return JSON: { "deckFramework": [...] }`,
           const knownTools = /slidebean|canva|pitch\.com|gamma|tome|jasper|docsend|visible|chatgpt|beautiful\.ai|footnote|method/i;
           return !!(hasCompetitorInHeading || hasCompetitorInContent || knownTools.test(allText));
         })(),
-        aiAssistAvailable: true, sectionHeading: "Market", category: "Differentiation", points: 10, layer: L1,
+        aiAssistAvailable: true, sectionHeading: "Market", category: "Market", points: 10, layer: L1,
       });
       opportunities.push({
         id: "ask_amount", label: "State your raise",
         description: "Be direct about what you need. Vague asks signal uncertainty.",
         prompt: "How much are you raising? (e.g. $500K, $2M)",
         completed: /\$[\d.]+ ?(K|M|k|m|thousand|million)/i.test(allText + " " + rawInput),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 10, layer: L1,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Vision", points: 10, layer: L1,
       });
       opportunities.push({
         id: "use_of_funds", label: "Explain use of funds",
         description: "Investors want to know their money has a plan, not just a destination.",
         prompt: "What will you use the funds for? (e.g. hiring, product, marketing)",
         completed: /use of funds|allocated|will fund|will be used|spend on|invest in|hiring|runway|engineering|marketing|product development/i.test(allText),
-        aiAssistAvailable: false, sectionHeading: "Vision", category: "Ask", points: 8, layer: L1,
+        aiAssistAvailable: false, sectionHeading: "Vision", category: "Vision", points: 8, layer: L1,
       });
       opportunities.push({
         id: "why_now", label: "Explain why now",
         description: "Timing is one of the top reasons investors pass or lean in.",
         prompt: "What recent change makes this the right time? (new regulation, technology shift, market event)",
         completed: sectionText("Why Now").length > 80,
-        aiAssistAvailable: true, sectionHeading: "Why Now", category: "Timing", points: 10, layer: L1,
+        aiAssistAvailable: true, sectionHeading: "Why Now", category: "Why Now", points: 10, layer: L1,
       });
       // Materials (layer 1)
       opportunities.push({
@@ -1714,46 +1714,60 @@ Return JSON: { "deckFramework": [...] }`,
       }
     } else if (purpose === "board_meeting" || purpose === "board_update") {
       opportunities.push({
+        id: "risks_flagged", label: "Flag key risks",
+        description: "Boards respect transparency. Surface what keeps you up at night and how you're addressing it.",
+        prompt: "What are the top 2-3 risks or challenges right now?",
+        completed: /risk|challenge|concern|threat|headwind|obstacle/i.test(allText),
+        aiAssistAvailable: true, sectionHeading: "Challenges", category: "Challenges", points: 15, layer: 1,
+      });
+      opportunities.push({
         id: "quarterly_metrics", label: "Include key metrics",
         description: "Board members expect to see the numbers that matter most, with context on what changed.",
         prompt: "What are your top 3-5 metrics this period? (revenue, growth, burn, runway, etc.)",
         completed: /revenue|ARR|MRR|burn|runway|growth|churn|NRR|users|customers/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Traction", category: "Metrics", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Progress & Metrics", category: "Progress & Metrics", points: 15, layer: 1,
       });
       opportunities.push({
         id: "progress_vs_plan", label: "Report progress against plan",
         description: "What did you say you'd do last time? How did it go?",
         prompt: "What were your milestones from last period and how did you perform against them?",
         completed: /delivered|shipped|launched|completed|achieved|missed|behind|ahead|on track/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Traction", category: "Progress", points: 12, layer: 1,
-      });
-      opportunities.push({
-        id: "risks_flagged", label: "Flag key risks",
-        description: "Boards respect transparency. Surface what keeps you up at night and how you're addressing it.",
-        prompt: "What are the top 2-3 risks or challenges right now?",
-        completed: /risk|challenge|concern|threat|headwind|obstacle/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Problem", category: "Risks", points: 15, layer: 1,
-      });
-      opportunities.push({
-        id: "board_asks", label: "State your asks",
-        description: "Every board meeting should end with specific, actionable asks. Not FYIs.",
-        prompt: "What do you need from the board? (introductions, approval, guidance, decisions)",
-        completed: /ask|request|need from|approval|decision|guidance|introduction/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Vision", category: "Asks", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Progress & Metrics", category: "Progress & Metrics", points: 12, layer: 1,
       });
       opportunities.push({
         id: "cash_runway", label: "Report cash and runway",
         description: "How much do you have and how long does it last? Every board wants to know.",
         prompt: "What's your current cash position and runway in months?",
         completed: /cash|runway|months.*remaining|bank|balance.*\$|burn.*rate/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Market", category: "Cash", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Progress & Metrics", category: "Progress & Metrics", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "strategic_updates", label: "Share strategic decisions",
+        description: "What big decisions were made this period? Any pivots, new initiatives, or direction changes?",
+        prompt: "What strategic decisions or changes in direction happened this period?",
+        completed: /strategic|pivot|decision|initiative|launched|shifted|new direction|changed approach|partnership|acquisition/i.test(allText),
+        aiAssistAvailable: true, sectionHeading: "Strategic Updates", category: "Strategic Updates", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "market_position", label: "Report on market position",
+        description: "How has your competitive landscape changed? New entrants, partner updates, market shifts?",
+        prompt: "What changed in your market or competitive landscape this period?",
+        completed: /competitor|market share|landscape|position|entrant|partner|industry.*change|market.*shift/i.test(allText),
+        aiAssistAvailable: true, sectionHeading: "Market Position", category: "Market Position", points: 10, layer: 1,
+      });
+      opportunities.push({
+        id: "board_asks", label: "State your asks",
+        description: "Every board meeting should end with specific, actionable asks. Not FYIs.",
+        prompt: "What do you need from the board? (introductions, approval, guidance, decisions)",
+        completed: /ask|request|need from|approval|decision|guidance|introduction/i.test(allText),
+        aiAssistAvailable: true, sectionHeading: "Key Asks", category: "Key Asks", points: 15, layer: 1,
       });
       opportunities.push({
         id: "next_milestones", label: "Define next period priorities",
         description: "What will you accomplish before the next update? Be specific.",
         prompt: "What are your key priorities and milestones for the next period?",
         completed: /milestone|next quarter|next month|goal|target|plan to|aim to|objective|priority|priorities/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Vision", category: "Plan", points: 10, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Next Quarter Priorities", category: "Next Quarter Priorities", points: 10, layer: 1,
       });
     } else if (purpose === "strategy") {
       opportunities.push({
@@ -1761,42 +1775,49 @@ Return JSON: { "deckFramework": [...] }`,
         description: "What changed that requires a strategic response? The reader needs to feel the urgency.",
         prompt: "What market shift, competitive move, or internal change prompted this strategy?",
         completed: sectionText("Problem").length > 80,
-        aiAssistAvailable: true, sectionHeading: "Problem", category: "Context", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Problem", category: "Problem", points: 15, layer: 1,
       });
       opportunities.push({
         id: "strategic_options", label: "Present options considered",
         description: "Strong strategy documents show the alternatives, not just the chosen path.",
         prompt: "What are the 2-3 strategic options you're weighing?",
         completed: /option|alternative|approach|path|scenario|strategy.*or|considered|evaluated/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Solution", category: "Options", points: 15, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Current State", category: "Current State", points: 15, layer: 1,
       });
       opportunities.push({
         id: "recommendation", label: "State your recommendation",
         description: "Be clear about what you're recommending and why.",
         prompt: "Which option do you recommend and what's the core reason?",
         completed: /recommend|propose|suggest|our approach|chosen|decision|going with/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Solution", category: "Recommendation", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Strategic Insight", category: "Strategic Insight", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "dependencies", label: "Map the landscape",
+        description: "What external factors shape this decision? Competitors, regulations, market dynamics.",
+        prompt: "What external dependencies, competitive forces, or market factors affect this strategy?",
+        completed: /depend|blocker|risk|assumption|require|contingent|competitor|regulation|market.*factor|landscape/i.test(allText),
+        aiAssistAvailable: true, sectionHeading: "Market Landscape", category: "Market Landscape", points: 10, layer: 1,
       });
       opportunities.push({
         id: "execution_plan", label: "Define execution plan",
         description: "Strategy without execution details is just a slide deck. Who does what, by when?",
         prompt: "What are the key execution steps and who owns them?",
         completed: /timeline|phase|milestone|owner|responsible|execute|implement|by Q|by end of/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Vision", category: "Execution", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Action Plan", category: "Action Plan", points: 12, layer: 1,
       });
       opportunities.push({
         id: "success_metrics", label: "Define success metrics",
         description: "How will you know this strategy is working? Pick 2-3 measurable indicators.",
         prompt: "What metrics will indicate success? (e.g., revenue target, adoption rate, cost reduction)",
         completed: /success.*metric|KPI|measure|indicator|track|target.*\d|goal.*\d/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Traction", category: "Success", points: 12, layer: 1,
+        aiAssistAvailable: true, sectionHeading: "Action Plan", category: "Action Plan", points: 12, layer: 1,
       });
       opportunities.push({
-        id: "dependencies", label: "Name dependencies and risks",
-        description: "What could block this? What's outside your control?",
-        prompt: "What external dependencies or risks could derail execution?",
-        completed: /depend|blocker|risk|assumption|require|contingent|if.*then/i.test(allText),
-        aiAssistAvailable: true, sectionHeading: "Market", category: "Dependencies", points: 10, layer: 1,
+        id: "strategy_vision", label: "Paint the end state",
+        description: "What does the world look like if this strategy succeeds? Make the destination vivid.",
+        prompt: "Describe what success looks like 12-18 months from now if this strategy works.",
+        completed: /end state|future|12 months|18 months|long.term|ultimately|vision|aspire|if.*succeed|when.*complete/i.test(sectionText("Vision") + " " + allText),
+        aiAssistAvailable: true, sectionHeading: "Vision", category: "Vision", points: 10, layer: 1,
       });
     } else if (purpose === "sales") {
       opportunities.push({
@@ -1812,6 +1833,20 @@ Return JSON: { "deckFramework": [...] }`,
         prompt: "Describe your ideal client: their title, company size, industry, and what makes them ready to buy.",
         completed: /CEO|CTO|COO|VP|founder|director|manager|company size|revenue.*\$|employees|headcount|small business|enterprise|mid.market/i.test(allText),
         aiAssistAvailable: true, sectionHeading: "Client Pain", category: "Client Pain", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "cost_of_inaction", label: "Quantify the cost of doing nothing",
+        description: "What happens if the prospect doesn't solve this? Make inaction feel expensive.",
+        prompt: "What does it cost your prospect to NOT solve this problem? (lost revenue, wasted time, competitive disadvantage)",
+        completed: /cost of inaction|cost of doing nothing|if you don't|without solving|delay|falling behind|competitors are|losing.*month|every month|every week/i.test(sectionText("Cost of Inaction") + " " + allText),
+        aiAssistAvailable: true, sectionHeading: "Cost of Inaction", category: "Cost of Inaction", points: 12, layer: 1,
+      });
+      opportunities.push({
+        id: "urgency_trigger", label: "Add a timing trigger",
+        description: "What recent change makes this urgent now? A regulation, a competitor move, a market shift.",
+        prompt: "What recent change makes solving this problem urgent right now?",
+        completed: /recent|regulation|new law|competitor.*launch|market shift|AI.*adoption|2024|2025|2026|just announced|this year|this quarter/i.test(sectionText("Cost of Inaction") + " " + allText),
+        aiAssistAvailable: true, sectionHeading: "Cost of Inaction", category: "Cost of Inaction", points: 10, layer: 1,
       });
       opportunities.push({
         id: "approach", label: "Explain your approach",
