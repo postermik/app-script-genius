@@ -384,8 +384,10 @@ export default function Investors() {
         <div className="mb-4">
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Match investors to narrative</label>
           <Select value={selectedProjectId || undefined} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-full max-w-xs h-9 text-sm"><SelectValue placeholder="Select a narrative..." /></SelectTrigger>
-            <SelectContent>{projects.map(p => (<SelectItem key={p.id} value={p.id}>{(p.title || "Untitled narrative").trim()}</SelectItem>))}</SelectContent>
+            <SelectTrigger className="w-full max-w-xs h-9 text-sm">
+              <span className="truncate">{projects.find(p => p.id === selectedProjectId)?.title || "Select a narrative..."}</span>
+            </SelectTrigger>
+            <SelectContent>{projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.title || "Untitled narrative"}</SelectItem>))}</SelectContent>
           </Select>
         </div>
       )}
