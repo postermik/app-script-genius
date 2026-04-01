@@ -205,7 +205,8 @@ export default function Investors() {
         .from("projects").select("id, title, raw_input, output_data, mode")
         .eq("user_id", session.user.id).eq("mode", "fundraising").order("updated_at", { ascending: false });
       if (projectsData && projectsData.length > 0) {
-        setProjects(projectsData);
+        const cleaned = projectsData.map(p => ({ ...p, title: (p.title || "").trim() }));
+        setProjects(cleaned);
         setSelectedProjectId(projectsData[0].id);
         const signals = extractNarrativeSignals(projectsData[0].output_data, projectsData[0].raw_input || "");
         if (signals.stages.length > 0) setSelectedStages(signals.stages);
