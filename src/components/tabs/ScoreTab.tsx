@@ -4,6 +4,20 @@ import { toast } from "sonner";
 import { useDecksmith } from "@/context/DecksmithContext";
 import type { NarrativeOpportunity } from "@/context/DecksmithContext";
 
+// Strip markdown formatting from AI research results
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,4}\s+/gm, "")         // strip headings
+    .replace(/\*\*([^*]+)\*\*/g, "$1")    // strip bold
+    .replace(/\*([^*]+)\*/g, "$1")        // strip italic
+    .replace(/^-\s+/gm, "\u2022 ")       // convert - to bullet
+    .replace(/^\d+\.\s+/gm, (m) => m)    // keep numbered lists
+    .replace(/\n{3,}/g, "\n\n")           // collapse extra newlines
+    .replace(/^\u2022\s*$/gm, "")         // remove empty bullets
+    .replace(/\n{3,}/g, "\n\n")           // collapse again
+    .trim();
+}
+
 function getBarColor(pct: number) {
   if (pct >= 90) return "bg-emerald";
   if (pct >= 70) return "bg-electric";
@@ -312,7 +326,9 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
                               <Sparkles className="h-3 w-3 text-electric" />
                               <span className="text-[10px] font-semibold text-electric uppercase tracking-wider">Here's what I found</span>
                             </div>
-                            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{aiResults[op.id]}</p>
+                            <div className="max-h-[280px] overflow-y-auto">
+                              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{cleanMarkdown(aiResults[op.id])}</p>
+                            </div>
                             <div className="flex items-center justify-end gap-2 pt-1">
                               <button onClick={() => setAiResults(prev => ({ ...prev, [op.id]: "" }))}
                                 className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Dismiss</button>
