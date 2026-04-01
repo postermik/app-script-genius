@@ -70,7 +70,7 @@ interface DecksmithContextType {
   projects: Project[];
   loadProjects: () => Promise<void>;
   currentProjectId: string | null;
-  openProject: (project: Project) => void;
+  openProject: (project: Project) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
   versions: ProjectVersion[];
@@ -2286,17 +2286,30 @@ No markdown fences. No commentary outside the JSON.`;
     }
   }, [output, rawInput, audienceVariants, voiceProfile, currentProjectId]);
 
-  const openProject = useCallback((project: Project) => {
+  const openProject = useCallback(async (project: Project) => {
     // Guard: if reopening the current project while outputs exist in memory, skip.
-    // The in-memory state is more recent than the projects array which may be stale.
     const currentOutputKeys = Object.keys(outputDataRef.current).filter(k => !k.endsWith('_error') && !k.endsWith('_rawResponse'));
     if (project.id === currentProjectIdRef.current && currentOutputKeys.length > 0) {
       console.log("[Persistence] Skipping openProject for current project (in-memory outputs exist):", currentOutputKeys);
       return;
     }
-    console.trace("[Persistence] openProject called for:", project.id, "current:", currentProjectId);
 
-    // Dismiss any lingering toasts from previous generation
+    // Fetch fresh output_data from DB. The projects array in memory may be stale
+    // (e.g. after AI assist apply, inline edits, or slide refinements).
+    let freshOutputData = (project as any).output_data;
+    try {
+      const { data: freshRow } = await supabase
+        .from("projects")
+        .select("output_data")
+        .eq("id", project.id)
+        .single();
+      if (freshRow?.output_data) freshOutputData = freshRow.output_data;
+    } catch (e) {
+      console.warn("[Persistence] Failed to fetch fresh output_data, using projects array:", e);
+    }
+
+    console.log("[Persistence] openProject called for:", project.id);
+
     toast.dismiss();
     
     setRawInput(project.raw_input);
@@ -2305,9 +2318,8 @@ No markdown fences. No commentary outside the JSON.`;
     setOutreachTracker(project.outreach_tracker || []);
     setIsEvaluation(project.detected_intent === "evaluate");
 
-    // All persisted data now lives in output_data
-    const persisted = (project.output_data as any) || {};
-    console.log("[Persistence] Loaded output_data:", JSON.stringify(persisted).substring(0, 500));
+    // All persisted data now lives in output_data (fresh from DB)
+    const persisted = freshOutputData || {};
 
     // Restore core narrative
     if (persisted.core_narrative?.sections?.length) {
