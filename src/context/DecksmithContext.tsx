@@ -268,7 +268,7 @@ export function DecksmithProvider({ children }: { children: React.ReactNode }) {
 
   const saveProject = useCallback(async (parsed: NarrativeOutputData, extras?: { coreNarrative?: CoreNarrativeData; outputData?: Record<string, any>; intakeSelections?: IntakeSelections }) => {
     if (!session) return;
-    const title = (parsed as any).title || "Untitled";
+    const title = ((parsed as any).title || "Untitled").trim();
     const thesis = extractThesis(parsed);
     const cn = extras?.coreNarrative || coreNarrative;
     const od = extras?.outputData || outputData;
@@ -981,7 +981,7 @@ Return JSON: { "deckFramework": [...] }`,
       console.log("[Generation] Core Narrative complete");
 
       // Save project immediately so we have a currentProjectId for incremental saves
-      const title = (fullOutput as any).title || "Untitled";
+      const title = ((fullOutput as any).title || "Untitled").trim();
       const thesis = extractThesis(fullOutput);
       const initialPayload = {
         core_narrative: cn,
@@ -1283,7 +1283,7 @@ Return JSON: { "deckFramework": [...] }`,
         setDetectedMode(parsed.mode);
         setOutput(parsed);
         if (session) {
-          const title = (parsed as any).title || "Deck Evaluation";
+          const title = ((parsed as any).title || "Deck Evaluation").trim();
           const thesis = extractThesis(parsed);
           const { data: projData } = await supabase.from("projects").insert({
             user_id: session.user.id, title, mode: parsed.mode, raw_input: extractedText,

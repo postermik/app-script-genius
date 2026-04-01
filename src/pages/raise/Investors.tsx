@@ -205,7 +205,12 @@ export default function Investors() {
         .from("projects").select("id, title, raw_input, output_data, mode")
         .eq("user_id", session.user.id).eq("mode", "fundraising").order("updated_at", { ascending: false });
       if (projectsData && projectsData.length > 0) {
-        const cleaned = projectsData.map(p => ({ ...p, title: (p.title || "").trim() }));
+        const cleaned = projectsData.map(p => {
+          const trimmed = (p.title || "").replace(/^\s+|\s+$/g, "");
+          // Fix leading/trailing whitespace in DB if found
+          if (trimmed !== p.title) supabase.from("projects").update({ title: trimmed }).eq("id", p.id).then();
+          return { ...p, title: trimmed || "Untitled narrative" };
+        });
         setProjects(cleaned);
         setSelectedProjectId(projectsData[0].id);
         const signals = extractNarrativeSignals(projectsData[0].output_data, projectsData[0].raw_input || "");
