@@ -62,7 +62,7 @@ interface Props {
 }
 
 export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
-  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection, guideSummary, loadingGuideSummary, refreshGuideSummary } = useDecksmith();
+  const { computeNarrativeStrength, aiAssistOpportunity, isFree, refineSection, coreNarrative, outputData, updateNarrativeSection, guideSummary, loadingGuideSummary, refreshGuideSummary, addNarrativeContext, isWeaving } = useDecksmith();
 
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
@@ -73,6 +73,18 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editBuffer, setEditBuffer] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [contextExpanded, setContextExpanded] = useState(false);
+  const [contextInput, setContextInput] = useState("");
+  const [contextSuccess, setContextSuccess] = useState(false);
+
+  const handleAddContext = async () => {
+    if (!contextInput.trim() || isWeaving) return;
+    await addNarrativeContext(contextInput);
+    setContextInput("");
+    setContextExpanded(false);
+    setContextSuccess(true);
+    setTimeout(() => setContextSuccess(false), 3000);
+  };
 
   const strength = computeNarrativeStrength();
   const allOpportunities = strength.opportunities;
@@ -204,6 +216,34 @@ export function ScoreTab({ score, mode, purpose, slides = [] }: Props) {
           ))}
         </div>
       </div>
+
+      {/* ADD CONTEXT */}
+      {!contextExpanded && !contextSuccess && (
+        <button onClick={() => setContextExpanded(true)}
+          className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors px-1 py-2 flex items-center gap-1.5">
+          <Pencil className="h-3 w-3" /> Add more context
+        </button>
+      )}
+      {contextSuccess && (
+        <div className="flex items-center gap-1.5 px-1 py-2 text-xs text-emerald font-medium animate-fade-in">
+          <Check className="h-3 w-3" /> Narrative updated
+        </div>
+      )}
+      {contextExpanded && (
+        <div className="space-y-2 animate-fade-in">
+          <textarea value={contextInput} onChange={(e) => setContextInput(e.target.value)}
+            placeholder="Add context you forgot to include... (traction, partnerships, metrics, team background)"
+            rows={3} className="w-full bg-background/60 border border-border/50 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-electric/50 transition-colors" />
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => { setContextExpanded(false); setContextInput(""); }}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1">Cancel</button>
+            <button onClick={handleAddContext} disabled={!contextInput.trim() || isWeaving}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-electric text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40">
+              {isWeaving ? <><Loader2 className="h-3 w-3 animate-spin" />Updating...</> : "Update narrative"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* NARRATIVE CARDS */}
       {cards.length > 0 && (

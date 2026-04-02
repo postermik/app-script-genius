@@ -289,8 +289,8 @@ export function OutputView() {
     output, setOutput, reset, isPro, isHobby, isFree, generationCount, currentProjectId, rawInput,
     isEvaluation, intakeSelections, setIntakeSelections, refineSection, refiningSection,
     rescoreNarrative, isGenerating, generateSlides, isGeneratingSlides, generateOutput,
-    completedOutputs, coreNarrative, outputData, isGeneratingOutputs, streamingText, appliedSuggestions,
-    deckTheme, setDeckTheme,
+    completedOutputs, coreNarrative, outputData, setOutputData, isGeneratingOutputs, streamingText, appliedSuggestions,
+    deckTheme, setDeckTheme, updateNarrativeSection,
   } = useDecksmith();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -406,6 +406,9 @@ export function OutputView() {
   const editSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveOutputEdit = (outputKey: string, updater: (existing: any) => any) => {
     if (!currentProjectId) return;
+    // Update in-memory state immediately so React stays in sync
+    setOutputData(prev => ({ ...prev, [outputKey]: updater(prev[outputKey] || {}) }));
+    // Debounced DB write
     if (editSaveTimer.current) clearTimeout(editSaveTimer.current);
     editSaveTimer.current = setTimeout(() => {
       supabase.from("projects").select("output_data").eq("id", currentProjectId).single().then(({ data }) => {
@@ -421,9 +424,9 @@ export function OutputView() {
   // Core Narrative edit
   const handleEditCoreSection = (index: number, content: string) => {
     if (!coreNarrative) return;
-    const updated = { ...coreNarrative, sections: coreNarrative.sections.map((s: any, i: number) => i === index ? { ...s, content } : s) };
-    // Update context state directly via setCoreNarrative if available, otherwise just persist
-    saveOutputEdit("core_narrative", () => updated);
+    const heading = coreNarrative.sections[index]?.heading;
+    if (!heading) return;
+    updateNarrativeSection(heading, content);
   };
 
   // Elevator Pitch edit
