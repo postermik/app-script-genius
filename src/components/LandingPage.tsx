@@ -56,10 +56,10 @@ export function LandingPage() {
         </div>
 
         {/* Trust bar — right below CTA */}
-        <div className="max-w-[720px] mx-auto mt-10 relative z-10 animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-10 sm:gap-y-2.5">
+        <div className="flex justify-center mt-10 relative z-10 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-12 sm:gap-y-2.5">
             {PROOF.map((p) => (
-              <div key={p.text} className="flex items-center justify-center gap-2.5">
+              <div key={p.text} className="flex items-center gap-2.5">
                 <p.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="text-foreground/70 text-sm">{p.text}</span>
               </div>
@@ -186,9 +186,9 @@ export function LandingPage() {
                 plan.highlighted ? "border-primary/30" : "border-border hover:border-muted-foreground/20"
               }`}>
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">{plan.name}</p>
-                {plan.tierId && annual && (
-                  <p className="text-[11px] text-primary mb-1.5">Billed at ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
-                )}
+                <p className={`text-[11px] text-primary mb-1.5 ${plan.tierId && annual ? "visible" : "invisible"}`}>
+                  {plan.tierId ? `Billed at $${TIERS[plan.tierId].annualYearlyPrice}/year` : "\u00A0"}
+                </p>
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {plan.tierId && <span className="text-sm text-muted-foreground">/mo</span>}

@@ -136,9 +136,9 @@ export default function Pricing() {
                     : "border-border hover:border-muted-foreground/20"
                 }`}>
                   <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
-                  {plan.tierId && annual && (
-                    <p className="text-[11px] text-electric mb-1.5">Billed at ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
-                  )}
+                  <p className={`text-[11px] text-electric mb-1.5 ${plan.tierId && annual ? "visible" : "invisible"}`}>
+                    {plan.tierId ? `Billed at $${TIERS[plan.tierId].annualYearlyPrice}/year` : "\u00A0"}
+                  </p>
                   <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-4xl font-bold text-foreground">{getPrice(plan)}</span>
                     {plan.tierId && <span className="text-sm text-muted-foreground">/mo</span>}

@@ -38,7 +38,7 @@ export const TIERS = {
       "Unlimited projects",
       "Full narrative guide with AI research",
       "Inline editing & refinement",
-      "Export to PPT, DOCX & PDF",
+      "Export to PPTX, DOCX & PDF",
       "All output modes",
     ],
   },
