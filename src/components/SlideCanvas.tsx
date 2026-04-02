@@ -149,14 +149,15 @@ function DataCards({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C 
     </div>;
   }
   // Fallback to old format
-  const dp = s.dataPoints || []; const items = (s.bodyContent || []).slice(0, 3);
-  const n = Math.max(dp.length, Math.min(items.length, 3));
+  const dp = s.dataPoints || []; const items = (s.bodyContent || []).slice(0, 6);
+  const n = Math.max(dp.length, Math.min(items.length, 6));
+  const isCompact = n > 3;
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
     <Header s={s} c={c} />
     {n > 0 && <div style={{ display:"flex", gap:"2.5%", marginTop:"3%", flex:1 }}>
       {Array.from({ length: n }).map((_, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderTop:`3px solid ${c.primary}`, borderRadius:4, padding:"3.5% 4%", display:"flex", flexDirection:"column" }}>
-        {dp[i] && <div style={{ fontSize:"0.85em", fontWeight:700, color:c.head, marginBottom:"4%" }}>{dp[i]}</div>}
-        {items[i] && <div style={{ fontSize:"0.42em", color:c.body, lineHeight:1.5 }}>{items[i]}</div>}
+        {dp[i] && <div style={{ fontSize: isCompact ? "0.65em" : "0.85em", fontWeight:700, color:c.head, marginBottom:"4%" }}>{dp[i]}</div>}
+        {items[i] && <div style={{ fontSize: isCompact ? "0.35em" : "0.42em", color:c.body, lineHeight:1.5 }}>{items[i]}</div>}
       </div>)}
     </div>}
   </div>;
@@ -285,7 +286,8 @@ function Flywheel({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }
 
 // ── ICON COLUMNS ──
 function IconColumns({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 3); const dp = s.dataPoints || [];
+  const items = (s.bodyContent || []).slice(0, 6); const dp = s.dataPoints || [];
+  const isCompact = items.length > 3;
   const icons = [
     <svg key="ic1" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.primary} strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /></svg>,
     <svg key="ic2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.primary} strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>,
@@ -293,11 +295,11 @@ function IconColumns({ slide: s, colors: c }: { slide: SlideCanvasData; colors: 
   ];
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"5% 7%" }}>
     <Header s={s} c={c} />
-    {items.length >= 2 && <div style={{ display:"flex", gap:"2.5%", marginTop:"3%", flex:1 }}>
-      {items.map((t, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderRadius:4, padding:"4%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-        <div style={{ width:"2.2em", height:"2.2em", borderRadius:"50%", border:`2px solid ${c.primary}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"5%" }}>{icons[i % 3]}</div>
-        {dp[i] && <div style={{ fontSize:"0.6em", fontWeight:700, color:c.head, marginBottom:"3%" }}>{dp[i]}</div>}
-        <div style={{ fontSize:"0.42em", color:c.body, textAlign:"center", lineHeight:1.4 }}>{t}</div>
+    {items.length >= 1 && <div style={{ display:"flex", gap: isCompact ? "1.5%" : "2.5%", marginTop:"3%", flex:1 }}>
+      {items.map((t, i) => <div key={i} style={{ flex:1, border:`1px solid ${c.border}`, borderRadius:4, padding: isCompact ? "3%" : "4%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ width: isCompact ? "1.6em" : "2.2em", height: isCompact ? "1.6em" : "2.2em", borderRadius:"50%", border:`2px solid ${c.primary}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"5%" }}>{icons[i % 3]}</div>
+        {dp[i] && <div style={{ fontSize: isCompact ? "0.48em" : "0.6em", fontWeight:700, color:c.head, marginBottom:"3%" }}>{dp[i]}</div>}
+        <div style={{ fontSize: isCompact ? "0.35em" : "0.42em", color:c.body, textAlign:"center", lineHeight:1.4 }}>{t}</div>
       </div>)}
     </div>}
   </div>;
@@ -305,7 +307,7 @@ function IconColumns({ slide: s, colors: c }: { slide: SlideCanvasData; colors: 
 
 // ── TEAM ──
 function Team({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const items = (s.bodyContent || []).slice(0, 4);
+  const items = (s.bodyContent || []).slice(0, 6);
   const icons = [
     <svg key="t1" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.primary} strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0112 0v1" /></svg>,
     <svg key="t2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c.primary} strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>,
@@ -328,12 +330,12 @@ function Team({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
 
 // ── STAIRCASE (uses milestones field if available) ──
 function Staircase({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) {
-  const ms = s.milestones || (s.bodyContent || []).slice(0, 4).map((t, i) => ({
+  const ms = s.milestones || (s.bodyContent || []).slice(0, 6).map((t, i) => ({
     amount: (s.dataPoints || [])[i] || "",
     bullets: t.split(/[,;]/).map(b => b.trim()).filter(Boolean).slice(0, 3),
   }));
   const n = ms.length;
-  const pcts = [30, 50, 70, 90];
+  const pcts = n <= 4 ? [30, 50, 70, 90] : n === 5 ? [25, 40, 55, 72, 90] : [20, 33, 46, 59, 75, 90];
   return <div style={{ display:"flex", flexDirection:"column", height:"100%", padding:"4.5% 6%" }}>
     <Header s={s} c={c} />
     <div style={{ flex:1, marginTop:"1.5%" }}>

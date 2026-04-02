@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GripVertical, RotateCcw, ChevronDown, Lightbulb, Loader2, Pencil, X, Check } from "lucide-react";
+import { GripVertical, RotateCcw, ChevronDown, Lightbulb, Loader2, Pencil, X, Check, Plus } from "lucide-react";
 import { SlideCanvas, LayoutPicker } from "@/components/SlideCanvas";
 import { resolveLayout } from "@/lib/slideLayouts";
 import { supabase } from "@/integrations/supabase/client";
@@ -331,7 +331,7 @@ export function SlidePreview({
                 />
               </div>
 
-              {/* Edit panel - layout-aware */}
+              {/* Edit panel - layout-aware with add/remove */}
               {isEditing && !isExcluded && (
                 <div className="px-4 py-3 border-t border-border space-y-2 card-gradient">
                   <EditField label="Headline" value={slide.headline} onSave={(v) => onEditSlide?.(slide.originalIdx, "headline", v)} />
@@ -340,32 +340,50 @@ export function SlidePreview({
                   )}
 
                   {/* Flywheel: step label + description pairs */}
-                  {layout === "flywheel" && (slide.flywheelSteps || []).map((step, si) => (
-                    <div key={`fw-${si}`} className="space-y-1">
-                      {si === 0 && <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold pt-1">Flywheel steps</p>}
-                      <EditField label={`Step ${si + 1}`} value={step.label} onSave={(v) => {
-                        const updated = [...(slide.flywheelSteps || [])]; updated[si] = { ...updated[si], label: v };
-                        onEditSlide?.(slide.originalIdx, "flywheelSteps", updated);
-                      }} />
-                      <EditField label={`Desc ${si + 1}`} value={step.description} onSave={(v) => {
-                        const updated = [...(slide.flywheelSteps || [])]; updated[si] = { ...updated[si], description: v };
-                        onEditSlide?.(slide.originalIdx, "flywheelSteps", updated);
-                      }} />
+                  {layout === "flywheel" && <>
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Flywheel steps</p>
+                      {(slide.flywheelSteps || []).length < 6 && (
+                        <button onClick={() => { const updated = [...(slide.flywheelSteps || []), { label: "", description: "", leadsTo: "" }]; onEditSlide?.(slide.originalIdx, "flywheelSteps", updated); }}
+                          className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add step</button>
+                      )}
                     </div>
-                  ))}
+                    {(slide.flywheelSteps || []).map((step, si) => (
+                      <div key={`fw-${si}`} className="space-y-1 relative">
+                        {(slide.flywheelSteps || []).length > 3 && (
+                          <button onClick={() => { const updated = [...(slide.flywheelSteps || [])]; updated.splice(si, 1); onEditSlide?.(slide.originalIdx, "flywheelSteps", updated); }}
+                            className="absolute -right-1 top-0 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                        )}
+                        <EditField label={`Step ${si + 1}`} value={step.label} onSave={(v) => {
+                          const updated = [...(slide.flywheelSteps || [])]; updated[si] = { ...updated[si], label: v };
+                          onEditSlide?.(slide.originalIdx, "flywheelSteps", updated);
+                        }} />
+                        <EditField label={`Desc ${si + 1}`} value={step.description} onSave={(v) => {
+                          const updated = [...(slide.flywheelSteps || [])]; updated[si] = { ...updated[si], description: v };
+                          onEditSlide?.(slide.originalIdx, "flywheelSteps", updated);
+                        }} />
+                      </div>
+                    ))}
+                  </>}
 
                   {/* Matrix: axis labels + competitor name/description pairs */}
                   {layout === "matrix" && <>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold pt-1">Axis labels</p>
-                    <EditField label="X axis" value={slide.axisLabels?.x || ""} onSave={(v) => {
-                      onEditSlide?.(slide.originalIdx, "axisLabels", { ...slide.axisLabels, x: v });
-                    }} />
-                    <EditField label="Y axis" value={slide.axisLabels?.y || ""} onSave={(v) => {
-                      onEditSlide?.(slide.originalIdx, "axisLabels", { ...slide.axisLabels, y: v });
-                    }} />
+                    <EditField label="X axis" value={slide.axisLabels?.x || ""} onSave={(v) => onEditSlide?.(slide.originalIdx, "axisLabels", { ...slide.axisLabels, x: v })} />
+                    <EditField label="Y axis" value={slide.axisLabels?.y || ""} onSave={(v) => onEditSlide?.(slide.originalIdx, "axisLabels", { ...slide.axisLabels, y: v })} />
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Competitors</p>
+                      {(slide.competitors || []).length < 6 && (
+                        <button onClick={() => { const updated = [...(slide.competitors || []), { name: "", description: "", x: 0.5, y: 0.5 }]; onEditSlide?.(slide.originalIdx, "competitors", updated); }}
+                          className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add</button>
+                      )}
+                    </div>
                     {(slide.competitors || []).map((comp, ci) => (
-                      <div key={`comp-${ci}`} className="space-y-1">
-                        {ci === 0 && <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold pt-1">Competitors</p>}
+                      <div key={`comp-${ci}`} className="space-y-1 relative">
+                        {(slide.competitors || []).length > 1 && (
+                          <button onClick={() => { const updated = [...(slide.competitors || [])]; updated.splice(ci, 1); onEditSlide?.(slide.originalIdx, "competitors", updated); }}
+                            className="absolute -right-1 top-0 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                        )}
                         <EditField label={`Name ${ci + 1}`} value={comp.name} onSave={(v) => {
                           const updated = [...(slide.competitors || [])]; updated[ci] = { ...updated[ci], name: v };
                           onEditSlide?.(slide.originalIdx, "competitors", updated);
@@ -379,44 +397,68 @@ export function SlidePreview({
                   </>}
 
                   {/* Data Cards: category + stat label/value pairs */}
-                  {layout === "data-cards" && (slide.cards || []).map((card, ci) => (
-                    <div key={`card-${ci}`} className="space-y-1">
-                      {ci === 0 && <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold pt-1">Data cards</p>}
-                      <EditField label={`Card ${ci + 1}`} value={card.category} onSave={(v) => {
-                        const updated = [...(slide.cards || [])]; updated[ci] = { ...updated[ci], category: v };
-                        onEditSlide?.(slide.originalIdx, "cards", updated);
-                      }} />
-                      {card.stats.map((stat, si) => (
-                        <div key={`stat-${ci}-${si}`} className="flex gap-1">
-                          <EditField label="Label" value={stat.label} onSave={(v) => {
-                            const updated = [...(slide.cards || [])]; const stats = [...updated[ci].stats]; stats[si] = { ...stats[si], label: v }; updated[ci] = { ...updated[ci], stats };
-                            onEditSlide?.(slide.originalIdx, "cards", updated);
-                          }} />
-                          <EditField label="Value" value={stat.value} onSave={(v) => {
-                            const updated = [...(slide.cards || [])]; const stats = [...updated[ci].stats]; stats[si] = { ...stats[si], value: v }; updated[ci] = { ...updated[ci], stats };
-                            onEditSlide?.(slide.originalIdx, "cards", updated);
-                          }} />
-                        </div>
-                      ))}
+                  {layout === "data-cards" && <>
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Data cards</p>
+                      {(slide.cards || []).length < 6 && (
+                        <button onClick={() => { const updated = [...(slide.cards || []), { category: "", stats: [{ label: "", value: "" }] }]; onEditSlide?.(slide.originalIdx, "cards", updated); }}
+                          className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add card</button>
+                      )}
                     </div>
-                  ))}
+                    {(slide.cards || []).map((card, ci) => (
+                      <div key={`card-${ci}`} className="space-y-1 relative">
+                        {(slide.cards || []).length > 1 && (
+                          <button onClick={() => { const updated = [...(slide.cards || [])]; updated.splice(ci, 1); onEditSlide?.(slide.originalIdx, "cards", updated); }}
+                            className="absolute -right-1 top-0 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                        )}
+                        <EditField label={`Card ${ci + 1}`} value={card.category} onSave={(v) => {
+                          const updated = [...(slide.cards || [])]; updated[ci] = { ...updated[ci], category: v };
+                          onEditSlide?.(slide.originalIdx, "cards", updated);
+                        }} />
+                        {card.stats.map((stat, si) => (
+                          <div key={`stat-${ci}-${si}`} className="flex gap-1">
+                            <EditField label="Label" value={stat.label} onSave={(v) => {
+                              const updated = [...(slide.cards || [])]; const stats = [...updated[ci].stats]; stats[si] = { ...stats[si], label: v }; updated[ci] = { ...updated[ci], stats };
+                              onEditSlide?.(slide.originalIdx, "cards", updated);
+                            }} />
+                            <EditField label="Value" value={stat.value} onSave={(v) => {
+                              const updated = [...(slide.cards || [])]; const stats = [...updated[ci].stats]; stats[si] = { ...stats[si], value: v }; updated[ci] = { ...updated[ci], stats };
+                              onEditSlide?.(slide.originalIdx, "cards", updated);
+                            }} />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </>}
 
                   {/* Staircase: milestone amount + bullets */}
-                  {layout === "staircase" && (slide.milestones || []).map((ms, mi) => (
-                    <div key={`ms-${mi}`} className="space-y-1">
-                      {mi === 0 && <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold pt-1">Milestones</p>}
-                      <EditField label={`Header ${mi + 1}`} value={ms.amount} onSave={(v) => {
-                        const updated = [...(slide.milestones || [])]; updated[mi] = { ...updated[mi], amount: v };
-                        onEditSlide?.(slide.originalIdx, "milestones", updated);
-                      }} />
-                      {ms.bullets.map((b, bi) => (
-                        <EditField key={`msb-${mi}-${bi}`} label={`Bullet`} value={b} onSave={(v) => {
-                          const updated = [...(slide.milestones || [])]; const bullets = [...updated[mi].bullets]; bullets[bi] = v; updated[mi] = { ...updated[mi], bullets };
+                  {layout === "staircase" && <>
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Milestones</p>
+                      {(slide.milestones || []).length < 6 && (
+                        <button onClick={() => { const updated = [...(slide.milestones || []), { amount: "", bullets: [""] }]; onEditSlide?.(slide.originalIdx, "milestones", updated); }}
+                          className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add</button>
+                      )}
+                    </div>
+                    {(slide.milestones || []).map((ms, mi) => (
+                      <div key={`ms-${mi}`} className="space-y-1 relative">
+                        {(slide.milestones || []).length > 1 && (
+                          <button onClick={() => { const updated = [...(slide.milestones || [])]; updated.splice(mi, 1); onEditSlide?.(slide.originalIdx, "milestones", updated); }}
+                            className="absolute -right-1 top-0 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                        )}
+                        <EditField label={`Header ${mi + 1}`} value={ms.amount} onSave={(v) => {
+                          const updated = [...(slide.milestones || [])]; updated[mi] = { ...updated[mi], amount: v };
                           onEditSlide?.(slide.originalIdx, "milestones", updated);
                         }} />
-                      ))}
-                    </div>
-                  ))}
+                        {ms.bullets.map((b, bi) => (
+                          <EditField key={`msb-${mi}-${bi}`} label="Bullet" value={b} onSave={(v) => {
+                            const updated = [...(slide.milestones || [])]; const bullets = [...updated[mi].bullets]; bullets[bi] = v; updated[mi] = { ...updated[mi], bullets };
+                            onEditSlide?.(slide.originalIdx, "milestones", updated);
+                          }} />
+                        ))}
+                      </div>
+                    ))}
+                  </>}
 
                   {/* Concentric: tier label + amount + description */}
                   {layout === "concentric" && (slide.tiers || []).map((tier, ti) => (
@@ -437,15 +479,62 @@ export function SlidePreview({
                     </div>
                   ))}
 
-                  {/* Bullets-based layouts: flat bullet list */}
-                  {!["flywheel","matrix","data-cards","staircase","concentric","statement"].includes(layout) && (slide.bodyContent || []).map((bullet, bi) => (
-                    <EditField key={bi} label={`Bullet ${bi + 1}`} value={bullet}
-                      onSave={(v) => {
-                        const updated = [...(slide.bodyContent || [])];
-                        updated[bi] = v;
-                        onEditSlide?.(slide.originalIdx, "bodyContent", updated.filter(b => b.trim()));
-                      }} />
-                  ))}
+                  {/* Team: name + title pairs from bodyContent "Name: Title" format */}
+                  {layout === "team" && <>
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Team members</p>
+                      {(slide.bodyContent || []).length < 6 && (
+                        <button onClick={() => { const updated = [...(slide.bodyContent || []), ""]; onEditSlide?.(slide.originalIdx, "bodyContent", updated); }}
+                          className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add member</button>
+                      )}
+                    </div>
+                    {(slide.bodyContent || []).map((item, mi) => {
+                      const ci2 = item.indexOf(":"); const name = ci2 > 0 ? item.substring(0, ci2).trim() : item; const title = ci2 > 0 ? item.substring(ci2 + 1).trim() : "";
+                      return (
+                        <div key={`team-${mi}`} className="space-y-1 relative">
+                          {(slide.bodyContent || []).length > 1 && (
+                            <button onClick={() => { const updated = [...(slide.bodyContent || [])]; updated.splice(mi, 1); onEditSlide?.(slide.originalIdx, "bodyContent", updated); }}
+                              className="absolute -right-1 top-0 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                          )}
+                          <EditField label="Name" value={name} onSave={(v) => {
+                            const updated = [...(slide.bodyContent || [])]; updated[mi] = title ? `${v}: ${title}` : v;
+                            onEditSlide?.(slide.originalIdx, "bodyContent", updated);
+                          }} />
+                          <EditField label="Title" value={title} onSave={(v) => {
+                            const updated = [...(slide.bodyContent || [])]; updated[mi] = v ? `${name}: ${v}` : name;
+                            onEditSlide?.(slide.originalIdx, "bodyContent", updated);
+                          }} />
+                        </div>
+                      );
+                    })}
+                  </>}
+
+                  {/* Bullets-based layouts (not team): flat bullet list with add/remove */}
+                  {!["flywheel","matrix","data-cards","staircase","concentric","statement","team"].includes(layout) && <>
+                    {(slide.bodyContent || []).length > 0 && (
+                      <div className="flex items-center justify-between pt-1">
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Bullets</p>
+                        {(slide.bodyContent || []).length < 6 && (
+                          <button onClick={() => { const updated = [...(slide.bodyContent || []), ""]; onEditSlide?.(slide.originalIdx, "bodyContent", updated); }}
+                            className="text-[10px] text-electric hover:text-foreground transition-colors flex items-center gap-0.5"><Plus className="h-3 w-3" />Add bullet</button>
+                        )}
+                      </div>
+                    )}
+                    {(slide.bodyContent || []).map((bullet, bi) => (
+                      <div key={bi} className="relative">
+                        <EditField label={`Bullet ${bi + 1}`} value={bullet}
+                          onSave={(v) => {
+                            const updated = [...(slide.bodyContent || [])];
+                            updated[bi] = v;
+                            onEditSlide?.(slide.originalIdx, "bodyContent", updated.filter(b => b.trim()));
+                          }} />
+                        {(slide.bodyContent || []).length > 1 && (
+                          <button onClick={() => { const updated = [...(slide.bodyContent || [])]; updated.splice(bi, 1); onEditSlide?.(slide.originalIdx, "bodyContent", updated); }}
+                            className="absolute -right-1 top-1 text-muted-foreground/40 hover:text-destructive p-0.5"><X className="h-2.5 w-2.5" /></button>
+                        )}
+                      </div>
+                    ))}
+                  </>}
 
                   {/* Statement: subheadline + closing only */}
                   {layout === "statement" && (

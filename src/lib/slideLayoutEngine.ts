@@ -196,17 +196,18 @@ function layoutDataCards(s: SlideData): El[] {
       }
     }
   } else {
-    const dp = s.dataPoints || []; const items = (s.bodyContent || []).slice(0,3);
-    const n = Math.max(dp.length, Math.min(items.length, 3));
+    const dp = s.dataPoints || []; const items = (s.bodyContent || []).slice(0,6);
+    const n = Math.max(dp.length, Math.min(items.length, 6));
     if (n > 0) {
-      const gap = 0.2; const cardW = (CW - gap*(n-1)) / n;
+      const gap = n > 3 ? 0.12 : 0.2; const cardW = (CW - gap*(n-1)) / n;
+      const headPt = n > 3 ? 14 : 18; const bodyPt = n > 4 ? 8 : 10;
       for (let i = 0; i < n; i++) {
         const cx = S.ML + i*(cardW+gap);
         els.push({ t:"rect", x:cx, y, w:cardW, h:aH, stroke:"border", sw:1, r:0.04 });
         els.push({ t:"rect", x:cx, y, w:cardW, h:0.04, fill:"primary" });
         let ty = y + 0.15;
-        if (dp[i]) { els.push({ t:"text", x:cx+0.1, y:ty, w:cardW-0.2, h:0.35, text:dp[i], pt:18, bold:true, color:"head", valign:"middle" }); ty += 0.4; }
-        if (items[i]) els.push({ t:"text", x:cx+0.1, y:ty, w:cardW-0.2, h:aH-(ty-y)-0.1, text:items[i], pt:10, color:"body" });
+        if (dp[i]) { els.push({ t:"text", x:cx+0.1, y:ty, w:cardW-0.2, h:0.35, text:dp[i], pt:headPt, bold:true, color:"head", valign:"middle" }); ty += 0.4; }
+        if (items[i]) els.push({ t:"text", x:cx+0.1, y:ty, w:cardW-0.2, h:aH-(ty-y)-0.1, text:items[i], pt:bodyPt, color:"body" });
       }
     }
   }
@@ -347,14 +348,14 @@ function layoutFlywheel(s: SlideData): El[] {
 // ── STAIRCASE ──
 function layoutStaircase(s: SlideData): El[] {
   const { els, y: hy } = hdr(s);
-  const ms = s.milestones || (s.bodyContent || []).slice(0,4).map((t, i) => ({
+  const ms = s.milestones || (s.bodyContent || []).slice(0,6).map((t, i) => ({
     amount: (s.dataPoints || [])[i] || "",
     bullets: t.split(/[,;]/).map(b => b.trim()).filter(Boolean).slice(0,3),
   }));
   const n = ms.length; const gap = 0.12;
   const stepW = (CW - gap*(n-1)) / n;
   const maxH = CB - hy - 0.15; const baseY = CB;
-  const pcts = [0.35, 0.55, 0.75, 0.92];
+  const pcts = n <= 4 ? [0.35, 0.55, 0.75, 0.92] : n === 5 ? [0.25, 0.40, 0.55, 0.72, 0.92] : [0.2, 0.33, 0.46, 0.59, 0.75, 0.92];
 
   for (let i = 0; i < n; i++) {
     const h = maxH * (pcts[i] || 0.92);
@@ -372,20 +373,22 @@ function layoutStaircase(s: SlideData): El[] {
 // ── ICON COLUMNS ──
 function layoutIconCols(s: SlideData): El[] {
   const { els, y: hy } = hdr(s);
-  const items = (s.bodyContent || []).slice(0,3); const dp = s.dataPoints || [];
-  if (items.length < 2) return layoutBullets(s);
-  const n = items.length; const gap = 0.2;
+  const items = (s.bodyContent || []).slice(0,6); const dp = s.dataPoints || [];
+  if (items.length < 1) return layoutBullets(s);
+  const n = items.length; const gap = n > 3 ? 0.12 : 0.2;
   const colW = (CW - gap*(n-1)) / n; const colH = CB - hy;
+  const ir = n > 3 ? 0.15 : 0.2;
+  const bodyPt = n > 4 ? 8 : n > 3 ? 9 : 10;
+  const headPt = n > 3 ? 11 : 14;
 
   for (let i = 0; i < n; i++) {
     const cx = S.ML + i*(colW+gap);
     els.push({ t:"rect", x:cx, y:hy, w:colW, h:colH, stroke:"border", sw:1, r:0.04 });
-    const ir = 0.2;
     els.push({ t:"ellipse", cx:cx+colW/2, cy:hy+colH*0.15+ir, rx:ir, ry:ir, stroke:"primary", sw:1.5 });
-    els.push({ t:"text", x:cx+colW/2-ir, y:hy+colH*0.15, w:ir*2, h:ir*2, text:String(i+1), pt:12, bold:true, color:"primary", align:"center", valign:"middle" });
+    els.push({ t:"text", x:cx+colW/2-ir, y:hy+colH*0.15, w:ir*2, h:ir*2, text:String(i+1), pt:n>3?10:12, bold:true, color:"primary", align:"center", valign:"middle" });
     let ty = hy + colH*0.15 + ir*2 + 0.1;
-    if (dp[i]) { els.push({ t:"text", x:cx+0.1, y:ty, w:colW-0.2, h:0.25, text:dp[i], pt:14, bold:true, color:"head", align:"center" }); ty += 0.3; }
-    els.push({ t:"text", x:cx+0.08, y:ty, w:colW-0.16, h:colH-(ty-hy)-0.08, text:items[i], pt:10, color:"body", align:"center" });
+    if (dp[i]) { els.push({ t:"text", x:cx+0.1, y:ty, w:colW-0.2, h:0.25, text:dp[i], pt:headPt, bold:true, color:"head", align:"center" }); ty += 0.3; }
+    els.push({ t:"text", x:cx+0.08, y:ty, w:colW-0.16, h:colH-(ty-hy)-0.08, text:items[i], pt:bodyPt, color:"body", align:"center" });
   }
   return els;
 }
@@ -393,7 +396,7 @@ function layoutIconCols(s: SlideData): El[] {
 // ── TEAM ──
 function layoutTeam(s: SlideData): El[] {
   const { els, y: hy } = hdr(s);
-  const items = (s.bodyContent || []).slice(0,4);
+  const items = (s.bodyContent || []).slice(0,6);
   const n = items.length; const gap = 0.2;
   const colW = (CW - gap*(n-1)) / n; const colH = CB - hy;
 
