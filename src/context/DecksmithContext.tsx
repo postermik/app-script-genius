@@ -2004,63 +2004,6 @@ Return JSON: { "deckFramework": [...] }`,
     return data.content || "Could not generate suggestions. Please try again.";
   }, [rawInput]);
 
-  // ── Add context: append info and weave into narrative sections ──
-  const addNarrativeContext = useCallback(async (newContext: string) => {
-    if (!newContext.trim()) return;
-    const cn = coreNarrativeRef.current;
-    if (!cn?.sections?.length) return;
-
-    setIsWeaving(true);
-    try {
-      // 1. Append to rawInput and persist
-      const updatedRawInput = rawInput + "\n\nAdditional context:\n" + newContext.trim();
-      setRawInput(updatedRawInput);
-      if (currentProjectId) {
-        await supabase.from("projects").update({ raw_input: updatedRawInput }).eq("id", currentProjectId);
-      }
-
-      // 2. Call AI to weave new context into affected narrative sections
-      const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
-      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
-        body: {
-          mode: "weave_context",
-          input: updatedRawInput,
-          narrativeSections: cn.sections,
-          newContext: newContext.trim(),
-          purpose,
-          max_tokens: 4000,
-        },
-      });
-      if (error) throw error;
-
-      // 3. Update only sections that changed
-      const updatedSections = data.sections;
-      if (updatedSections?.length === cn.sections.length) {
-        const updatedCN = { sections: updatedSections };
-        restoringProjectRef.current = true;
-        setCoreNarrative(updatedCN);
-
-        // 4. Persist to DB
-        if (currentProjectId) {
-          const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
-          const existing = (proj?.output_data as any) || {};
-          await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
-        }
-
-        // 5. Increment version so outputs know they're stale
-        setNarrativeVersion(v => v + 1);
-
-        // 6. Refresh guide summary
-        narrativeDirtyRef.current = true;
-        refreshGuideSummary();
-      }
-    } catch (e) {
-      console.error("[WeaveContext] Failed:", e);
-    } finally {
-      setIsWeaving(false);
-    }
-  }, [rawInput, currentProjectId, refreshGuideSummary]);
-
   const generateGuideSummary = useCallback(async (): Promise<string> => {
     const cn = coreNarrativeRef.current;
     const strength = computeNarrativeStrength();
@@ -2122,6 +2065,63 @@ RULES: Maximum 3 sentences. No lists. No bullet points. No em dashes. No headers
       narrativeDirtyRef.current = false;
     } catch {} finally { setLoadingGuideSummary(false); }
   }, [generateGuideSummary]);
+
+  // ── Add context: append info and weave into narrative sections ──
+  const addNarrativeContext = useCallback(async (newContext: string) => {
+    if (!newContext.trim()) return;
+    const cn = coreNarrativeRef.current;
+    if (!cn?.sections?.length) return;
+
+    setIsWeaving(true);
+    try {
+      // 1. Append to rawInput and persist
+      const updatedRawInput = rawInput + "\n\nAdditional context:\n" + newContext.trim();
+      setRawInput(updatedRawInput);
+      if (currentProjectId) {
+        await supabase.from("projects").update({ raw_input: updatedRawInput }).eq("id", currentProjectId);
+      }
+
+      // 2. Call AI to weave new context into affected narrative sections
+      const purpose = intakeSelectionsRef.current?.purpose || "fundraising";
+      const { data, error } = await supabase.functions.invoke("decksmith-ai", {
+        body: {
+          mode: "weave_context",
+          input: updatedRawInput,
+          narrativeSections: cn.sections,
+          newContext: newContext.trim(),
+          purpose,
+          max_tokens: 4000,
+        },
+      });
+      if (error) throw error;
+
+      // 3. Update only sections that changed
+      const updatedSections = data.sections;
+      if (updatedSections?.length === cn.sections.length) {
+        const updatedCN = { sections: updatedSections };
+        restoringProjectRef.current = true;
+        setCoreNarrative(updatedCN);
+
+        // 4. Persist to DB
+        if (currentProjectId) {
+          const { data: proj } = await supabase.from("projects").select("output_data").eq("id", currentProjectId).single();
+          const existing = (proj?.output_data as any) || {};
+          await supabase.from("projects").update({ output_data: { ...existing, core_narrative: updatedCN } as any }).eq("id", currentProjectId);
+        }
+
+        // 5. Increment version so outputs know they're stale
+        setNarrativeVersion(v => v + 1);
+
+        // 6. Refresh guide summary
+        narrativeDirtyRef.current = true;
+        refreshGuideSummary();
+      }
+    } catch (e) {
+      console.error("[WeaveContext] Failed:", e);
+    } finally {
+      setIsWeaving(false);
+    }
+  }, [rawInput, currentProjectId, refreshGuideSummary]);
 
   const rescoreNarrative = useCallback(async () => {
     if (!output) return;
