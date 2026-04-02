@@ -44,7 +44,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
     const rawClosing = slide?.closingStatement || "";
     const rawBodyContent = slide?.bodyContent;
     const filteredBodyContent = Array.isArray(rawBodyContent)
-      ? rawBodyContent.filter((item: string) => !isPlaceholderText(item))
+      ? rawBodyContent.filter((item: string) => !isPlaceholderText(item) && item.trim())
       : rawBodyContent;
     return {
       headline: typeof slide === "string" ? slide : (slide.headline || `Slide ${idx + 1}`),
