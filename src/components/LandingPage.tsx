@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Check, Zap, BarChart3, Users, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Zap, BarChart3, Users, ShieldCheck, Sparkles } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -39,15 +39,15 @@ export function LandingPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-10 overflow-hidden">
+      <section className="relative px-4 sm:px-6 pt-24 sm:pt-32 pb-4 overflow-hidden">
         {/* Subtle warm radial background */}
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 30%, hsl(36 30% 92%) 0%, transparent 70%)" }} />
         <div className="max-w-[800px] mx-auto text-center relative z-10 animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-foreground leading-[1.05] tracking-tight mb-6">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-7xl font-semibold text-foreground leading-[1.05] tracking-tight mb-6">
             Craft your narrative.
           </h1>
-          <p className="text-lg text-muted-foreground max-w-[640px] mx-auto leading-relaxed mb-10">
-            Turn rough notes into pitch decks, board updates, and strategy memos.
+          <p className="text-lg text-muted-foreground max-w-[560px] mx-auto leading-relaxed mb-10">
+            Turn rough notes into pitch decks, investor memos, and board updates. Find the right investors. Keep your story sharp long after you raise.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
             className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity inline-flex items-center gap-2">
@@ -55,8 +55,20 @@ export function LandingPage() {
           </button>
         </div>
 
+        {/* Trust bar — right below CTA */}
+        <div className="max-w-[720px] mx-auto mt-10 relative z-10 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-10 sm:gap-y-2.5">
+            {PROOF.map((p) => (
+              <div key={p.text} className="flex items-center justify-center sm:justify-start gap-2.5">
+                <p.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="text-foreground/70 text-sm">{p.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Hero product preview */}
-        <div className="max-w-[900px] mx-auto mt-10 sm:mt-16 relative z-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <div className="max-w-[900px] mx-auto mt-10 sm:mt-14 relative z-10 animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="bg-card border border-border/80 rounded-xl overflow-hidden" style={{ boxShadow: "0 4px 32px -8px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
               <div className="flex items-center gap-1.5">
@@ -119,13 +131,13 @@ export function LandingPage() {
                           <div key={i} className="flex-1 bg-emerald/30 rounded-sm" style={{ height: `${v * 0.28}px` }} />
                         ))}
                       </div>
-                      <div className="flex gap-4">
+                      <div className="flex items-center gap-3 mt-0.5">
                         <span className="text-[9px] text-emerald font-semibold">+34% QoQ</span>
                         <span className="text-[9px] text-muted-foreground">128% NRR</span>
                       </div>
                     </div>
                   </div>
-                  {/* Card 3: Competitive matrix (abstract, no real names) */}
+                  {/* Card 3: Competitive matrix */}
                   <div className="bg-secondary/70 border border-border/60 rounded-xl overflow-hidden sm:[aspect-ratio:16/10]">
                     <div className="p-4 flex flex-col justify-between h-full gap-2">
                       <div>
@@ -148,27 +160,15 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Product Showcase ── */}
+      {/* ── Product Showcase (lifecycle 01-04) ── */}
       <ProductShowcase />
 
-      {/* ── Credibility Bar ── */}
-      <section className="px-4 sm:px-6 py-8 sm:py-10 border-y border-border/50">
-        <div className="max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-x-10 sm:gap-y-3">
-          {PROOF.map((p) => (
-            <div key={p.text} className="flex items-center gap-2.5">
-              <p.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-foreground/70 text-sm">{p.text}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ── Pricing ── */}
-      <section className="px-4 sm:px-6 py-14 sm:py-20">
+      <section className="px-4 sm:px-6 py-14 sm:py-20 border-t border-border/50">
         <div className="max-w-[1100px] mx-auto">
           <div className="text-center mb-10">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-3">Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">Start free. Scale when ready.</h2>
+            <h2 className="font-display text-3xl sm:text-4xl font-medium text-foreground tracking-tight">Start free. Scale when ready.</h2>
           </div>
           <div className="flex items-center justify-center gap-3 mb-12">
             <span className={`text-sm ${!annual ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>

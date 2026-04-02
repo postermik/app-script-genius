@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { Sparkles, AlertTriangle, FileText, BarChart3, Mail } from "lucide-react";
 
 /* ── Scroll-triggered fade-in ── */
 function AnimatedEntry({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -13,54 +13,6 @@ function AnimatedEntry({ children, className = "", delay = 0 }: { children: Reac
   return (
     <div ref={ref} className={`transition-all duration-[600ms] ease-out ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[20px]"} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
       {children}
-    </div>
-  );
-}
-
-/* ── Generation Experience ── */
-function GenerationPreview() {
-  const [progress, setProgress] = useState(0);
-  const [activeStep, setActiveStep] = useState(0);
-  const [allDone, setAllDone] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-  const STEPS = ["Analyzing your input", "Structuring argument", "Writing sections", "Reviewing quality"];
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !started.current) {
-        started.current = true;
-        let p = 0;
-        const iv = setInterval(() => {
-          p += 2; setProgress(Math.min(p, 100));
-          if (p <= 25) setActiveStep(0); else if (p <= 55) setActiveStep(1); else if (p <= 80) setActiveStep(2); else setActiveStep(3);
-          if (p >= 100) { clearInterval(iv); setTimeout(() => setAllDone(true), 1500); }
-        }, 60);
-      }
-    }, { threshold: 0.4 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="p-5 space-y-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-medium tracking-[0.12em] uppercase text-foreground/90">Generating...</span>
-          <span className="text-[10px] font-bold text-electric tabular-nums">{progress}%</span>
-        </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-electric rounded-full transition-all duration-150" style={{ width: `${progress}%` }} />
-        </div>
-        <div className="space-y-1.5 pt-1">
-          {STEPS.map((step, i) => {
-            const done = allDone ? true : i < activeStep;
-            const active = !allDone && i === activeStep;
-            if (!allDone && i > activeStep) return null;
-            return (<p key={step} className={`text-[11px] transition-all duration-300 ${done ? "text-emerald" : active ? "text-foreground/70" : "text-muted-foreground"}`}>{done ? "\u2713" : "\u2192"} {step}</p>);
-          })}
-        </div>
-      </div>
     </div>
   );
 }
@@ -84,6 +36,15 @@ function ConsultantPreview() {
 
   return (
     <div ref={ref} className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Built-in Consultant</span>
+        <div />
+      </div>
       <div className="p-5 space-y-4">
         <div>
           <p className="text-[10px] font-medium text-electric uppercase tracking-wider mb-2">Getting Sharp</p>
@@ -123,6 +84,54 @@ function ConsultantPreview() {
             );
           })}
         </div>
+        <div className="bg-secondary/60 rounded-lg p-3 flex items-start gap-2.5">
+          <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
+          <p className="text-[11px] text-foreground/70 leading-relaxed">
+            "Name your competitors. Investors will ask. Frame it as 'here's why existing solutions fall short' to control the narrative."
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Investor Discovery ── */
+function InvestorPreview() {
+  const investors = [
+    { name: "Sequoia Capital", match: 94, stage: "Series A", sector: "AI / ML" },
+    { name: "Andreessen Horowitz", match: 91, stage: "Series A-B", sector: "Enterprise SaaS" },
+    { name: "Founders Fund", match: 87, stage: "Seed-A", sector: "Deep Tech" },
+    { name: "First Round Capital", match: 84, stage: "Seed", sector: "B2B SaaS" },
+  ];
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Find Your Investors</span>
+        <div />
+      </div>
+      <div className="divide-y divide-border">
+        {investors.map((inv) => (
+          <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-[13px] text-foreground/90 font-medium">{inv.name}</p>
+              <p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p>
+            </div>
+            <span className="text-[11px] font-medium text-electric">{inv.match}% match</span>
+          </div>
+        ))}
+      </div>
+      <div className="px-5 py-4 flex gap-2.5 border-t border-border">
+        <button className="flex-1 bg-primary text-primary-foreground text-xs font-medium py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+          View contact info
+        </button>
+        <button className="flex-1 border border-border text-foreground text-xs font-medium py-2.5 rounded-lg hover:border-muted-foreground/30 transition-colors">
+          Export list
+        </button>
       </div>
     </div>
   );
@@ -151,6 +160,15 @@ function FormatChartCard() {
   const ACTIVE = "Pitch Deck";
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Every Format</span>
+        <div />
+      </div>
       <div className="flex w-full border-b border-border sm:overflow-visible overflow-x-auto">
         {TABS.map((tab) => (
           <span key={tab} className={`text-[10px] font-medium tracking-[0.08em] uppercase px-[14px] sm:px-[18px] py-[14px] whitespace-nowrap relative select-none ${tab === ACTIVE ? "text-foreground/90 bg-secondary/50" : "text-muted-foreground"}`}>
@@ -174,55 +192,125 @@ function FormatChartCard() {
   );
 }
 
-/* ── Investor Discovery ── */
-function InvestorPreview() {
-  const investors = [
-    { name: "Sequoia Capital", match: 94, stage: "Series A", sector: "AI / ML" },
-    { name: "Andreessen Horowitz", match: 91, stage: "Series A-B", sector: "Enterprise SaaS" },
-    { name: "Founders Fund", match: 87, stage: "Seed-A", sector: "Deep Tech" },
+/* ── Keep It Sharp (post-raise retention) ── */
+function RetentionPreview() {
+  const modes = [
+    { icon: FileText, title: "Board Updates", desc: "Monthly updates from your latest metrics and narrative" },
+    { icon: BarChart3, title: "Sales Decks", desc: "Customer-facing pitch rooted in your company story" },
+    { icon: Mail, title: "Strategy Memos", desc: "Internal docs that keep your team aligned on the vision" },
   ];
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="divide-y divide-border">
-        {investors.map((inv) => (
-          <div key={inv.name} className="px-5 py-3.5 flex items-center justify-between">
-            <div><p className="text-[13px] text-foreground/90 font-medium">{inv.name}</p><p className="text-[11px] text-muted-foreground">{inv.stage} · {inv.sector}</p></div>
-            <span className="text-[11px] font-medium text-electric">{inv.match}% match</span>
-          </div>
-        ))}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-secondary/30">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <span className="text-[9px] text-muted-foreground/50 tracking-wider uppercase">Beyond the Raise</span>
+        <div />
+      </div>
+      <div className="p-5">
+        <div className="grid grid-cols-3 gap-2.5">
+          {modes.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="bg-secondary/60 rounded-lg p-4 text-center hover:-translate-y-0.5 transition-transform">
+              <Icon className="h-5 w-5 text-electric mx-auto mb-2.5" />
+              <p className="text-[11px] font-semibold text-foreground/90 mb-1">{title}</p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="bg-secondary/60 rounded-lg p-3 flex items-start gap-2.5 mt-4">
+          <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
+          <p className="text-[11px] text-foreground/70 leading-relaxed">
+            Your narrative evolves. Rhetoric remembers your story and adapts every output as your company grows.
+          </p>
+        </div>
       </div>
     </div>
+  );
+}
+
+/* ── Step Row ── */
+function StepRow({
+  number,
+  title,
+  description,
+  children,
+  reverse = false,
+}: {
+  number: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  reverse?: boolean;
+}) {
+  return (
+    <AnimatedEntry>
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center ${reverse ? "md:[direction:rtl]" : ""}`}>
+        <div className={reverse ? "md:[direction:ltr]" : ""}>
+          <span className="font-display text-[56px] leading-none text-border/80 select-none">{number}</span>
+          <h3 className="font-display text-2xl sm:text-[28px] font-medium text-foreground tracking-tight mt-2 mb-3">{title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-[420px]">{description}</p>
+        </div>
+        <div className={reverse ? "md:[direction:ltr]" : ""}>{children}</div>
+      </div>
+    </AnimatedEntry>
   );
 }
 
 /* ── Main Showcase ── */
 export function ProductShowcase() {
   return (
-    <section className="px-4 sm:px-6 pt-8 sm:pt-12 pb-14 sm:pb-20 overflow-hidden">
-      <div className="max-w-[1000px] mx-auto">
-        <div className="md:w-[52%] md:ml-[5%]">
-          <AnimatedEntry>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">From notes to materials</p>
-            <GenerationPreview />
-          </AnimatedEntry>
-        </div>
-        <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
-          <AnimatedEntry>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">Built-in consultant</p>
+    <section className="px-4 sm:px-6 pt-8 sm:pt-16 pb-14 sm:pb-24 overflow-hidden">
+      <div className="max-w-[1060px] mx-auto">
+        {/* Section header */}
+        <AnimatedEntry className="text-center mb-16 sm:mb-20">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-3">How it works</p>
+          <h2 className="font-display text-3xl sm:text-4xl font-medium text-foreground tracking-tight">Raise, then run.</h2>
+          <p className="text-sm text-muted-foreground mt-3 max-w-[480px] mx-auto leading-relaxed">
+            Rhetoric guides you from raw idea to closed round, then stays with you as your company grows.
+          </p>
+        </AnimatedEntry>
+
+        <div className="space-y-16 sm:space-y-24">
+          {/* 01 — Build your narrative */}
+          <StepRow
+            number="01"
+            title="Build your narrative"
+            description="Paste in your rough notes, a previous deck, or just talk about your company. Rhetoric analyzes your story, identifies gaps investors will probe, and builds a structured narrative across every section of your pitch."
+          >
             <ConsultantPreview />
-          </AnimatedEntry>
-        </div>
-        <div className="md:w-[52%] md:ml-[5%] md:mt-[60px] mt-10">
-          <AnimatedEntry>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">Every format, ready to use</p>
-            <FormatChartCard />
-          </AnimatedEntry>
-        </div>
-        <div className="md:w-[52%] md:ml-[43%] md:mt-[60px] mt-10">
-          <AnimatedEntry>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">Find your investors</p>
+          </StepRow>
+
+          {/* 02 — Find your investors */}
+          <StepRow
+            number="02"
+            title="Find your investors"
+            description="Rhetoric matches you to investors based on your stage, sector, geography, and check size. See match scores, access contact info, and build a targeted outreach list without spreadsheet wrangling."
+            reverse
+          >
             <InvestorPreview />
-          </AnimatedEntry>
+          </StepRow>
+
+          {/* 03 — Export everything */}
+          <StepRow
+            number="03"
+            title="Export everything"
+            description="One narrative, every format. Rhetoric generates pitch decks, investor memos, board updates, and cold emails, all rooted in your core story. Edit inline, then export to PPT, DOCX, or PDF in one click."
+          >
+            <FormatChartCard />
+          </StepRow>
+
+          {/* 04 — Keep it sharp */}
+          <StepRow
+            number="04"
+            title="Keep it sharp"
+            description="After you raise, your narrative doesn't stop. Use Rhetoric for board updates, strategy memos, and sales materials, all grounded in the same core story. When it's time to raise again, everything is already up to date."
+            reverse
+          >
+            <RetentionPreview />
+          </StepRow>
         </div>
       </div>
     </section>
