@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 type TierKey = "hobby" | "pro";
 
-const PLANS: { name: string; tierId: TierKey | null; description: string; features: readonly string[]; highlighted: boolean }[] = [
-  { name: FREE_PLAN.name, tierId: null, description: FREE_PLAN.description, features: FREE_PLAN.features, highlighted: false },
-  { name: TIERS.hobby.name, tierId: "hobby", description: TIERS.hobby.description, features: TIERS.hobby.features, highlighted: false },
-  { name: TIERS.pro.name, tierId: "pro", description: TIERS.pro.description, features: TIERS.pro.features, highlighted: true },
+const PLANS: { name: string; tierId: TierKey | null; description: string; features: readonly string[]; cta: string; highlighted: boolean }[] = [
+  { name: FREE_PLAN.name, tierId: null, description: FREE_PLAN.description, features: FREE_PLAN.features, cta: "Get Started", highlighted: false },
+  { name: TIERS.hobby.name, tierId: "hobby", description: TIERS.hobby.description, features: TIERS.hobby.features, cta: "Choose Hobby", highlighted: false },
+  { name: TIERS.pro.name, tierId: "pro", description: TIERS.pro.description, features: TIERS.pro.features, cta: "Choose Pro", highlighted: true },
 ];
 
 export default function Pricing() {
@@ -37,7 +37,6 @@ export default function Pricing() {
   };
 
   const isCurrentPlan = (plan: typeof PLANS[0]) => {
-    // Never show "current plan" when logged out
     if (!session) return false;
     if (!plan.tierId) return !subscribed;
     if (!subscribed || !productId) return false;
@@ -79,10 +78,10 @@ export default function Pricing() {
   const getButtonLabel = (plan: typeof PLANS[0], current: boolean) => {
     if (!plan.tierId) {
       if (current) return "Current Plan";
-      return "Get Started";
+      return plan.cta;
     }
     if (current) return "Manage Subscription";
-    if (!session) return `Choose ${plan.name}`;
+    if (!session) return plan.cta;
     return `Upgrade to ${plan.name}`;
   };
 
@@ -97,7 +96,7 @@ export default function Pricing() {
       <div className="px-4 sm:px-6 pt-20 sm:pt-24 pb-8">
         <div className="max-w-[1100px] mx-auto text-center">
           <p className="text-xs font-medium tracking-[0.2em] uppercase text-electric mb-3">Pricing</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight mb-4">
+          <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground tracking-tight mb-4">
             Start free. Scale when ready.
           </h1>
           <p className="text-base text-foreground/70 max-w-[500px] mx-auto mb-10">
@@ -137,13 +136,13 @@ export default function Pricing() {
                     : "border-border hover:border-muted-foreground/20"
                 }`}>
                   <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-4">{plan.name}</p>
+                  {plan.tierId && annual && (
+                    <p className="text-[11px] text-electric mb-1.5">Billed at ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
+                  )}
                   <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-4xl font-bold text-foreground">{getPrice(plan)}</span>
                     {plan.tierId && <span className="text-sm text-muted-foreground">/mo</span>}
                   </div>
-                  {plan.tierId && annual && (
-                    <p className="text-[11px] text-electric mb-2">Billed ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
-                  )}
                   <p className="text-sm text-muted-foreground mb-10">{plan.description}</p>
                   <ul className="space-y-3 mb-10 flex-1">
                     {plan.features.map((f) => (

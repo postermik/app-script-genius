@@ -195,8 +195,8 @@ function FormatChartCard() {
 /* ── Keep It Sharp (post-raise retention) ── */
 function RetentionPreview() {
   const modes = [
-    { icon: FileText, title: "Board Updates", desc: "Monthly updates from your latest metrics and narrative" },
-    { icon: BarChart3, title: "Sales Decks", desc: "Customer-facing pitch rooted in your company story" },
+    { icon: FileText, title: "Board Updates", desc: "Monthly updates powered by your latest metrics and strategy" },
+    { icon: BarChart3, title: "Sales Decks", desc: "Customer-facing materials built from your core narrative" },
     { icon: Mail, title: "Strategy Memos", desc: "Internal docs that keep your team aligned on the vision" },
   ];
   return (
@@ -223,7 +223,7 @@ function RetentionPreview() {
         <div className="bg-secondary/60 rounded-lg p-3 flex items-start gap-2.5 mt-4">
           <Sparkles className="h-3.5 w-3.5 text-electric shrink-0 mt-0.5" />
           <p className="text-[11px] text-foreground/70 leading-relaxed">
-            Your narrative evolves. Rhetoric remembers your story and adapts every output as your company grows.
+            Your narrative evolves. Rhetoric remembers your story and adapts every output as things change.
           </p>
         </div>
       </div>
@@ -297,7 +297,7 @@ export function ProductShowcase() {
           <StepRow
             number="03"
             title="Export everything"
-            description="One narrative, every format. Rhetoric generates pitch decks, investor memos, board updates, and cold emails, all rooted in your core story. Edit inline, then export to PPT, DOCX, or PDF in one click."
+            description="One narrative, every format. Rhetoric generates pitch decks, investor memos, board updates, and cold emails from a single source of truth. Edit inline, then export to PPTX, DOCX, or PDF in one click."
           >
             <FormatChartCard />
           </StepRow>
@@ -306,7 +306,7 @@ export function ProductShowcase() {
           <StepRow
             number="04"
             title="Keep it sharp"
-            description="After you raise, your narrative doesn't stop. Use Rhetoric for board updates, strategy memos, and sales materials, all grounded in the same core story. When it's time to raise again, everything is already up to date."
+            description="After you raise, the work continues. Use Rhetoric for board updates, strategy memos, and sales materials that stay connected to what you've already built. When it's time to raise again, everything is already current."
             reverse
           >
             <RetentionPreview />

@@ -24,7 +24,7 @@ const FAQ_ITEMS = [
 const PLANS = [
   { name: FREE_PLAN.name, tierId: null as "hobby" | "pro" | null, description: FREE_PLAN.description, features: FREE_PLAN.features, cta: "Get Started", highlighted: false },
   { name: TIERS.hobby.name, tierId: "hobby" as const, description: TIERS.hobby.description, features: TIERS.hobby.features, cta: "Choose Hobby", highlighted: false },
-  { name: TIERS.pro.name, tierId: "pro" as const, description: TIERS.pro.description, features: TIERS.pro.features, cta: "Get Pro", highlighted: true },
+  { name: TIERS.pro.name, tierId: "pro" as const, description: TIERS.pro.description, features: TIERS.pro.features, cta: "Choose Pro", highlighted: true },
 ];
 
 export function LandingPage() {
@@ -47,7 +47,7 @@ export function LandingPage() {
             Craft your narrative.
           </h1>
           <p className="text-lg text-muted-foreground max-w-[560px] mx-auto leading-relaxed mb-10">
-            Turn rough notes into pitch decks, investor memos, and board updates. Find the right investors. Keep your story sharp long after you raise.
+            Turn rough notes into pitch decks, investor memos, and board updates. Find your investors, and keep your story sharp.
           </p>
           <button onClick={() => navigate("/auth?signup=true&next=/dashboard")}
             className="bg-primary text-primary-foreground px-8 py-4 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity inline-flex items-center gap-2">
@@ -59,7 +59,7 @@ export function LandingPage() {
         <div className="max-w-[720px] mx-auto mt-10 relative z-10 animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-x-10 sm:gap-y-2.5">
             {PROOF.map((p) => (
-              <div key={p.text} className="flex items-center justify-center sm:justify-start gap-2.5">
+              <div key={p.text} className="flex items-center justify-center gap-2.5">
                 <p.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="text-foreground/70 text-sm">{p.text}</span>
               </div>
@@ -186,13 +186,13 @@ export function LandingPage() {
                 plan.highlighted ? "border-primary/30" : "border-border hover:border-muted-foreground/20"
               }`}>
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-4">{plan.name}</p>
+                {plan.tierId && annual && (
+                  <p className="text-[11px] text-primary mb-1.5">Billed at ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
+                )}
                 <div className="flex items-baseline gap-1 mb-2">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {plan.tierId && <span className="text-sm text-muted-foreground">/mo</span>}
                 </div>
-                {plan.tierId && annual && (
-                  <p className="text-[11px] text-primary mb-2">Billed ${TIERS[plan.tierId].annualYearlyPrice}/year</p>
-                )}
                 <p className="text-sm text-foreground/70 mb-8">{plan.description}</p>
                 <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((f) => (
