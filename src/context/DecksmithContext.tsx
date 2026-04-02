@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { NarrativeOutputData, OutputMode, RefinementTone, Project, ProjectVersion, OutreachEntry, VoiceProfile, AudienceType } from "@/types/narrative";
 import type { IntakeSelections, OutputDeliverable, CoreNarrativeData, IntakePurpose } from "@/types/rhetoric";
-import { CORE_NARRATIVE_SECTIONS } from "@/types/rhetoric";
+import { CORE_NARRATIVE_SECTIONS, INTENT_OUTPUTS } from "@/types/rhetoric";
 import type { DeckTheme, BrandColors } from "@/components/SlidePreview";
 
 const DEFAULT_DECK_THEME: DeckTheme = { scheme: "light", primary: "#3b82f6", secondary: "#ffffff", accent: "#1e3a5f", text: undefined };
