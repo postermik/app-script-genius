@@ -57,7 +57,7 @@ export function parseSlide(raw: any): SlideData {
   return {
     headline: truncate(typeof raw === "string" ? raw : (raw?.headline || ""), CHAR_LIMITS.HEADLINE_MAX),
     subheadline: truncate(raw?.subheadline || raw?.subheader || "", CHAR_LIMITS.SUBHEADLINE_MAX),
-    bodyContent: (Array.isArray(raw?.bodyContent) ? raw.bodyContent : []).map((b: string) => truncate(b.replace(/^[-\u2022*]\s*/, ""), CHAR_LIMITS.BULLET_MAX)),
+    bodyContent: (Array.isArray(raw?.bodyContent) ? raw.bodyContent : []).map((b: string) => truncate(b.replace(/^[-\u2022*]\s*/, ""), CHAR_LIMITS.BULLET_MAX)).filter((b: string) => b.length > 0),
     categoryLabel: truncate((raw?.categoryLabel || "").replace(/_/g, " "), CHAR_LIMITS.CATEGORY_MAX),
     closingStatement: truncate(raw?.closingStatement || "", CHAR_LIMITS.CLOSING_MAX),
     dataPoints: raw?.metadata?.dataPoints || [],
@@ -339,7 +339,7 @@ function layoutFlywheel(s: SlideData): El[] {
 
     els.push({ t:"text", x:lx, y:ty-0.2, w:lw, h:0.25, text:getLabel(), pt:10, bold:true, color:"head", align:labelAlign, valign:"middle" });
     const desc = getDesc();
-    if (desc) els.push({ t:"text", x:lx, y:ty+0.05, w:lw, h:0.35, text:desc, pt:8, color:"sub", align:labelAlign });
+    if (desc) els.push({ t:"text", x:lx, y:ty+0.05, w:lw, h:0.5, text:desc, pt:8, color:"sub", align:labelAlign });
   }
   return els;
 }

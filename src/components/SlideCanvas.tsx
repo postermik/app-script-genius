@@ -222,7 +222,7 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
           return <g key={i}>
             <circle cx={px} cy={py} r="7" fill={c.sub} opacity="0.5" />
             <text x={px + 14} y={py - 3} fill={c.body} fontSize="10" fontWeight="600">{comp.name}</text>
-            {comp.description && <text x={px + 14} y={py + 10} fill={c.sub} fontSize="8">{comp.description.substring(0, 45)}</text>}
+            {comp.description && <text x={px + 14} y={py + 10} fill={c.sub} fontSize="8">{comp.description.substring(0, 60)}</text>}
           </g>;
         })}
         {comps.length > 0 && (() => {
@@ -232,7 +232,7 @@ function Matrix({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }) 
             <circle cx={px} cy={py} r="11" fill={c.primary} opacity="0.9" />
             <circle cx={px} cy={py} r="17" fill="none" stroke={c.primary} strokeWidth="1.5" opacity="0.4" />
             <text x={px} y={py - 18} textAnchor="middle" fill={c.head} fontSize="12" fontWeight="700">{last.name}</text>
-            {last.description && <text x={px + 18} y={py + 4} fill={c.cat} fontSize="9">{last.description.substring(0, 40)}</text>}
+            {last.description && <text x={px + 18} y={py + 4} fill={c.cat} fontSize="9">{last.description.substring(0, 55)}</text>}
           </g>;
         })()}
       </svg>
@@ -275,7 +275,7 @@ function Flywheel({ slide: s, colors: c }: { slide: SlideCanvasData; colors: C }
             <circle cx={nd.x} cy={nd.y} r={14} fill={c.primary} />
             <text x={nd.x} y={nd.y + 4} textAnchor="middle" fill="#fff" fontSize="11" fontWeight="700">{i + 1}</text>
             <text x={tx} y={isTop ? ty - 6 : ty} textAnchor={anchor} fill={c.head} fontSize="11" fontWeight="600">{step.label}</text>
-            {step.description && <text x={tx} y={isTop ? ty + 7 : ty + 13} textAnchor={anchor} fill={c.sub} fontSize="9">{step.description.substring(0, 45)}</text>}
+            {step.description && <text x={tx} y={isTop ? ty + 7 : ty + 13} textAnchor={anchor} fill={c.sub} fontSize="9">{step.description.substring(0, 65)}</text>}
           </g>;
         })}
       </svg>

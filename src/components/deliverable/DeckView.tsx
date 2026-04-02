@@ -68,7 +68,7 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
     };
   });
 
-  const handleEditSlide = (slideIndex: number, field: string, value: string | string[]) => {
+  const handleEditSlide = (slideIndex: number, field: string, value: any) => {
     if (!onUpdateDeliverable) return;
     const updatedFramework = [...framework];
     const slide = { ...updatedFramework[slideIndex] };
@@ -77,6 +77,30 @@ export function DeckView({ deliverable, excludedSlides, onToggleSlide, slideOrde
     } else {
       (slide as any)[field] = value;
     }
+
+    // When switching layout, ensure the target layout has data to render.
+    // Extract flat bodyContent from structured fields if bodyContent is empty.
+    if (field === "selectedLayout") {
+      const bc = slide.bodyContent || [];
+      const hasBody = bc.filter((s: string) => s?.trim()).length > 0;
+
+      if (!hasBody) {
+        const flat: string[] = [];
+        if (slide.flywheelSteps?.length) {
+          for (const s of slide.flywheelSteps) flat.push(s.description ? `${s.label}: ${s.description}` : s.label);
+        } else if (slide.milestones?.length) {
+          for (const m of slide.milestones) flat.push(m.amount ? `${m.amount}: ${m.bullets.join(", ")}` : m.bullets.join(", "));
+        } else if (slide.competitors?.length) {
+          for (const c of slide.competitors) flat.push(c.description ? `${c.name}: ${c.description}` : c.name);
+        } else if (slide.cards?.length) {
+          for (const c of slide.cards) flat.push(`${c.category}: ${c.stats.map((s: any) => `${s.label} ${s.value}`).join(", ")}`);
+        } else if (slide.tiers?.length) {
+          for (const t of slide.tiers) flat.push(t.amount ? `${t.label} (${t.amount}): ${t.description}` : `${t.label}: ${t.description}`);
+        }
+        if (flat.length > 0) slide.bodyContent = flat;
+      }
+    }
+
     updatedFramework[slideIndex] = slide;
     onUpdateDeliverable({ ...deliverable, deckFramework: updatedFramework });
   };
