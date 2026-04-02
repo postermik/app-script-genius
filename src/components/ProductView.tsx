@@ -12,7 +12,7 @@ import { sortBySpeed } from "@/lib/outputOrder";
 import { formatDistanceToNow } from "date-fns";
 import { parseDeckFile } from "@/lib/parseDeck";
 import { GenerationStepper } from "@/components/GenerationStepper";
-import { IntakeCard } from "@/components/intake/IntakeCard";
+import { IntakeCard, detectFromInput } from "@/components/intake/IntakeCard";
 import { toast } from "sonner";
 
 const MODE_LABELS: Record<string, string> = {
@@ -68,7 +68,28 @@ export function ProductView() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [heroCopied, setHeroCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const detectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [detectedPurpose, setDetectedPurpose] = useState<IntakePurpose | undefined>(undefined);
+  const intakeCancelledRef = useRef(false);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
+
+  // Debounced purpose detection + auto-open IntakeCard
+  useEffect(() => {
+    clearTimeout(detectTimerRef.current);
+    if (rawInput.trim().length < 30) {
+      setDetectedPurpose(undefined);
+      intakeCancelledRef.current = false;
+      return;
+    }
+    detectTimerRef.current = setTimeout(() => {
+      const { purpose } = detectFromInput(rawInput);
+      setDetectedPurpose(purpose);
+      if (!intakeCancelledRef.current && !showIntake && !isGenerating && !isFreeAndLocked) {
+        setShowIntake(true);
+      }
+    }, 800);
+    return () => clearTimeout(detectTimerRef.current);
+  }, [rawInput]);
 
   const hour = new Date().getHours();
   const mornings = ["What are you building today?", "Fresh morning, fresh narrative.", "Ready when you are."];
@@ -130,10 +151,10 @@ export function ProductView() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex flex-col items-center px-6 pt-16">
         <div className="max-w-[720px] w-full animate-fade-in">
-          <h1 className="text-[32px] sm:text-[36px] font-semibold text-foreground/60 leading-[1.15] tracking-tight text-center mb-10">{greeting}</h1>
+          <h1 className="font-display text-[32px] sm:text-[36px] font-medium text-foreground/60 leading-[1.15] tracking-tight text-center mb-10">{greeting}</h1>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
-              placeholder="Describe your startup, paste your pitch, or upload a file to evaluate..."
+              placeholder="Tell me what you need. I'll take it from here."
               rows={8} disabled={isFreeAndLocked || isGenerating}
               className="w-full bg-card border border-border rounded-lg px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {!isGenerating && !showIntake && !isFreeAndLocked && (
@@ -144,19 +165,27 @@ export function ProductView() {
                   { label: "Board update", purpose: "board_meeting" as IntakePurpose, template: "[COMPANY NAME] Q[X] [YEAR] Board Update\n\nKey metrics: Revenue $[X], Growth [X]%, Burn $[X]/mo, Runway [X] months\nHighlights: [2-3 wins this quarter]\nChallenges: [1-2 risks or misses]\nAsks: [What you need from the board]" },
                   { label: "Strategy memo", purpose: "strategy" as IntakePurpose, template: "[COMPANY NAME] Strategic Memo: [TOPIC]\n\nContext: [What changed that requires a strategic decision]\nOptions: [2-3 paths we could take]\nRecommendation: [Which path and why]\nSuccess metrics: [How we'll know it's working]" },
                   { label: "Evaluate my deck", purpose: undefined, template: "" },
-                ].map(chip => (
+                ].map(chip => {
+                  const isDetected = detectedPurpose && chip.purpose === detectedPurpose;
+                  return (
                   <button key={chip.label} onClick={() => {
                     if (chip.label === "Evaluate my deck") { fileInputRef.current?.click(); }
                     else { setRawInput(chip.template); setChipPurpose(chip.purpose); setShowIntake(true); }
                   }}
-                    className="text-xs px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-muted transition-colors font-medium">
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+                      isDetected
+                        ? "bg-electric/10 text-electric border border-electric/30"
+                        : "bg-secondary text-secondary-foreground hover:bg-muted"
+                    }`}>
                     {chip.label}
+                    {isDetected && <span className="ml-1.5 text-[9px] font-bold tracking-wide uppercase opacity-80 animate-fade-in">✓ detected</span>}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
             {showIntake && !isGenerating && (
-              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => { setShowIntake(false); setChipPurpose(undefined); }} defaultPurpose={chipPurpose} />
+              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => { setShowIntake(false); setChipPurpose(undefined); intakeCancelledRef.current = true; }} defaultPurpose={chipPurpose} />
             )}
             {!showIntake && !isFreeAndLocked && !isGenerating && (
               <div className="flex gap-2">

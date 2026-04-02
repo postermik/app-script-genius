@@ -18,7 +18,19 @@ const STAGES: { value: IntakeStage; label: string }[] = [
   { value: "growth", label: "Growth" },
 ];
 
-function detectFromInput(input: string): IntakeSelections {
+/* ── Output keyword patterns for detecting explicitly mentioned outputs ── */
+const OUTPUT_KEYWORDS: [string, RegExp[]][] = [
+  ["slide_framework", [/\bdeck\b/i, /\bslides?\b/i, /\bpresentation\b/i, /pitch deck/i]],
+  ["elevator_pitch", [/elevator pitch/i, /one.?liner/i, /elevator\b/i]],
+  ["investor_qa", [/q\s*[&]?\s*a/i, /investor question/i, /q&a prep/i]],
+  ["pitch_email", [/pitch email/i, /cold email/i, /outreach email/i]],
+  ["investment_memo", [/investment memo/i]],
+  ["board_memo", [/board memo/i, /board report/i]],
+  ["key_metrics_summary", [/\bmetrics\b/i, /\bkpis?\b/i, /key metrics/i]],
+  ["strategic_memo", [/strategy memo/i, /strategic memo/i, /strategic plan/i]],
+];
+
+export function detectFromInput(input: string): IntakeSelections {
   // Board meeting requires STRONG, explicit signals.
   const boardSignals = [
     /board of directors/i,
@@ -101,16 +113,27 @@ function detectFromInput(input: string): IntakeSelections {
     purpose = "fundraising";
   }
 
-  const outputs: OutputDeliverable[] = INTENT_OUTPUTS[purpose]
-    .filter(o => o.preSelected)
-    .map(o => o.value);
-
+  // Detect stage
   const lower = input.toLowerCase();
   let stage: IntakeStage = "seed";
   if (/pre.?seed/.test(lower)) stage = "pre_seed";
   else if (/series\s*b/i.test(lower)) stage = "series_b";
   else if (/series\s*a/i.test(lower)) stage = "series_a";
   else if (/growth|late.stage/.test(lower)) stage = "growth";
+
+  // Detect explicitly mentioned outputs from text
+  const availableOutputs = INTENT_OUTPUTS[purpose].map(o => o.value);
+  const mentionedOutputs: OutputDeliverable[] = [];
+  for (const [key, patterns] of OUTPUT_KEYWORDS) {
+    if (patterns.some(re => re.test(input)) && availableOutputs.includes(key as OutputDeliverable)) {
+      mentionedOutputs.push(key as OutputDeliverable);
+    }
+  }
+
+  // If user explicitly mentioned outputs, use those; otherwise use preSelected defaults
+  const outputs: OutputDeliverable[] = mentionedOutputs.length > 0
+    ? mentionedOutputs
+    : INTENT_OUTPUTS[purpose].filter(o => o.preSelected).map(o => o.value);
 
   return { purpose, outputs, stage };
 }
