@@ -70,19 +70,25 @@ export function ProductView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const detectTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const [detectedPurpose, setDetectedPurpose] = useState<IntakePurpose | undefined>(undefined);
+  const intakeCancelledRef = useRef(false);
   const isFreeAndLocked = !subscribed && draftsUsed !== null && draftsUsed >= 1;
 
-  // Debounced purpose detection as user types
+  // Debounced purpose detection + auto-open IntakeCard
   useEffect(() => {
     clearTimeout(detectTimerRef.current);
     if (rawInput.trim().length < 30) {
       setDetectedPurpose(undefined);
+      intakeCancelledRef.current = false;
       return;
     }
     detectTimerRef.current = setTimeout(() => {
       const { purpose } = detectFromInput(rawInput);
       setDetectedPurpose(purpose);
-    }, 400);
+      // Auto-open the IntakeCard if user hasn't cancelled it for this input
+      if (!intakeCancelledRef.current && !showIntake && !isGenerating && !isFreeAndLocked) {
+        setShowIntake(true);
+      }
+    }, 800);
     return () => clearTimeout(detectTimerRef.current);
   }, [rawInput]);
 
@@ -149,7 +155,7 @@ export function ProductView() {
           <h1 className="font-display text-[32px] sm:text-[36px] font-medium text-foreground/60 leading-[1.15] tracking-tight text-center mb-10">{greeting}</h1>
           <div className="space-y-5">
             <textarea value={rawInput} onChange={(e) => setRawInput(e.target.value)} onKeyDown={handleKeyDown}
-              placeholder="Paste anything. I'll take it from here."
+              placeholder="Tell me what you need. I'll take it from here."
               rows={8} disabled={isFreeAndLocked || isGenerating}
               className="w-full bg-card border border-border rounded-lg px-5 py-4 text-foreground text-[15px] leading-relaxed resize-none focus:outline-none focus:border-electric/40 transition-colors placeholder:text-muted-foreground disabled:opacity-50" />
             {!isGenerating && !showIntake && !isFreeAndLocked && (
@@ -180,7 +186,7 @@ export function ProductView() {
               </div>
             )}
             {showIntake && !isGenerating && (
-              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => { setShowIntake(false); setChipPurpose(undefined); }} defaultPurpose={chipPurpose} />
+              <IntakeCard rawInput={rawInput} onGenerate={handleIntakeGenerate} onCancel={() => { setShowIntake(false); setChipPurpose(undefined); intakeCancelledRef.current = true; }} defaultPurpose={chipPurpose} />
             )}
             {!showIntake && !isFreeAndLocked && !isGenerating && (
               <div className="flex gap-2">
