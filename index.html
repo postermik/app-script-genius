@@ -11,7 +11,23 @@
     <link rel="canonical" href="https://getrhetoric.ai" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+    <!-- Preload the font file directly so the browser fetches it immediately -->
+    <link rel="preload" href="https://fonts.gstatic.com/s/fraunces/v31/6NUh8FyLNQOQZAnv9ZwNjOcKMbw.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Load Google Fonts stylesheet without blocking render -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" as="style" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- Inline fallback: reserve exact space so headline doesn't reflow when font loads -->
+    <style>
+      @font-face {
+        font-family: 'Fraunces Fallback';
+        src: local('Georgia');
+        size-adjust: 105%;
+        ascent-override: 95%;
+        descent-override: 22%;
+        line-height-override: normal;
+      }
+    </style>
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" /></noscript>
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://getrhetoric.ai" />
     <meta property="og:title" content="Rhetoric - Craft your narrative" />
